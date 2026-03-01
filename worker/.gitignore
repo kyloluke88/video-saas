@@ -1,0 +1,4 @@
+tmp/
+storage/logs/
+.DS_Store
+.env

@@ -1,0 +1,33 @@
+# https://github.com/cosmtrek/air/blob/master/air_example.toml
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  bin = "./tmp/main"
+  cmd = "go build -o ./tmp/main ."
+  delay = 1000
+  exclude_dir = ["tmp", "vendor", "artifacts"]
+  exclude_file = []
+  exclude_regex = []
+  exclude_unchanged = false
+  follow_symlink = false
+  full_bin = ""
+  include_dir = []
+  include_ext = ["go", "env"]
+  kill_delay = "0s"
+  log = "air.log"
+  send_interrupt = false
+  stop_on_error = true
+  args_bin = []
+
+[color]
+  main = "magenta"
+  watcher = "cyan"
+  build = "yellow"
+  runner = "green"
+
+[log]
+  time = false
+
+[misc]
+  clean_on_exit = false

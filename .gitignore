@@ -1,0 +1,75 @@
+# macOS
+.DS_Store
+
+# Go build/test
+*.test
+*.out
+*.prof
+*.cgo1.go
+*.cgo2.c
+_cgo_defun.c
+_cgo_gotypes.go
+_cgo_export.*
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# Archives
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Logs and databases
+*.log
+*.sqlite
+*.db
+
+# Temporary files
+.tmp/
+tmp/
+
+# Artifacts
+artifacts/
+projects/*/final.mp4
+projects/*/stitched.mp4
+projects/*/with_subtitles.mp4
+projects/*/subtitles.srt
+projects/*/concat.txt
+projects/*/compose.queued
+projects/*/bgm_selected.txt
+projects/*/narration.mp3
+
+# Storage
+storage/logs/
+
+# Worker & Backend
+worker/tmp/
+worker/storage/logs/
+backend/tmp/
+backend/storage/logs/
+
+# Env files
+.env
+
+# History
+.history
+
+# 排除所有 .env 文件
+**/.env
+
+# 排除所有临时文件
+**/tmp/
+**/.tmp/
+**/*.log
+**/*.out
+**/*.prof
+**/*.test
+**/main
