@@ -73,3 +73,6 @@ backend/storage/logs/
 **/*.prof
 **/*.test
 **/main
+
+# 排除每个目录下的 .air.toml 文件
+**/.air.toml
