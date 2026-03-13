@@ -14,6 +14,9 @@ RUN go install github.com/air-verse/air@v1.61.7
 COPY go.mod go.sum ./
 RUN go mod download
 
+COPY assets/fonts/ /usr/share/fonts/custom/
+RUN fc-cache -f
+
 COPY . .
 
 CMD ["air"]

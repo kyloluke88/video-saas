@@ -32,28 +32,12 @@ _cgo_export.*
 *.sqlite
 *.db
 
-# Temporary files
-.tmp/
-tmp/
 
 # Artifacts
 artifacts/
-projects/*/final.mp4
-projects/*/stitched.mp4
-projects/*/with_subtitles.mp4
-projects/*/subtitles.srt
-projects/*/concat.txt
-projects/*/compose.queued
-projects/*/bgm_selected.txt
-projects/*/narration.mp3
-
-# Storage
-storage/logs/
 
 # Worker & Backend
-worker/tmp/
 worker/storage/logs/
-backend/tmp/
 backend/storage/logs/
 
 # Env files
@@ -73,6 +57,4 @@ backend/storage/logs/
 **/*.prof
 **/*.test
 **/main
-
-# 排除每个目录下的 .air.toml 文件
 **/.air.toml

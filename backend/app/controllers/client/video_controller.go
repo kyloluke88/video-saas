@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
 	"api/app/requests/client/video"
+	appconfig "api/pkg/config"
 	"api/pkg/deepseek"
 	"api/pkg/logger"
 	"api/pkg/queue"
@@ -21,6 +23,21 @@ type VideoController struct {
 	BaseAPIController
 }
 
+type referencePromptTask struct {
+	Label    string
+	Kind     string
+	ObjectID string
+	Prompt   string
+}
+
+type referenceImage struct {
+	Label    string `json:"label"`
+	Kind     string `json:"kind"`
+	ObjectID string `json:"object_id,omitempty"`
+	TaskID   string `json:"task_id,omitempty"`
+	ImageURL string `json:"image_url,omitempty"`
+}
+
 // CreateIdiomStory 由 backend 同步调用 DeepSeek 规划，成功后再入队给 worker 执行生成流水线。
 func (ctrl *VideoController) CreateIdiomStory(c *gin.Context) {
 	var req video.CreateIdiomStoryRequest
@@ -28,7 +45,7 @@ func (ctrl *VideoController) CreateIdiomStory(c *gin.Context) {
 		return
 	}
 
-	projectID := buildIdiomProjectID(req.IdiomNameEn)
+	projectID := buildProjectID(req.IdiomNameEn)
 	targetDurationSec := req.TargetDurationSec
 	if targetDurationSec == 0 {
 		targetDurationSec = 30
@@ -38,23 +55,15 @@ func (ctrl *VideoController) CreateIdiomStory(c *gin.Context) {
 		ProjectID:         projectID,
 		IdiomName:         req.IdiomName,
 		IdiomNameEn:       req.IdiomNameEn,
-		Dynasty:           "泛古代",
-		Platform:          defaultIfEmpty(req.Platform, "youtube"),
+		Description:       req.Description,
 		Category:          "idiom_story", // worker分流标志
 		NarrationLanguage: defaultIfEmpty(req.NarrationLanguage, "zh-CN"),
 		TargetDurationSec: targetDurationSec,
-		Audience:          "亲子",
-		Tone:              defaultIfEmpty(req.Tone, "storytelling"),
-		AspectRatio:       resolveAspectRatio(req.AspectRatio, req.Platform, "9:16"),
-		Resolution:        defaultIfEmpty(req.Resolution, "720p"),
-		VisualStyle:       "storybook",
-		AnimationStyle:    "subtle",
-		ExpressionStyle:   "mild_exaggerated",
-		CameraShotSize:    "wide",
-		CameraAngle:       "high",
-		CameraMovement:    "slow_push",
+		AspectRatio:       defaultIfEmpty(req.AspectRatio, "16:9"),
+		Resolution:        defaultIfEmpty(req.Resolution, defaultPodcastResolution()),
 	}
 	plan, err := deepseek.BuildIdiomPlan(deepseek.LoadConfig(), planInput)
+
 	if err != nil {
 		c.AbortWithStatusJSON(502, gin.H{
 			"message": "deepseek planning failed",
@@ -62,26 +71,15 @@ func (ctrl *VideoController) CreateIdiomStory(c *gin.Context) {
 		})
 		return
 	}
-
-	imageURLs, err := generateReferenceImages(plan)
-	if err != nil {
-		c.AbortWithStatusJSON(502, gin.H{
-			"message": "wanxiang image generation failed",
-			"error":   err.Error(),
-		})
-		return
-	}
-
 	requestPayload := map[string]interface{}{
 		"project_id":          planInput.ProjectID,
-		"platform":            planInput.Platform,
+		"idiom_name":          planInput.IdiomName,
+		"idiom_name_en":       planInput.IdiomNameEn,
 		"category":            planInput.Category,
 		"narration_language":  planInput.NarrationLanguage,
 		"target_duration_sec": planInput.TargetDurationSec,
-		"tone":                planInput.Tone,
 		"aspect_ratio":        planInput.AspectRatio,
 		"resolution":          planInput.Resolution,
-		"image_urls":          imageURLs,
 	}
 
 	taskID, err := queue.PublishVideoTask("plan.v1", map[string]interface{}{
@@ -129,19 +127,10 @@ func (ctrl *VideoController) SubmitPlan(c *gin.Context) {
 		response.BadRequest(c, fmt.Errorf("project_id missing"), "request_payload.project_id is required")
 		return
 	}
-	var schema deepseek.ProjectPlanSchema
-	if err := json.Unmarshal(req.Plan, &schema); err != nil {
-		response.BadRequest(c, err, "plan parse failed")
-		return
-	}
-	if len(schema.Scenes) == 0 {
-		response.BadRequest(c, fmt.Errorf("scenes empty"), "plan.scenes is required")
-		return
-	}
 
 	taskID, err := queue.PublishVideoTask("plan.v1", map[string]interface{}{
 		"request_payload": requestPayload,
-		"plan":            schema,
+		"plan":            req.Plan,
 	})
 	if err != nil {
 		response.Abort500(c, "enqueue plan task failed: "+err.Error())
@@ -156,6 +145,43 @@ func (ctrl *VideoController) SubmitPlan(c *gin.Context) {
 	})
 }
 
+func (ctrl *VideoController) CreatePodcastDialogue(c *gin.Context) {
+	var req video.CreatePodcastDialogueRequest
+	if !ctrl.BindJSON(c, &req) {
+		return
+	}
+
+	projectSeed := req.Title
+	if strings.TrimSpace(projectSeed) == "" {
+		projectSeed = req.ScriptFilename
+	}
+	projectID := buildProjectID(projectSeed)
+
+	payload := map[string]interface{}{
+		"project_id":      projectID,
+		"title":           strings.TrimSpace(req.Title),
+		"script_filename": strings.TrimSpace(req.ScriptFilename),
+		"bg_img_filename": strings.TrimSpace(req.BgImgFilename),
+		"target_platform": defaultIfEmpty(strings.TrimSpace(req.TargetPlatform), "youtube"),
+		"aspect_ratio":    defaultIfEmpty(strings.TrimSpace(req.AspectRatio), "16:9"),
+		"resolution":      defaultIfEmpty(strings.TrimSpace(req.Resolution), defaultPodcastResolution()),
+		"design_style":    defaultInt(req.DesignStyle, 1),
+	}
+
+	taskID, err := queue.PublishVideoTask("podcast.audio.generate.v1", payload)
+	if err != nil {
+		response.Abort500(c, "enqueue podcast audio task failed: "+err.Error())
+		return
+	}
+
+	response.JSON(c, gin.H{
+		"message":    "podcast dialogue accepted",
+		"project_id": projectID,
+		"task_id":    taskID,
+		"task_type":  "podcast.audio.generate.v1",
+	})
+}
+
 func anyString(v interface{}) string {
 	if s, ok := v.(string); ok {
 		return s
@@ -163,8 +189,8 @@ func anyString(v interface{}) string {
 	return ""
 }
 
-func buildIdiomProjectID(idiomNameEn string) string {
-	englishName := strings.TrimSpace(idiomNameEn)
+func buildProjectID(seed string) string {
+	englishName := strings.TrimSpace(seed)
 	slug := slugForID(englishName)
 	return fmt.Sprintf("pro_%d_%s", time.Now().UnixNano(), slug)
 }
@@ -176,21 +202,19 @@ func defaultIfEmpty(value, fallback string) string {
 	return value
 }
 
-// 如果传了aspect_ratio就用传的；如果没传但指定了平台，就用平台默认的；否则用 fallback。
-func resolveAspectRatio(value, platform, fallback string) string {
-	if value != "" {
-		return value
-	}
-	switch strings.ToLower(strings.TrimSpace(platform)) {
-	case "tiktok":
-		return "9:16"
-	case "youtube":
-		return fallback
-	case "both":
-		return "9:16"
-	default:
+func defaultInt(value, fallback int) int {
+	if value == 0 {
 		return fallback
 	}
+	return value
+}
+
+func defaultPodcastResolution() string {
+	mode := strings.ToLower(strings.TrimSpace(fmt.Sprint(appconfig.Env("PODCAST_MODE", "debug"))))
+	if mode == "production" {
+		return "1080p"
+	}
+	return "480p"
 }
 
 func slugForID(s string) string {
@@ -210,72 +234,183 @@ func slugForID(s string) string {
 	return s
 }
 
-func generateReferenceImages(plan deepseek.ProjectPlanSchema) ([]string, error) {
+func generateReferenceImages(plan deepseek.ProjectPlanSchema) ([]string, []referenceImage, error) {
 	cfg := wanxiang.LoadConfig()
 	if !cfg.Enabled {
-		return nil, nil
+		return nil, nil, nil
 	}
+	// One image per prompt task to keep prompt->image mapping stable.
+	cfg.NumImages = 1
 
-	charPrompt := buildCharacterImagePrompt(plan)
-	worldPrompt := buildWorldImagePrompt(plan)
+	tasks := buildCharacterImagePrompt(plan)
+	tasks = append(tasks, buildWorldImagePrompt(plan)...)
 	negative := strings.TrimSpace(plan.VisualBible.NegativePrompt)
-
-	out := make([]string, 0, 2)
-	if charPrompt != "" {
+	out := make([]string, 0, len(tasks))
+	refs := make([]referenceImage, 0, len(tasks))
+	for _, task := range tasks {
+		if strings.TrimSpace(task.Prompt) == "" {
+			continue
+		}
+		logger.InfoString("wanxiang", task.Label+"_prompt", task.Prompt)
 		res, err := wanxiang.Generate(cfg, wanxiang.GenerateRequest{
-			Prompt:         charPrompt,
+			Prompt:         task.Prompt,
 			NegativePrompt: negative,
 		})
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		if len(res.ImageURLs) > 0 {
-			out = append(out, res.ImageURLs[0])
+		url := ""
+		if len(res.ImageURLs) > 0 && strings.TrimSpace(res.ImageURLs[0]) != "" {
+			url = strings.TrimSpace(res.ImageURLs[0])
+			out = append(out, url)
 		}
-	}
-
-	if worldPrompt != "" {
-		res, err := wanxiang.Generate(cfg, wanxiang.GenerateRequest{
-			Prompt:         worldPrompt,
-			NegativePrompt: negative,
+		refs = append(refs, referenceImage{
+			Label:    task.Label,
+			Kind:     task.Kind,
+			ObjectID: task.ObjectID,
+			TaskID:   strings.TrimSpace(res.TaskID),
+			ImageURL: url,
 		})
-		if err != nil {
-			return nil, err
-		}
-		if len(res.ImageURLs) > 0 {
-			out = append(out, res.ImageURLs[0])
-		}
+		logger.DebugJSON("wanxiang", "image_urls", out)
 	}
-
-	logger.DebugJSON("wanxiang", "image_urls", out)
-	return out, nil
+	logger.DebugJSON("wanxiang", "reference_images", refs)
+	return out, refs, nil
 }
 
-func buildCharacterImagePrompt(plan deepseek.ProjectPlanSchema) string {
-	if len(plan.Characters) == 0 {
-		return ""
+func buildCharacterImagePrompt(plan deepseek.ProjectPlanSchema) []referencePromptTask {
+	vb := visualBiblePrompt(plan)
+
+	out := make([]referencePromptTask, 0, len(plan.ObjectRegistry.Characters))
+	for _, character := range plan.ObjectRegistry.Characters {
+		id := strings.TrimSpace(character.ID)
+		if id == "" {
+			continue
+		}
+		detail := immutableSummary(character.Immutable)
+		prompt := fmt.Sprintf(
+			"Character concept art for Chinese idiom short-video. Character ID: %s. Immutable traits: %s. %s. Single character only, full body, clear silhouette, neutral clean background, no text, no watermark.",
+			id,
+			detail,
+			vb,
+		)
+		out = append(out, referencePromptTask{
+			Label:    "character:" + id,
+			Kind:     "character",
+			ObjectID: id,
+			Prompt:   prompt,
+		})
 	}
-	style := strings.TrimSpace(plan.VisualBible.StyleAnchor)
-	characterAnchor := strings.TrimSpace(plan.VisualBible.CharacterAnchor)
-	return fmt.Sprintf(
-		"Character concept art for Chinese idiom short-video. Characters: %s. Style: %s. Character anchor: %s. Clean background, full body, clear costume and silhouette, high readability.",
-		strings.Join(plan.Characters, ", "),
-		style,
-		characterAnchor,
-	)
+	return out
 }
 
-func buildWorldImagePrompt(plan deepseek.ProjectPlanSchema) string {
-	if len(plan.SceneElements) == 0 && len(plan.Props) == 0 {
+func buildWorldImagePrompt(plan deepseek.ProjectPlanSchema) []referencePromptTask {
+	vb := visualBiblePrompt(plan)
+
+	out := make([]referencePromptTask, 0, 2)
+
+	// propsSummary := objectRegistrySummary(plan.ObjectRegistry.Props)
+	// if propsSummary != "" {
+	// 	out = append(out, referencePromptTask{
+	// 		Label:  "props:all",
+	// 		Kind:   "props",
+	// 		Prompt: fmt.Sprintf("Props concept art for Chinese idiom short-video. Props: %s. %s. No characters, neutral display background, clear material and shape details, no text, no watermark.", propsSummary, vb),
+	// 	})
+	// }
+
+	envSummary := objectRegistrySummary(plan.ObjectRegistry.Environments)
+	if envSummary != "" {
+		out = append(out, referencePromptTask{
+			Label:  "environment:all",
+			Kind:   "environment",
+			Prompt: fmt.Sprintf("Environment concept art for Chinese idiom short-video. Environments: %s. %s. No characters, wide composition, clear layout and depth, no text, no watermark.", envSummary, vb),
+		})
+	}
+
+	return out
+}
+
+func plannerObjectIDs(items []deepseek.PlanObjectSpec) []string {
+	out := make([]string, 0, len(items))
+	for _, item := range items {
+		id := strings.TrimSpace(item.ID)
+		if id != "" {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+func immutableSummary(immutable map[string]interface{}) string {
+	if len(immutable) == 0 {
 		return ""
 	}
+	keys := make([]string, 0, len(immutable))
+	for k := range immutable {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	parts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		value := strings.TrimSpace(anyToString(immutable[key]))
+		if value == "" {
+			continue
+		}
+		parts = append(parts, fmt.Sprintf("%s=%s", key, value))
+	}
+	return strings.Join(parts, "; ")
+}
+
+func objectRegistrySummary(items []deepseek.PlanObjectSpec) string {
+	if len(items) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(items))
+	for _, item := range items {
+		id := strings.TrimSpace(item.ID)
+		detail := immutableSummary(item.Immutable)
+		switch {
+		case id != "" && detail != "":
+			parts = append(parts, fmt.Sprintf("%s(%s)", id, detail))
+		case id != "":
+			parts = append(parts, id)
+		case detail != "":
+			parts = append(parts, detail)
+		}
+	}
+	return strings.Join(parts, " | ")
+}
+
+func anyToString(v interface{}) string {
+	switch val := v.(type) {
+	case string:
+		return val
+	case []interface{}:
+		parts := make([]string, 0, len(val))
+		for _, item := range val {
+			s := strings.TrimSpace(anyToString(item))
+			if s != "" {
+				parts = append(parts, s)
+			}
+		}
+		return strings.Join(parts, ", ")
+	default:
+		return fmt.Sprintf("%v", v)
+	}
+}
+
+func visualBiblePrompt(plan deepseek.ProjectPlanSchema) string {
 	style := strings.TrimSpace(plan.VisualBible.StyleAnchor)
-	environmentAnchor := strings.TrimSpace(plan.VisualBible.EnvironmentAnchor)
+	color := strings.TrimSpace(plan.VisualBible.ColorPalette)
+	lighting := strings.TrimSpace(plan.VisualBible.Lighting)
+	era := strings.TrimSpace(plan.VisualBible.EraSetting)
+	negative := strings.TrimSpace(plan.VisualBible.NegativePrompt)
 	return fmt.Sprintf(
-		"Environment and props concept art for Chinese idiom short-video. Scene elements: %s. Props: %s. Style: %s. Environment anchor: %s. Wide composition, no characters, clear prop details.",
-		strings.Join(plan.SceneElements, ", "),
-		strings.Join(plan.Props, ", "),
+		"Visual bible: style_anchor=%s; color_palette=%s; lighting=%s; era_setting=%s; negative_prompt=%s",
 		style,
-		environmentAnchor,
+		color,
+		lighting,
+		era,
+		negative,
 	)
 }

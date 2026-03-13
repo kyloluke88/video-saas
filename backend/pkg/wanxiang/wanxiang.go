@@ -242,13 +242,18 @@ func parseCreateResponse(raw []byte) ([]string, string, error) {
 
 func extractImageURLs(output map[string]interface{}) []string {
 	out := make([]string, 0, 4)
+	addURL := func(raw string) {
+		u := strings.TrimSpace(raw)
+		if u == "" || u == "<nil>" || strings.EqualFold(u, "null") {
+			return
+		}
+		out = append(out, u)
+	}
 
 	if results, ok := output["results"].([]interface{}); ok {
 		for _, item := range results {
 			if m, ok := item.(map[string]interface{}); ok {
-				if u := strings.TrimSpace(asString(m["url"])); u != "" {
-					out = append(out, u)
-				}
+				addURL(asString(m["url"]))
 			}
 		}
 	}
@@ -269,12 +274,8 @@ func extractImageURLs(output map[string]interface{}) []string {
 				if !ok {
 					continue
 				}
-				if u := strings.TrimSpace(asString(cm["url"])); u != "" {
-					out = append(out, u)
-				}
-				if u := strings.TrimSpace(asString(cm["image"])); u != "" {
-					out = append(out, u)
-				}
+				addURL(asString(cm["url"]))
+				addURL(asString(cm["image"]))
 			}
 		}
 	}
@@ -284,9 +285,15 @@ func extractImageURLs(output map[string]interface{}) []string {
 
 func asString(v interface{}) string {
 	switch t := v.(type) {
+	case nil:
+		return ""
 	case string:
 		return t
 	default:
-		return fmt.Sprintf("%v", v)
+		s := strings.TrimSpace(fmt.Sprintf("%v", v))
+		if s == "" || s == "<nil>" || strings.EqualFold(s, "null") {
+			return ""
+		}
+		return s
 	}
 }

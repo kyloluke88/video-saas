@@ -1,12 +1,15 @@
 package config
 
-import "api/pkg/config"
-import "github.com/spf13/cast"
+import (
+	"api/pkg/config"
+
+	"github.com/spf13/cast"
+)
 
 func init() {
 	config.Add("wanxiang", func() map[string]interface{} {
 		return map[string]interface{}{
-			"enabled":            cast.ToBool(config.Env("WANXIANG_ENABLED", false)),
+			"enabled":            cast.ToBool(config.Env("WANXIANG_ENABLED", true)),
 			"base_url":           config.Env("WANXIANG_BASE_URL", "https://dashscope.aliyuncs.com"),
 			"api_key":            config.Env("WANXIANG_API_KEY", config.Env("DASHSCOPE_API_KEY", "")),
 			"model":              config.Env("WANXIANG_MODEL", "wan2.6-t2i"),

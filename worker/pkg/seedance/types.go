@@ -11,13 +11,13 @@ type Config struct {
 }
 
 type GenerateRequest struct {
-	Prompt        string   `json:"prompt"`
-	AspectRatio   string   `json:"aspect_ratio,omitempty"`
-	Resolution    string   `json:"resolution,omitempty"`
-	Duration      string   `json:"duration,omitempty"`
-	GenerateAudio bool     `json:"generate_audio"`
-	FixedLens     bool     `json:"fixed_lens"`
-	ImageURLs     []string `json:"image_urls,omitempty"`
+	Prompt         string `json:"prompt"`
+	AspectRatio    string `json:"aspect_ratio,omitempty"`
+	Resolution     string `json:"resolution,omitempty"`
+	Duration       string `json:"duration,omitempty"`
+	NegativePrompt string `json:"negative_prompt,omitempty"`
+	GenerateAudio  bool   `json:"generate_audio"`
+	FixedLens      bool   `json:"fixed_lens"`
 }
 
 type GenerateResult struct {

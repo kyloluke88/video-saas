@@ -9,5 +9,8 @@ import (
 func Initialize(env string) error {
 	btsConfig.Initialize()
 	config.InitConfig(env)
-	return logger.InitLogger(config.Get[string]("log.filename"))
+	if err := logger.InitLogger(config.Get[string]("log.filename")); err != nil {
+		return err
+	}
+	return nil
 }

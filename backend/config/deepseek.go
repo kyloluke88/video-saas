@@ -9,6 +9,7 @@ import (
 func init() {
 	config.Add("deepseek", func() map[string]interface{} {
 		return map[string]interface{}{
+			"enable":           cast.ToBool(config.Env("DEEPSEEK_ENABLED", true)),
 			"base_url":         config.Env("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1"),
 			"api_key":          config.Env("DEEPSEEK_API_KEY", ""),
 			"model":            config.Env("DEEPSEEK_MODEL", "deepseek-chat"),
