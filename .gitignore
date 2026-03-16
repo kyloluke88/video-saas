@@ -40,6 +40,8 @@ artifacts/
 worker/storage/logs/
 worker/outputs/
 worker/worker/
+worker/.cache/
+worker/doc/contentLLM/temp.md
 backend/storage/logs/
 
 # Env files

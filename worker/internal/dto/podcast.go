@@ -1,5 +1,10 @@
 package dto
 
+import (
+	"fmt"
+	"strings"
+)
+
 type PodcastAudioGeneratePayload struct {
 	ProjectID       string `json:"project_id"`
 	Lang            string `json:"lang"`
@@ -139,4 +144,102 @@ func (s *PodcastScript) SyncBlocksFromSegments() {
 			s.Blocks[i].Segments[j] = updated
 		}
 	}
+}
+
+func (s *PodcastScript) RenumberStructureIDs() {
+	if len(s.Blocks) == 0 {
+		for i := range s.Segments {
+			s.Segments[i].SegmentID = formatSegmentID(i + 1)
+		}
+		return
+	}
+
+	chapterMetaByOldID := make(map[string]PodcastYouTubeChapter, len(s.YouTube.Chapters))
+	for _, chapter := range s.YouTube.Chapters {
+		if id := strings.TrimSpace(chapter.ChapterID); id != "" {
+			chapterMetaByOldID[id] = chapter
+		}
+	}
+
+	newChapterIDByOldID := make(map[string]string, len(s.Blocks))
+	chapterIndexByNewID := make(map[string]int, len(s.Blocks))
+	chapters := make([]PodcastYouTubeChapter, 0, len(s.YouTube.Chapters))
+
+	nextChapter := 1
+	nextBlock := 1
+	nextSegment := 1
+
+	for i := range s.Blocks {
+		oldChapterID := normalizedBlockChapterKey(s.Blocks[i], i)
+		newChapterID, ok := newChapterIDByOldID[oldChapterID]
+		if !ok {
+			newChapterID = formatChapterID(nextChapter)
+			nextChapter++
+			newChapterIDByOldID[oldChapterID] = newChapterID
+
+			meta := chapterMetaByOldID[oldChapterID]
+			chapters = append(chapters, PodcastYouTubeChapter{
+				ChapterID: newChapterID,
+				TitleEN:   meta.TitleEN,
+				TitleJA:   meta.TitleJA,
+				TitleZH:   meta.TitleZH,
+				BlockIDs:  make([]string, 0, 2),
+			})
+			chapterIndexByNewID[newChapterID] = len(chapters) - 1
+		}
+
+		s.Blocks[i].ChapterID = newChapterID
+		s.Blocks[i].TTSBlockID = formatBlockID(blockIDPrefix(s.Blocks[i]), nextBlock)
+		nextBlock++
+
+		chapters[chapterIndexByNewID[newChapterID]].BlockIDs = append(
+			chapters[chapterIndexByNewID[newChapterID]].BlockIDs,
+			s.Blocks[i].TTSBlockID,
+		)
+
+		for j := range s.Blocks[i].Segments {
+			s.Blocks[i].Segments[j].SegmentID = formatSegmentID(nextSegment)
+			nextSegment++
+		}
+	}
+
+	s.YouTube.Chapters = chapters
+	s.RefreshSegmentsFromBlocks()
+}
+
+func normalizedBlockChapterKey(block PodcastBlock, index int) string {
+	if value := strings.TrimSpace(block.ChapterID); value != "" {
+		return value
+	}
+	return fmt.Sprintf("__chapter_%03d", index+1)
+}
+
+func blockIDPrefix(block PodcastBlock) string {
+	if value := strings.TrimSpace(block.MacroBlock); value != "" {
+		return value
+	}
+	raw := strings.TrimSpace(block.TTSBlockID)
+	if raw == "" {
+		return "block"
+	}
+	if idx := strings.Index(raw, "."); idx > 0 {
+		return raw[:idx]
+	}
+	return raw
+}
+
+func formatChapterID(index int) string {
+	return fmt.Sprintf("ch_%03d", index)
+}
+
+func formatBlockID(prefix string, index int) string {
+	clean := strings.TrimSpace(prefix)
+	if clean == "" {
+		clean = "block"
+	}
+	return fmt.Sprintf("%s.%d", clean, index)
+}
+
+func formatSegmentID(index int) string {
+	return fmt.Sprintf("seg_%03d", index)
 }

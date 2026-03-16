@@ -15,6 +15,7 @@ type audioArtifacts struct {
 	dialoguePath     string
 	alignedPath      string
 	segmentsDir      string
+	dialogueClipsDir string
 	ttsResponsesDir  string
 	silencePath      string
 	shortSilencePath string
@@ -26,11 +27,15 @@ func prepareAudioArtifacts(projectDir string) (audioArtifacts, error) {
 		dialoguePath:     filepath.Join(projectDir, "dialogue.mp3"),
 		alignedPath:      filepath.Join(projectDir, "script_aligned.json"),
 		segmentsDir:      filepath.Join(projectDir, "segments"),
+		dialogueClipsDir: filepath.Join(projectDir, "dialogue_clips"),
 		ttsResponsesDir:  filepath.Join(projectDir, "tts_responses"),
 		silencePath:      filepath.Join(projectDir, "segment_gap.mp3"),
 		shortSilencePath: filepath.Join(projectDir, "segment_gap_same_speaker.mp3"),
 	}
 	if err := os.MkdirAll(artifacts.segmentsDir, 0o755); err != nil {
+		return audioArtifacts{}, err
+	}
+	if err := os.MkdirAll(artifacts.dialogueClipsDir, 0o755); err != nil {
 		return audioArtifacts{}, err
 	}
 	if err := os.MkdirAll(artifacts.ttsResponsesDir, 0o755); err != nil {
@@ -101,9 +106,15 @@ func persistAlignedCheckpoint(path string, script dto.PodcastScript) error {
 	return writeJSON(path, checkpoint)
 }
 
-func finalizeAlignedScript(projectID, alignedPath string, script dto.PodcastScript, contentProfile string) (dto.PodcastScript, error) {
+func finalizeAlignedScript(projectID, alignedPath, dialoguePath string, script dto.PodcastScript, contentProfile string) (dto.PodcastScript, error) {
 	finalScript := script
 	finalScript.SyncBlocksFromSegments()
+	mergedScript, err := applyStartEndTemplates(projectID, dialoguePath, finalScript)
+	if err != nil {
+		return dto.PodcastScript{}, err
+	}
+	finalScript = mergedScript
+	finalScript.RenumberStructureIDs()
 	if err := writeJSON(alignedPath, finalScript); err != nil {
 		return dto.PodcastScript{}, err
 	}

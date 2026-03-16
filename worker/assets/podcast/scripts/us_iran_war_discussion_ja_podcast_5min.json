@@ -1,0 +1,1756 @@
+{
+  "language": "ja",
+  "audience_language": "en",
+  "difficulty_level": "N3-N2",
+  "target_duration_minutes": 5,
+  "min_chars_per_segment": 15,
+  "max_chars_per_segment": 42,
+  "title": "遠い戦争が近く感じるとき",
+  "youtube": {
+    "publish_title": "Why a Distant War Feels Close | 遠い戦争が近く感じる理由",
+    "chapters": [
+      {
+        "chapter_id": "ch_001",
+        "title_en": "Topic Hook",
+        "title_ja": "話題の入り口",
+        "block_ids": [
+          "theme_statement.1",
+          "comment_hook.2"
+        ]
+      },
+      {
+        "chapter_id": "ch_002",
+        "title_en": "Why It Feels Personal",
+        "title_ja": "生活に近づく理由",
+        "block_ids": [
+          "teaching_point_1.3",
+          "example_or_story.4",
+          "teaching_point_2.5"
+        ]
+      },
+      {
+        "chapter_id": "ch_003",
+        "title_en": "Views and Misunderstandings",
+        "title_ja": "見方の違いと誤解",
+        "block_ids": [
+          "teaching_point_3.6",
+          "example_or_story.7",
+          "comment_hook.8",
+          "teaching_point_3.9"
+        ]
+      },
+      {
+        "chapter_id": "ch_004",
+        "title_en": "Wrap-up",
+        "title_ja": "まとめ",
+        "block_ids": [
+          "summary_cta.10"
+        ]
+      }
+    ],
+    "in_this_episode_you_will_learn": [
+      "How a distant war can still affect daily life through prices, logistics, and mood.",
+      "Why different people react differently to the same international issue.",
+      "How to talk about a difficult topic in Japanese without needing perfect knowledge first.",
+      "How to keep some emotional distance from heavy news while staying thoughtful."
+    ],
+    "description_intro": [
+      "This episode is a gentle Japanese conversation about discussing a possible war between the United States and Iran without turning it into a hard news lecture. Yui and Akira focus on stable, everyday angles that Japanese learners can actually follow.",
+      "You will hear natural spoken Japanese about anxiety, prices, information overload, misunderstandings, and why global conflict can still feel close to ordinary life. The language stays mostly around the lower side of the N3-N2 range so it remains useful for listening practice."
+    ]
+  },
+  "blocks": [
+    {
+      "macro_block": "theme_statement",
+      "chapter_id": "ch_001",
+      "tts_block_id": "theme_statement.1",
+      "purpose": "固定の開頭テンプレートを受けて、そのまま今日の話題へ入る",
+      "segments": [
+        {
+          "segment_id": "seg_001",
+          "speaker": "female",
+          "display_ja": "今日の話題って、正直かなり重いけど、避けて通りにくい感じがありますよね。",
+          "tts_ja": "[thoughtful] 今日の話題って、正直かなり重いけど、避けて通りにくい感じがありますよね。",
+          "en": "Today’s topic feels heavy, but it also feels hard to avoid, right?",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "今日の話題",
+              "reading": "きょうのわだい"
+            },
+            {
+              "surface": "正直",
+              "reading": "しょうじき"
+            },
+            {
+              "surface": "重い",
+              "reading": "おもい"
+            },
+            {
+              "surface": "避けて通りにくい感じ",
+              "reading": "さけてとおりにくいかんじ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_002",
+          "speaker": "male",
+          "display_ja": "そうですね。アメリカとイランの戦争の話は、急に遠くない話にもなりますよね。",
+          "tts_ja": "そうですね。アメリカとイランの戦争の話は、急に遠くない話にもなりますよね。",
+          "en": "Yeah. A discussion about war between the U.S. and Iran suddenly doesn’t feel that far away.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "戦争",
+              "reading": "せんそう"
+            },
+            {
+              "surface": "話",
+              "reading": "はなし"
+            },
+            {
+              "surface": "急に",
+              "reading": "きゅうに"
+            },
+            {
+              "surface": "遠く",
+              "reading": "とおく"
+            },
+            {
+              "surface": "話",
+              "reading": "はなし"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_003",
+          "speaker": "female",
+          "display_ja": "でも、遠い国のことだと感じる人も、今でもやっぱり多い気がするんですよね。",
+          "tts_ja": "でも、遠い国のことだと感じる人も、今でもやっぱり多い気がするんですよね。",
+          "en": "But I think a lot of people still feel like it’s about countries far away.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "遠い国",
+              "reading": "とおいくに"
+            },
+            {
+              "surface": "感じる",
+              "reading": "かんじる"
+            },
+            {
+              "surface": "人",
+              "reading": "ひと"
+            },
+            {
+              "surface": "今",
+              "reading": "いま"
+            },
+            {
+              "surface": "多い",
+              "reading": "おおい"
+            },
+            {
+              "surface": "気",
+              "reading": "き"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_004",
+          "speaker": "male",
+          "display_ja": "その感覚も自然ですし、逆に不安だけがどうしても強くなる人も多いですよね。",
+          "tts_ja": "その感覚も自然ですし、逆に不安だけがどうしても強くなる人も多いですよね。",
+          "en": "That feeling is natural too, and for some people the anxiety just gets stronger.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "感覚",
+              "reading": "かんかく"
+            },
+            {
+              "surface": "自然",
+              "reading": "しぜん"
+            },
+            {
+              "surface": "逆",
+              "reading": "ぎゃく"
+            },
+            {
+              "surface": "不安",
+              "reading": "ふあん"
+            },
+            {
+              "surface": "強く",
+              "reading": "つよく"
+            },
+            {
+              "surface": "人",
+              "reading": "ひと"
+            },
+            {
+              "surface": "多い",
+              "reading": "おおい"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_005",
+          "speaker": "female",
+          "display_ja": "私は、何が本当に自分に関係あるのか、そこがやっぱりいちばん迷いやすいんです。",
+          "tts_ja": "私は、何が本当に自分に関係あるのか、そこがやっぱりいちばん迷いやすいんです。",
+          "en": "For me, the hardest part is figuring out what really has something to do with my own life.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "私",
+              "reading": "わたし"
+            },
+            {
+              "surface": "何",
+              "reading": "なに"
+            },
+            {
+              "surface": "本当に",
+              "reading": "ほんとうに"
+            },
+            {
+              "surface": "自分",
+              "reading": "じぶん"
+            },
+            {
+              "surface": "関係",
+              "reading": "かんけい"
+            },
+            {
+              "surface": "迷いやすい",
+              "reading": "まよいやすい"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_006",
+          "speaker": "male",
+          "display_ja": "今日はそこを、生活の目線に近づけながら、ゆっくり見ていきたいと思います。",
+          "tts_ja": "今日はそこを、生活の目線に近づけながら、ゆっくり見ていきたいと思います。",
+          "en": "Today I want to look at it slowly, from a perspective that feels closer to everyday life.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "今日",
+              "reading": "きょう"
+            },
+            {
+              "surface": "生活",
+              "reading": "せいかつ"
+            },
+            {
+              "surface": "目線",
+              "reading": "めせん"
+            },
+            {
+              "surface": "近づけながら",
+              "reading": "ちかづけながら"
+            },
+            {
+              "surface": "見て",
+              "reading": "みて"
+            },
+            {
+              "surface": "思います",
+              "reading": "おもいます"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "macro_block": "comment_hook",
+      "chapter_id": "ch_001",
+      "tts_block_id": "comment_hook.2",
+      "purpose": "怖さや不安の入り方を共有し、会話の温度を整える",
+      "segments": [
+        {
+          "segment_id": "seg_007",
+          "speaker": "female",
+          "display_ja": "戦争って聞くと、まず内容より先に、怖さが正直来てしまうことありませんか。",
+          "tts_ja": "戦争って聞くと、まず内容より先に、怖さが正直来てしまうことありませんか。",
+          "en": "When you hear the word war, doesn’t the fear hit before the details do?",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "戦争",
+              "reading": "せんそう"
+            },
+            {
+              "surface": "聞く",
+              "reading": "きく"
+            },
+            {
+              "surface": "内容",
+              "reading": "ないよう"
+            },
+            {
+              "surface": "先",
+              "reading": "さき"
+            },
+            {
+              "surface": "怖さ",
+              "reading": "こわさ"
+            },
+            {
+              "surface": "正直",
+              "reading": "しょうじき"
+            },
+            {
+              "surface": "来て",
+              "reading": "きて"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_008",
+          "speaker": "female",
+          "display_ja": "しかも映像や言葉が強いと、気持ちまでどうしても大きく揺れてしまいますよね。",
+          "tts_ja": "[sighs] しかも映像や言葉が強いと、気持ちまでどうしても大きく揺れてしまいますよね。",
+          "en": "And when the images and words are intense, your feelings can get shaken really hard.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "映像",
+              "reading": "えいぞう"
+            },
+            {
+              "surface": "言葉",
+              "reading": "ことば"
+            },
+            {
+              "surface": "強い",
+              "reading": "つよい"
+            },
+            {
+              "surface": "気持ち",
+              "reading": "きもち"
+            },
+            {
+              "surface": "大きく",
+              "reading": "おおきく"
+            },
+            {
+              "surface": "揺れて",
+              "reading": "ゆれて"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_009",
+          "speaker": "male",
+          "display_ja": "わかります。頭で整理する前に、心だけ先に緊張してしまう感じです。",
+          "tts_ja": "わかります。頭で整理する前に、心だけ先に緊張してしまう感じです。",
+          "en": "I get that. Before you can sort it out in your head, your heart is already tense.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "頭",
+              "reading": "あたま"
+            },
+            {
+              "surface": "整理",
+              "reading": "せいり"
+            },
+            {
+              "surface": "前",
+              "reading": "まえ"
+            },
+            {
+              "surface": "心",
+              "reading": "こころ"
+            },
+            {
+              "surface": "先",
+              "reading": "さき"
+            },
+            {
+              "surface": "緊張",
+              "reading": "きんちょう"
+            },
+            {
+              "surface": "感じ",
+              "reading": "かんじ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_010",
+          "speaker": "female",
+          "display_ja": "そうなんです。落ち着いて考える前に、体まで固くなるんですよね。",
+          "tts_ja": "そうなんです。落ち着いて考える前に、体まで固くなるんですよね。",
+          "en": "Exactly. Before I can think calmly, even my body feels stiff.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "落ち着いて考える",
+              "reading": "おちついてかんがえる"
+            },
+            {
+              "surface": "前",
+              "reading": "まえ"
+            },
+            {
+              "surface": "体",
+              "reading": "からだ"
+            },
+            {
+              "surface": "固く",
+              "reading": "かたく"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_011",
+          "speaker": "male",
+          "display_ja": "だから最初から全部を詳しく知る必要は、そこまでないと思うんです。",
+          "tts_ja": "だから最初から全部を詳しく知る必要は、そこまでないと思うんです。",
+          "en": "That’s why I don’t think you need to know every detail from the start.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "最初",
+              "reading": "さいしょ"
+            },
+            {
+              "surface": "全部",
+              "reading": "ぜんぶ"
+            },
+            {
+              "surface": "詳しく",
+              "reading": "くわしく"
+            },
+            {
+              "surface": "知る",
+              "reading": "しる"
+            },
+            {
+              "surface": "必要",
+              "reading": "ひつよう"
+            },
+            {
+              "surface": "思う",
+              "reading": "おもう"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_012",
+          "speaker": "female",
+          "display_ja": "まずは、なぜ話題になるのかだけでも、十分な入口になる気がします。",
+          "tts_ja": "まずは、なぜ話題になるのかだけでも、十分な入口になる気がします。",
+          "en": "Even just understanding why it becomes a big topic is a good enough entry point.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "話題",
+              "reading": "わだい"
+            },
+            {
+              "surface": "十分",
+              "reading": "じゅうぶん"
+            },
+            {
+              "surface": "入口",
+              "reading": "いりぐち"
+            },
+            {
+              "surface": "気",
+              "reading": "き"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "macro_block": "teaching_point_1",
+      "chapter_id": "ch_002",
+      "tts_block_id": "teaching_point_1.3",
+      "purpose": "エネルギーや値段の変化など、生活に近い影響へつなげる",
+      "segments": [
+        {
+          "segment_id": "seg_013",
+          "speaker": "male",
+          "display_ja": "大きい国どうしの対立は、やっぱりエネルギー不安につながりやすいですよね。",
+          "tts_ja": "大きい国どうしの対立は、やっぱりエネルギー不安につながりやすいですよね。",
+          "en": "When major countries clash, it often leads to anxiety about energy first.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "大きい国",
+              "reading": "おおきいくに"
+            },
+            {
+              "surface": "対立",
+              "reading": "たいりつ"
+            },
+            {
+              "surface": "不安",
+              "reading": "ふあん"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_014",
+          "speaker": "female",
+          "display_ja": "ガソリン代とか電気代みたいな話に、すっと近づいてくるんですね。",
+          "tts_ja": "ガソリン代とか電気代みたいな話に、すっと近づいてくるんですね。",
+          "en": "So it starts to feel connected to things like gas prices or electricity bills.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "代",
+              "reading": "だい"
+            },
+            {
+              "surface": "電気代",
+              "reading": "でんきだい"
+            },
+            {
+              "surface": "話",
+              "reading": "はなし"
+            },
+            {
+              "surface": "近づいて",
+              "reading": "ちかづいて"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_015",
+          "speaker": "male",
+          "display_ja": "そうです。戦場が遠くても、値段の変化は生活の近くまで来ますよね。",
+          "tts_ja": "そうです。戦場が遠くても、値段の変化は生活の近くまで来ますよね。",
+          "en": "Right. Even if the battlefield is far away, price changes come close to daily life.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "戦場",
+              "reading": "せんじょう"
+            },
+            {
+              "surface": "遠く",
+              "reading": "とおく"
+            },
+            {
+              "surface": "値段",
+              "reading": "ねだん"
+            },
+            {
+              "surface": "変化",
+              "reading": "へんか"
+            },
+            {
+              "surface": "生活",
+              "reading": "せいかつ"
+            },
+            {
+              "surface": "近く",
+              "reading": "ちかく"
+            },
+            {
+              "surface": "来ます",
+              "reading": "きます"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_016",
+          "speaker": "female",
+          "display_ja": "それは急に現実っぽくなりますね。ちょっと嫌なくらいの近さです。",
+          "tts_ja": "それは急に現実っぽくなりますね。ちょっと嫌なくらいの近さです。",
+          "en": "That suddenly makes it feel very real, and honestly kind of uncomfortably close.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "急に",
+              "reading": "きゅうに"
+            },
+            {
+              "surface": "現実",
+              "reading": "げんじつ"
+            },
+            {
+              "surface": "嫌な",
+              "reading": "いやな"
+            },
+            {
+              "surface": "近さ",
+              "reading": "ちかさ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_017",
+          "speaker": "male",
+          "display_ja": "あとは物流です。物が動きにくいと、生活費にもじわっと響いてくるんですよね。",
+          "tts_ja": "あとは物流です。物が動きにくいと、生活費にもじわっと響いてくるんですよね。",
+          "en": "Then there’s logistics. When goods stop moving smoothly, household costs feel it too.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "物流",
+              "reading": "ぶつりゅう"
+            },
+            {
+              "surface": "物",
+              "reading": "もの"
+            },
+            {
+              "surface": "動きにくい",
+              "reading": "うごきにくい"
+            },
+            {
+              "surface": "生活費",
+              "reading": "せいかつひ"
+            },
+            {
+              "surface": "響いて",
+              "reading": "ひびいて"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_018",
+          "speaker": "female",
+          "display_ja": "え、それって食べ物とか日用品にも、かなり関係してくるんですか。",
+          "tts_ja": "[curious] え、それって食べ物とか日用品にも、かなり関係してくるんですか。",
+          "en": "Wait, does that affect things like food and daily necessities too?",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "食べ物",
+              "reading": "たべもの"
+            },
+            {
+              "surface": "日用品",
+              "reading": "にちようひん"
+            },
+            {
+              "surface": "関係",
+              "reading": "かんけい"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "macro_block": "example_or_story",
+      "chapter_id": "ch_002",
+      "tts_block_id": "example_or_story.4",
+      "purpose": "情報疲れやじわじわ来る不安を、身近な感覚として話す",
+      "segments": [
+        {
+          "segment_id": "seg_019",
+          "speaker": "male",
+          "display_ja": "すぐ全部が変わるとは限りませんが、影響はやっぱり出やすくなるんですよね。",
+          "tts_ja": "すぐ全部が変わるとは限りませんが、影響はやっぱり出やすくなるんですよね。",
+          "en": "It doesn’t mean everything changes at once, but the effects can show up more easily.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "全部",
+              "reading": "ぜんぶ"
+            },
+            {
+              "surface": "変わる",
+              "reading": "かわる"
+            },
+            {
+              "surface": "限り",
+              "reading": "かぎり"
+            },
+            {
+              "surface": "影響",
+              "reading": "えいきょう"
+            },
+            {
+              "surface": "出やすく",
+              "reading": "でやすく"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_020",
+          "speaker": "female",
+          "display_ja": "なんか、じわじわ来る感じのほうが、私は不安かもしれませんね。",
+          "tts_ja": "なんか、じわじわ来る感じのほうが、私は不安かもしれませんね。",
+          "en": "Somehow, the slow creeping kind of impact feels more unsettling to me.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "来る",
+              "reading": "くる"
+            },
+            {
+              "surface": "感じ",
+              "reading": "かんじ"
+            },
+            {
+              "surface": "私",
+              "reading": "わたし"
+            },
+            {
+              "surface": "不安",
+              "reading": "ふあん"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_021",
+          "speaker": "male",
+          "display_ja": "そうなんですよ。突然よりも、長く続くほうが人は疲れやすいです。",
+          "tts_ja": "そうなんですよ。突然よりも、長く続くほうが人は疲れやすいです。",
+          "en": "Exactly. People often get more worn out when something drags on than when it hits all at once.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "突然",
+              "reading": "とつぜん"
+            },
+            {
+              "surface": "長く続く",
+              "reading": "ながくつづく"
+            },
+            {
+              "surface": "人",
+              "reading": "ひと"
+            },
+            {
+              "surface": "疲れやすい",
+              "reading": "つかれやすい"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_022",
+          "speaker": "female",
+          "display_ja": "ニュースを見続けるだけでも、本当に気持ちが重くなる日ってあるんですよね。",
+          "tts_ja": "[thoughtful] ニュースを見続けるだけでも、本当に気持ちが重くなる日ってあるんですよね。",
+          "en": "Even just keeping up with the news can make some days feel emotionally heavy.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "見続ける",
+              "reading": "みつづける"
+            },
+            {
+              "surface": "本当に",
+              "reading": "ほんとうに"
+            },
+            {
+              "surface": "気持ち",
+              "reading": "きもち"
+            },
+            {
+              "surface": "重くなる",
+              "reading": "おもくなる"
+            },
+            {
+              "surface": "日",
+              "reading": "ひ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_023",
+          "speaker": "male",
+          "display_ja": "だから情報との距離も大事です。やっぱり見すぎない工夫も必要になりますよね。",
+          "tts_ja": "だから情報との距離も大事です。やっぱり見すぎない工夫も必要になりますよね。",
+          "en": "That’s why having some distance from information matters too. You need ways not to overconsume it.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "情報",
+              "reading": "じょうほう"
+            },
+            {
+              "surface": "距離",
+              "reading": "きょり"
+            },
+            {
+              "surface": "大事",
+              "reading": "だいじ"
+            },
+            {
+              "surface": "見すぎない工夫",
+              "reading": "みすぎないくふう"
+            },
+            {
+              "surface": "必要",
+              "reading": "ひつよう"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_024",
+          "speaker": "female",
+          "display_ja": "知ることと、のみこまれないことを、分ける感覚も大事ですね。",
+          "tts_ja": "知ることと、のみこまれないことを、分ける感覚も大事ですね。",
+          "en": "Being informed and not getting swallowed by it are two different things.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "知る",
+              "reading": "しる"
+            },
+            {
+              "surface": "分ける",
+              "reading": "わける"
+            },
+            {
+              "surface": "感覚",
+              "reading": "かんかく"
+            },
+            {
+              "surface": "大事",
+              "reading": "だいじ"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "macro_block": "teaching_point_2",
+      "chapter_id": "ch_002",
+      "tts_block_id": "teaching_point_2.5",
+      "purpose": "立場や入口の違いで見え方が変わることを整理する",
+      "segments": [
+        {
+          "segment_id": "seg_025",
+          "speaker": "female",
+          "display_ja": "でも、こういう話って、見る立場によって見え方がかなり変わってきますよね。",
+          "tts_ja": "でも、こういう話って、見る立場によって見え方がかなり変わってきますよね。",
+          "en": "But with a topic like this, what you see really changes depending on your standpoint.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "話",
+              "reading": "はなし"
+            },
+            {
+              "surface": "見る立場",
+              "reading": "みるたちば"
+            },
+            {
+              "surface": "見え方",
+              "reading": "みえかた"
+            },
+            {
+              "surface": "変わって",
+              "reading": "かわって"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_026",
+          "speaker": "male",
+          "display_ja": "はい。安全保障で見る人もいれば、生活の不安から見る人もいます。",
+          "tts_ja": "はい。安全保障で見る人もいれば、生活の不安から見る人もいます。",
+          "en": "Yes. Some people look at it through security, and others through daily-life worries.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "安全保障",
+              "reading": "あんぜんほしょう"
+            },
+            {
+              "surface": "見る人",
+              "reading": "みるひと"
+            },
+            {
+              "surface": "生活",
+              "reading": "せいかつ"
+            },
+            {
+              "surface": "不安",
+              "reading": "ふあん"
+            },
+            {
+              "surface": "見る人",
+              "reading": "みるひと"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_027",
+          "speaker": "male",
+          "display_ja": "さらに歴史の記憶から考える人もいて、反応が分かれやすいです。",
+          "tts_ja": "さらに歴史の記憶から考える人もいて、反応が分かれやすいです。",
+          "en": "And some people think about it through history and memory, so reactions split pretty easily.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "歴史",
+              "reading": "れきし"
+            },
+            {
+              "surface": "記憶",
+              "reading": "きおく"
+            },
+            {
+              "surface": "考える人",
+              "reading": "かんがえるひと"
+            },
+            {
+              "surface": "反応",
+              "reading": "はんのう"
+            },
+            {
+              "surface": "分かれやすい",
+              "reading": "わかれやすい"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_028",
+          "speaker": "female",
+          "display_ja": "たしかに、同じ出来事でも、入っていく入口が違うんですね。",
+          "tts_ja": "たしかに、同じ出来事でも、入っていく入口が違うんですね。",
+          "en": "True. Even with the same event, people enter the conversation through different doors.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "同じ出来事",
+              "reading": "おなじできごと"
+            },
+            {
+              "surface": "入っていく",
+              "reading": "はいっていく"
+            },
+            {
+              "surface": "入口",
+              "reading": "いりぐち"
+            },
+            {
+              "surface": "違う",
+              "reading": "ちがう"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_029",
+          "speaker": "male",
+          "display_ja": "そうです。だから相手の反応を、すぐ否定しないほうがいいです。",
+          "tts_ja": "そうです。だから相手の反応を、すぐ否定しないほうがいいです。",
+          "en": "Exactly. That’s why it’s better not to reject someone else’s reaction too quickly.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "相手",
+              "reading": "あいて"
+            },
+            {
+              "surface": "反応",
+              "reading": "はんのう"
+            },
+            {
+              "surface": "否定",
+              "reading": "ひてい"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_030",
+          "speaker": "female",
+          "display_ja": "わからないまま強く言い切ると、会話が止まりやすいですもんね。",
+          "tts_ja": "わからないまま強く言い切ると、会話が止まりやすいですもんね。",
+          "en": "If you speak too strongly while still unsure, the conversation shuts down fast.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "強く言い切る",
+              "reading": "つよくいいきる"
+            },
+            {
+              "surface": "会話",
+              "reading": "かいわ"
+            },
+            {
+              "surface": "止まりやすい",
+              "reading": "とまりやすい"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "macro_block": "teaching_point_3",
+      "chapter_id": "ch_003",
+      "tts_block_id": "teaching_point_3.6",
+      "purpose": "日本から見た距離感と、日常へのつながりを具体化する",
+      "segments": [
+        {
+          "segment_id": "seg_031",
+          "speaker": "male",
+          "display_ja": "日本にいると、直接の戦場感覚は、どうしても持ちにくいところがありますしね。",
+          "tts_ja": "日本にいると、直接の戦場感覚は、どうしても持ちにくいところがありますしね。",
+          "en": "In Japan, it can be hard to feel the battlefield directly.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "日本",
+              "reading": "にほん"
+            },
+            {
+              "surface": "直接",
+              "reading": "ちょくせつ"
+            },
+            {
+              "surface": "戦場感覚",
+              "reading": "せんじょうかんかく"
+            },
+            {
+              "surface": "持ちにくい",
+              "reading": "もちにくい"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_032",
+          "speaker": "female",
+          "display_ja": "でも、円安とか物価の話と結びつくと、急に近く感じてしまいます。",
+          "tts_ja": "でも、円安とか物価の話と結びつくと、急に近く感じてしまいます。",
+          "en": "But once it connects to things like the weak yen or rising prices, it suddenly feels close.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "円安",
+              "reading": "えんやす"
+            },
+            {
+              "surface": "物価",
+              "reading": "ぶっか"
+            },
+            {
+              "surface": "話",
+              "reading": "はなし"
+            },
+            {
+              "surface": "結びつく",
+              "reading": "むすびつく"
+            },
+            {
+              "surface": "急に",
+              "reading": "きゅうに"
+            },
+            {
+              "surface": "近く感じて",
+              "reading": "ちかくかんじて"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_033",
+          "speaker": "male",
+          "display_ja": "留学や出張の予定がある人は、移動面でも気になってきますよね。",
+          "tts_ja": "留学や出張の予定がある人は、移動面でも気になってきますよね。",
+          "en": "If you have plans to study abroad or travel for work, mobility becomes a concern too.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "留学",
+              "reading": "りゅうがく"
+            },
+            {
+              "surface": "出張",
+              "reading": "しゅっちょう"
+            },
+            {
+              "surface": "予定",
+              "reading": "よてい"
+            },
+            {
+              "surface": "人",
+              "reading": "ひと"
+            },
+            {
+              "surface": "移動面",
+              "reading": "いどうめん"
+            },
+            {
+              "surface": "気",
+              "reading": "き"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_034",
+          "speaker": "female",
+          "display_ja": "ビザとか乗り継ぎの空気まで変わるかもって、考えてしまいます。",
+          "tts_ja": "ビザとか乗り継ぎの空気まで変わるかもって、考えてしまいます。",
+          "en": "You start wondering whether even visas or the mood around transit routes might change.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "乗り継ぎ",
+              "reading": "のりつぎ"
+            },
+            {
+              "surface": "空気",
+              "reading": "くうき"
+            },
+            {
+              "surface": "変わる",
+              "reading": "かわる"
+            },
+            {
+              "surface": "考えて",
+              "reading": "かんがえて"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_035",
+          "speaker": "male",
+          "display_ja": "そういう小さい不便が重なると、社会の緊張感にもつながります。",
+          "tts_ja": "そういう小さい不便が重なると、社会の緊張感にもつながります。",
+          "en": "When lots of small inconveniences pile up, they also become social tension.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "小さい不便",
+              "reading": "ちいさいふべん"
+            },
+            {
+              "surface": "重なる",
+              "reading": "かさなる"
+            },
+            {
+              "surface": "社会",
+              "reading": "しゃかい"
+            },
+            {
+              "surface": "緊張感",
+              "reading": "きんちょうかん"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_036",
+          "speaker": "female",
+          "display_ja": "大きな国際問題が、結局は日常の疲れになるんだなって思います。",
+          "tts_ja": "大きな国際問題が、結局は日常の疲れになるんだなって思います。",
+          "en": "A huge international issue can end up becoming everyday fatigue.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "大きな国際問題",
+              "reading": "おおきなこくさいもんだい"
+            },
+            {
+              "surface": "結局",
+              "reading": "けっきょく"
+            },
+            {
+              "surface": "日常",
+              "reading": "にちじょう"
+            },
+            {
+              "surface": "疲れ",
+              "reading": "つかれ"
+            },
+            {
+              "surface": "思います",
+              "reading": "おもいます"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "macro_block": "example_or_story",
+      "chapter_id": "ch_003",
+      "tts_block_id": "example_or_story.7",
+      "purpose": "単純化の危うさと、考える余白の大切さを会話で深める",
+      "segments": [
+        {
+          "segment_id": "seg_037",
+          "speaker": "female",
+          "display_ja": "あと、どちらかだけを悪者にすると、少し楽ですけど危ないですよね。",
+          "tts_ja": "[thoughtful] あと、どちらかだけを悪者にすると、少し楽ですけど危ないですよね。",
+          "en": "It feels easier if you make just one side the villain, but that can be dangerous.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "悪者",
+              "reading": "わるもの"
+            },
+            {
+              "surface": "少し楽",
+              "reading": "すこしらく"
+            },
+            {
+              "surface": "危ない",
+              "reading": "あぶない"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_038",
+          "speaker": "male",
+          "display_ja": "そうですね。単純な善悪だけでは、見えなくなる部分が多いです。",
+          "tts_ja": "そうですね。単純な善悪だけでは、見えなくなる部分が多いです。",
+          "en": "Yeah. A simple good-versus-evil frame hides too much.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "単純",
+              "reading": "たんじゅん"
+            },
+            {
+              "surface": "善悪",
+              "reading": "ぜんあく"
+            },
+            {
+              "surface": "見えなくなる部分",
+              "reading": "みえなくなるぶぶん"
+            },
+            {
+              "surface": "多い",
+              "reading": "おおい"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_039",
+          "speaker": "female",
+          "display_ja": "なのに、短い動画だと、一言で決めたくなる気持ちもあります。",
+          "tts_ja": "なのに、短い動画だと、一言で決めたくなる気持ちもあります。",
+          "en": "And yet with short videos, you kind of want to decide everything in one sentence.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "短い動画",
+              "reading": "みじかいどうが"
+            },
+            {
+              "surface": "一言",
+              "reading": "ひとこと"
+            },
+            {
+              "surface": "決めたく",
+              "reading": "きめたく"
+            },
+            {
+              "surface": "気持ち",
+              "reading": "きもち"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_040",
+          "speaker": "male",
+          "display_ja": "その速さは便利ですが、考える時間を減らしてしまうんですよね。",
+          "tts_ja": "その速さは便利ですが、考える時間を減らしてしまうんですよね。",
+          "en": "That speed is convenient, but it also takes away time to think.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "速さ",
+              "reading": "はやさ"
+            },
+            {
+              "surface": "便利",
+              "reading": "べんり"
+            },
+            {
+              "surface": "考える時間",
+              "reading": "かんがえるじかん"
+            },
+            {
+              "surface": "減らして",
+              "reading": "へらして"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_041",
+          "speaker": "female",
+          "display_ja": "ちょっと立ち止まって聞く姿勢だけでも、かなり違いそうです。",
+          "tts_ja": "ちょっと立ち止まって聞く姿勢だけでも、かなり違いそうです。",
+          "en": "Even just pausing and listening a little more carefully could change a lot.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "立ち止まって聞く姿勢",
+              "reading": "たちどまってきくしせい"
+            },
+            {
+              "surface": "違い",
+              "reading": "ちがい"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_042",
+          "speaker": "male",
+          "display_ja": "すぐ答えを出さずに残しておく力も、やっぱり大事だと思います。",
+          "tts_ja": "すぐ答えを出さずに残しておく力も、やっぱり大事だと思います。",
+          "en": "I think it also matters to leave some questions unanswered for a while.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "答え",
+              "reading": "こたえ"
+            },
+            {
+              "surface": "出さず",
+              "reading": "ださず"
+            },
+            {
+              "surface": "残しておく力",
+              "reading": "のこしておくちから"
+            },
+            {
+              "surface": "大事",
+              "reading": "だいじ"
+            },
+            {
+              "surface": "思います",
+              "reading": "おもいます"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "macro_block": "comment_hook",
+      "chapter_id": "ch_003",
+      "tts_block_id": "comment_hook.8",
+      "purpose": "よくある誤解をやわらかくほどき、話し始めるハードルを下げる",
+      "segments": [
+        {
+          "segment_id": "seg_043",
+          "speaker": "male",
+          "display_ja": "よくある誤解は、遠い争いは自分に無関係だという見方です。",
+          "tts_ja": "よくある誤解は、遠い争いは自分に無関係だという見方です。",
+          "en": "A common misunderstanding is thinking a distant conflict has nothing to do with you.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "誤解",
+              "reading": "ごかい"
+            },
+            {
+              "surface": "遠い争い",
+              "reading": "とおいあらそい"
+            },
+            {
+              "surface": "自分",
+              "reading": "じぶん"
+            },
+            {
+              "surface": "無関係",
+              "reading": "むかんけい"
+            },
+            {
+              "surface": "見方",
+              "reading": "みかた"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_044",
+          "speaker": "female",
+          "display_ja": "でも実際は、お金や気分や予定に、静かに入ってきますよね。",
+          "tts_ja": "でも実際は、お金や気分や予定に、静かに入ってきますよね。",
+          "en": "But in reality, it quietly enters your money, your mood, and your plans.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "実際",
+              "reading": "じっさい"
+            },
+            {
+              "surface": "お金",
+              "reading": "おかね"
+            },
+            {
+              "surface": "気分",
+              "reading": "きぶん"
+            },
+            {
+              "surface": "予定",
+              "reading": "よてい"
+            },
+            {
+              "surface": "静か",
+              "reading": "しずか"
+            },
+            {
+              "surface": "入って",
+              "reading": "はいって"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_045",
+          "speaker": "male",
+          "display_ja": "もう一つは、全部理解しないと話せないと思い込むことです。",
+          "tts_ja": "もう一つは、全部理解しないと話せないと思い込むことです。",
+          "en": "Another misunderstanding is thinking you need to understand everything before you can talk about it.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "一つ",
+              "reading": "ひとつ"
+            },
+            {
+              "surface": "全部理解",
+              "reading": "ぜんぶりかい"
+            },
+            {
+              "surface": "話せない",
+              "reading": "はなせない"
+            },
+            {
+              "surface": "思い込む",
+              "reading": "おもいこむ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_046",
+          "speaker": "female",
+          "display_ja": "完全に説明できなくても、感じた不安は話していいですよね。",
+          "tts_ja": "完全に説明できなくても、感じた不安は話していいですよね。",
+          "en": "Even if you can’t explain it perfectly, it’s still okay to talk about the anxiety you feel.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "完全",
+              "reading": "かんぜん"
+            },
+            {
+              "surface": "説明",
+              "reading": "せつめい"
+            },
+            {
+              "surface": "感じた",
+              "reading": "かんじた"
+            },
+            {
+              "surface": "不安",
+              "reading": "ふあん"
+            },
+            {
+              "surface": "話して",
+              "reading": "はなして"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_047",
+          "speaker": "male",
+          "display_ja": "はい。その一歩が、考える練習にも会話の練習にもなります。",
+          "tts_ja": "はい。その一歩が、考える練習にも会話の練習にもなります。",
+          "en": "Yes. That first step becomes practice in thinking and also practice in conversation.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "一歩",
+              "reading": "いっぽ"
+            },
+            {
+              "surface": "考える練習",
+              "reading": "かんがえるれんしゅう"
+            },
+            {
+              "surface": "会話",
+              "reading": "かいわ"
+            },
+            {
+              "surface": "練習",
+              "reading": "れんしゅう"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_048",
+          "speaker": "female",
+          "display_ja": "むしろ、わからないと言えるほうが、会話は始めやすい気がします。",
+          "tts_ja": "むしろ、わからないと言えるほうが、会話は始めやすい気がします。",
+          "en": "In a way, being able to say ‘I don’t know’ makes it easier to start talking.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "言える",
+              "reading": "いえる"
+            },
+            {
+              "surface": "会話",
+              "reading": "かいわ"
+            },
+            {
+              "surface": "始めやすい",
+              "reading": "はじめやすい"
+            },
+            {
+              "surface": "気",
+              "reading": "き"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "macro_block": "teaching_point_3",
+      "chapter_id": "ch_003",
+      "tts_block_id": "teaching_point_3.9",
+      "purpose": "距離感の取り方と、生活目線で考える利点をまとめる",
+      "segments": [
+        {
+          "segment_id": "seg_049",
+          "speaker": "male",
+          "display_ja": "それに、この話題は正しさだけでなく、距離感も大事なんですよね。",
+          "tts_ja": "それに、この話題は正しさだけでなく、距離感も大事なんですよね。",
+          "en": "And with this topic, not just correctness but distance matters too.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "話題",
+              "reading": "わだい"
+            },
+            {
+              "surface": "正しさ",
+              "reading": "ただしさ"
+            },
+            {
+              "surface": "距離感",
+              "reading": "きょりかん"
+            },
+            {
+              "surface": "大事",
+              "reading": "だいじ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_050",
+          "speaker": "female",
+          "display_ja": "近すぎても苦しいし、遠ざけすぎても現実が見えなくなります。",
+          "tts_ja": "近すぎても苦しいし、遠ざけすぎても現実が見えなくなります。",
+          "en": "If it feels too close, it hurts, but if you push it too far away, you stop seeing reality.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "近すぎても",
+              "reading": "ちかすぎても"
+            },
+            {
+              "surface": "苦しい",
+              "reading": "くるしい"
+            },
+            {
+              "surface": "遠ざけすぎても",
+              "reading": "とおざけすぎても"
+            },
+            {
+              "surface": "現実",
+              "reading": "げんじつ"
+            },
+            {
+              "surface": "見えなく",
+              "reading": "みえなく"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_051",
+          "speaker": "male",
+          "display_ja": "だから、生活への影響を入り口にすると、落ち着いて考えやすいです。",
+          "tts_ja": "だから、生活への影響を入り口にすると、落ち着いて考えやすいです。",
+          "en": "So if you start from how it affects everyday life, it becomes easier to think about calmly.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "生活",
+              "reading": "せいかつ"
+            },
+            {
+              "surface": "影響",
+              "reading": "えいきょう"
+            },
+            {
+              "surface": "入り口",
+              "reading": "いりぐち"
+            },
+            {
+              "surface": "落ち着いて考えやすい",
+              "reading": "おちついてかんがえやすい"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_052",
+          "speaker": "female",
+          "display_ja": "たしかに、その入り方なら、私でも少し整理して話せそうです。",
+          "tts_ja": "たしかに、その入り方なら、私でも少し整理して話せそうです。",
+          "en": "Yeah, if I start there, I feel like I could organize my thoughts a little better too.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "入り方",
+              "reading": "はいりかた"
+            },
+            {
+              "surface": "私",
+              "reading": "わたし"
+            },
+            {
+              "surface": "少し整理",
+              "reading": "すこしせいり"
+            },
+            {
+              "surface": "話せそう",
+              "reading": "はなせそう"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_053",
+          "speaker": "male",
+          "display_ja": "難しい国際関係でも、普通の生活に引きつけると見え方が変わります。",
+          "tts_ja": "難しい国際関係でも、普通の生活に引きつけると見え方が変わります。",
+          "en": "Even with difficult international relations, the view changes when you pull it closer to ordinary life.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "難しい国際関係",
+              "reading": "むずかしいこくさいかんけい"
+            },
+            {
+              "surface": "普通",
+              "reading": "ふつう"
+            },
+            {
+              "surface": "生活",
+              "reading": "せいかつ"
+            },
+            {
+              "surface": "引きつける",
+              "reading": "ひきつける"
+            },
+            {
+              "surface": "見え方",
+              "reading": "みえかた"
+            },
+            {
+              "surface": "変わります",
+              "reading": "かわります"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_054",
+          "speaker": "female",
+          "display_ja": "なんか、怖い話をそのまま飲みこむより、ずっと健全な感じがします。",
+          "tts_ja": "なんか、怖い話をそのまま飲みこむより、ずっと健全な感じがします。",
+          "en": "Somehow that feels much healthier than swallowing a scary topic whole.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "怖い話",
+              "reading": "こわいはなし"
+            },
+            {
+              "surface": "飲みこむ",
+              "reading": "のみこむ"
+            },
+            {
+              "surface": "健全",
+              "reading": "けんぜん"
+            },
+            {
+              "surface": "感じ",
+              "reading": "かんじ"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "macro_block": "summary_cta",
+      "chapter_id": "ch_004",
+      "tts_block_id": "summary_cta.10",
+      "purpose": "話題を回収しつつ、聞くことと話すことを次の練習へつなげる",
+      "segments": [
+        {
+          "segment_id": "seg_055",
+          "speaker": "female",
+          "display_ja": "今日みたいに、アメリカとイランの戦争を生活目線で見ると、少し整理しやすいですね。",
+          "tts_ja": "[thoughtful] 今日みたいに、アメリカとイランの戦争を生活目線で見ると、少し整理しやすいですね。",
+          "en": "Like today, looking at a possible U.S.-Iran war through the lens of daily life makes it easier to sort out.",
+          "summary": false,
+          "ruby_tokens": [
+            {
+              "surface": "今日",
+              "reading": "きょう"
+            },
+            {
+              "surface": "戦争",
+              "reading": "せんそう"
+            },
+            {
+              "surface": "生活目線",
+              "reading": "せいかつめせん"
+            },
+            {
+              "surface": "見る",
+              "reading": "みる"
+            },
+            {
+              "surface": "少し整理",
+              "reading": "すこしせいり"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_056",
+          "speaker": "male",
+          "display_ja": "難しい話でも、少しずつ聞いて話して、日本語の練習を続けていきたいですね。",
+          "tts_ja": "難しい話でも、少しずつ聞いて話して、日本語の練習を続けていきたいですね。",
+          "en": "Even with difficult topics, let’s keep listening, talking, and practicing Japanese little by little.",
+          "summary": true,
+          "ruby_tokens": [
+            {
+              "surface": "難しい話",
+              "reading": "むずかしいはなし"
+            },
+            {
+              "surface": "少しずつ",
+              "reading": "すこしずつ"
+            },
+            {
+              "surface": "聞いて",
+              "reading": "きいて"
+            },
+            {
+              "surface": "話して",
+              "reading": "はなして"
+            },
+            {
+              "surface": "日本語",
+              "reading": "にほんご"
+            },
+            {
+              "surface": "練習",
+              "reading": "れんしゅう"
+            },
+            {
+              "surface": "続けて",
+              "reading": "つづけて"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

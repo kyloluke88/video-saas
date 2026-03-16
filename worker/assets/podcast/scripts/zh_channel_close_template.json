@@ -1,0 +1,139 @@
+{
+  "language": "zh",
+  "audience_language": "en",
+  "difficulty_level": "HSK2-HSK3",
+  "target_duration_minutes": 5,
+  "title": "中文频道结尾模板",
+  "youtube": {
+    "publish_title": "Chinese Channel Closing Template | 中文频道结尾模板",
+    "chapters": [
+      {
+        "chapter_id": "ch_001",
+        "title_en": "Channel CTA",
+        "title_zh": "频道互动",
+        "block_ids": ["channel_cta.1"]
+      }
+    ],
+    "in_this_episode_you_will_learn": [
+      "How to end a Chinese episode with a natural reminder.",
+      "How to ask for likes and subscriptions in a friendly way.",
+      "How to close with a warm practice-oriented message."
+    ],
+    "description_intro": [
+      "This is a short Chinese closing template for the podcast channel.",
+      "It focuses on a natural wrap-up, a like-and-subscribe reminder, and encouragement to keep practicing Chinese."
+    ]
+  },
+  "blocks": [
+    {
+      "macro_block": "channel_cta",
+      "chapter_id": "ch_001",
+      "tts_block_id": "channel_cta.1",
+      "purpose": "结尾提醒点赞订阅并鼓励继续练习中文",
+      "segments": [
+        {
+          "segment_id": "seg_001",
+          "speaker": "female",
+          "zh": "如果今天这集对你有帮助，欢迎订阅我们，也别忘了点个赞。",
+          "en": "If today's episode was helpful, feel free to subscribe and don't forget to leave a like.",
+          "summary": false,
+          "tokens": [
+            { "char": "如", "pinyin": "rú" },
+            { "char": "果", "pinyin": "guǒ" },
+            { "char": "今", "pinyin": "jīn" },
+            { "char": "天", "pinyin": "tiān" },
+            { "char": "这", "pinyin": "zhè" },
+            { "char": "集", "pinyin": "jí" },
+            { "char": "对", "pinyin": "duì" },
+            { "char": "你", "pinyin": "nǐ" },
+            { "char": "有", "pinyin": "yǒu" },
+            { "char": "帮", "pinyin": "bāng" },
+            { "char": "助", "pinyin": "zhù" },
+            { "char": "，", "pinyin": "" },
+            { "char": "欢", "pinyin": "huān" },
+            { "char": "迎", "pinyin": "yíng" },
+            { "char": "订", "pinyin": "dìng" },
+            { "char": "阅", "pinyin": "yuè" },
+            { "char": "我", "pinyin": "wǒ" },
+            { "char": "们", "pinyin": "men" },
+            { "char": "，", "pinyin": "" },
+            { "char": "也", "pinyin": "yě" },
+            { "char": "别", "pinyin": "bié" },
+            { "char": "忘", "pinyin": "wàng" },
+            { "char": "了", "pinyin": "le" },
+            { "char": "点", "pinyin": "diǎn" },
+            { "char": "个", "pinyin": "gè" },
+            { "char": "赞", "pinyin": "zàn" },
+            { "char": "。", "pinyin": "" }
+          ]
+        },
+        {
+          "segment_id": "seg_002",
+          "speaker": "male",
+          "zh": "有你的支持，我们会继续做自然又好懂的中文节目。",
+          "en": "With your support, we'll keep making natural and easy-to-follow Chinese episodes.",
+          "summary": false,
+          "tokens": [
+            { "char": "有", "pinyin": "yǒu" },
+            { "char": "你", "pinyin": "nǐ" },
+            { "char": "的", "pinyin": "de" },
+            { "char": "支", "pinyin": "zhī" },
+            { "char": "持", "pinyin": "chí" },
+            { "char": "，", "pinyin": "" },
+            { "char": "我", "pinyin": "wǒ" },
+            { "char": "们", "pinyin": "men" },
+            { "char": "会", "pinyin": "huì" },
+            { "char": "继", "pinyin": "jì" },
+            { "char": "续", "pinyin": "xù" },
+            { "char": "做", "pinyin": "zuò" },
+            { "char": "自", "pinyin": "zì" },
+            { "char": "然", "pinyin": "rán" },
+            { "char": "又", "pinyin": "yòu" },
+            { "char": "好", "pinyin": "hǎo" },
+            { "char": "懂", "pinyin": "dǒng" },
+            { "char": "的", "pinyin": "de" },
+            { "char": "中", "pinyin": "zhōng" },
+            { "char": "文", "pinyin": "wén" },
+            { "char": "节", "pinyin": "jié" },
+            { "char": "目", "pinyin": "mù" },
+            { "char": "。", "pinyin": "" }
+          ]
+        },
+        {
+          "segment_id": "seg_003",
+          "speaker": "female",
+          "zh": "我们下次再见，也欢迎你继续听、继续说、继续练中文。",
+          "en": "See you next time, and you're always welcome to keep listening, keep speaking, and keep practicing Chinese.",
+          "summary": false,
+          "tokens": [
+            { "char": "我", "pinyin": "wǒ" },
+            { "char": "们", "pinyin": "men" },
+            { "char": "下", "pinyin": "xià" },
+            { "char": "次", "pinyin": "cì" },
+            { "char": "再", "pinyin": "zài" },
+            { "char": "见", "pinyin": "jiàn" },
+            { "char": "，", "pinyin": "" },
+            { "char": "也", "pinyin": "yě" },
+            { "char": "欢", "pinyin": "huān" },
+            { "char": "迎", "pinyin": "yíng" },
+            { "char": "你", "pinyin": "nǐ" },
+            { "char": "继", "pinyin": "jì" },
+            { "char": "续", "pinyin": "xù" },
+            { "char": "听", "pinyin": "tīng" },
+            { "char": "、", "pinyin": "" },
+            { "char": "继", "pinyin": "jì" },
+            { "char": "续", "pinyin": "xù" },
+            { "char": "说", "pinyin": "shuō" },
+            { "char": "、", "pinyin": "" },
+            { "char": "继", "pinyin": "jì" },
+            { "char": "续", "pinyin": "xù" },
+            { "char": "练", "pinyin": "liàn" },
+            { "char": "中", "pinyin": "zhōng" },
+            { "char": "文", "pinyin": "wén" },
+            { "char": "。", "pinyin": "" }
+          ]
+        }
+      ]
+    }
+  ]
+}

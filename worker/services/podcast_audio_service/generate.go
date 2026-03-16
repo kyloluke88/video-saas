@@ -15,6 +15,7 @@ import (
 	conf "worker/pkg/config"
 	"worker/pkg/tts"
 	"worker/pkg/tts/elevenlabs"
+	services "worker/services"
 	ffmpegcommon "worker/services/ffmpeg_service/common"
 )
 
@@ -79,7 +80,7 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 			return GenerateResult{}, err
 		}
 		reusable.Script.Language = language
-		finalScript, err := finalizeAlignedScript(input.ProjectID, artifacts.alignedPath, reusable.Script, contentProfile)
+		finalScript, err := finalizeAlignedScript(input.ProjectID, artifacts.alignedPath, artifacts.dialoguePath, reusable.Script, contentProfile)
 		if err != nil {
 			return GenerateResult{}, err
 		}
@@ -145,7 +146,7 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 	}
 
 	if isJapaneseLanguage(language) {
-		return generateJapaneseDialogue(input.ProjectID, script, artifacts, gapMs, maleProfile, femaleProfile)
+		return generateJapaneseDialogue(input.ProjectID, script, artifacts, gapMs, sameSpeakerGapMs, maleProfile, femaleProfile)
 	}
 
 	provider, err := newProvider(language)
@@ -242,7 +243,7 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 		return GenerateResult{}, err
 	}
 	log.Printf("🎼 dialogue audio ready project_id=%s path=%s parts=%d total_ms=%d", input.ProjectID, artifacts.dialoguePath, len(concatPaths), cursorMs)
-	alignedScript, err := finalizeAlignedScript(input.ProjectID, artifacts.alignedPath, script, contentProfile)
+	alignedScript, err := finalizeAlignedScript(input.ProjectID, artifacts.alignedPath, artifacts.dialoguePath, script, contentProfile)
 	if err != nil {
 		return GenerateResult{}, err
 	}
@@ -254,7 +255,7 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 	}, nil
 }
 
-func generateJapaneseDialogue(projectID string, script dto.PodcastScript, artifacts audioArtifacts, gapMs int, maleProfile, femaleProfile speakerProfile) (GenerateResult, error) {
+func generateJapaneseDialogue(projectID string, script dto.PodcastScript, artifacts audioArtifacts, gapMs, sameSpeakerGapMs int, maleProfile, femaleProfile speakerProfile) (GenerateResult, error) {
 	cfg := providerConfigForLanguage(script.Language)
 	provider, err := elevenlabs.New(cfg)
 	if err != nil {
@@ -262,8 +263,7 @@ func generateJapaneseDialogue(projectID string, script dto.PodcastScript, artifa
 	}
 	dialogueStability := conf.Get[float64]("worker.elevenlabs_podcast_dialogue_stability", 0.47)
 
-	concatPaths := make([]string, 0, len(script.Blocks)*2)
-	cursorMs := 0
+	blockAudioPaths := make([]string, len(script.Blocks))
 	for blockIndex, block := range script.Blocks {
 		if len(block.Segments) == 0 {
 			continue
@@ -271,11 +271,7 @@ func generateJapaneseDialogue(projectID string, script dto.PodcastScript, artifa
 		if existingPath, ok := existingUnitAudioPath(artifacts.segmentsDir, blockIndex, block.TTSBlockID, "mp3"); ok && blockCheckpointComplete(block, existingPath) {
 			log.Printf("♻️ dialogue block resume project_id=%s block=%s audio=%s window_end=%d",
 				projectID, block.TTSBlockID, existingPath, blockEndMS(block))
-			concatPaths = appendConcatPath(concatPaths, existingPath, gapMs > 0 && blockIndex != len(script.Blocks)-1, artifacts.silencePath)
-			cursorMs = blockEndMS(block)
-			if gapMs > 0 && blockIndex != len(script.Blocks)-1 {
-				cursorMs += gapMs
-			}
+			blockAudioPaths[blockIndex] = existingPath
 			continue
 		}
 
@@ -322,28 +318,27 @@ func generateJapaneseDialogue(projectID string, script dto.PodcastScript, artifa
 			return GenerateResult{}, err
 		}
 		durationMs := int(durationSec * 1000)
-		assignDialogueBlockTimes(&block, result, cursorMs, durationMs)
+		assignDialogueBlockTimes(&block, result, 0, durationMs)
 		script.Blocks[blockIndex] = block
+		blockAudioPaths[blockIndex] = blockPath
 		script.RefreshSegmentsFromBlocks()
 		if err := persistAlignedCheckpoint(artifacts.alignedPath, script); err != nil {
 			return GenerateResult{}, err
-		}
-
-		concatPaths = appendConcatPath(concatPaths, blockPath, gapMs > 0 && blockIndex != len(script.Blocks)-1, artifacts.silencePath)
-		cursorMs += durationMs
-		if gapMs > 0 && blockIndex != len(script.Blocks)-1 {
-			cursorMs += gapMs
 		}
 		log.Printf("✅ dialogue block done project_id=%s block=%s audio=%s duration_ms=%d timed_segments=%d",
 			projectID, block.TTSBlockID, blockPath, durationMs, blockTimedSegments(block))
 	}
 
+	concatPaths, totalMS, err := rebuildJapaneseDialogueWithSegmentGaps(script, blockAudioPaths, artifacts, gapMs, sameSpeakerGapMs)
+	if err != nil {
+		return GenerateResult{}, err
+	}
 	if err := concatAudioFiles(artifacts.projectDir, concatPaths, artifacts.dialoguePath); err != nil {
 		return GenerateResult{}, err
 	}
 	script.RefreshSegmentsFromBlocks()
-	log.Printf("🎼 dialogue audio ready project_id=%s path=%s parts=%d total_ms=%d", projectID, artifacts.dialoguePath, len(concatPaths), cursorMs)
-	finalScript, err := finalizeAlignedScript(projectID, artifacts.alignedPath, script, "")
+	log.Printf("🎼 dialogue audio ready project_id=%s path=%s parts=%d total_ms=%d", projectID, artifacts.dialoguePath, len(concatPaths), totalMS)
+	finalScript, err := finalizeAlignedScript(projectID, artifacts.alignedPath, artifacts.dialoguePath, script, "")
 	if err != nil {
 		return GenerateResult{}, err
 	}
@@ -353,6 +348,98 @@ func generateJapaneseDialogue(projectID string, script dto.PodcastScript, artifa
 		AlignedScriptPath: artifacts.alignedPath,
 		Script:            finalScript,
 	}, nil
+}
+
+type japaneseSegmentRef struct {
+	blockIndex   int
+	segmentIndex int
+	globalIndex  int
+}
+
+func rebuildJapaneseDialogueWithSegmentGaps(script dto.PodcastScript, blockAudioPaths []string, artifacts audioArtifacts, gapMs, sameSpeakerGapMs int) ([]string, int, error) {
+	refs := make([]japaneseSegmentRef, 0, len(script.Segments))
+	globalIndex := 0
+	for blockIndex := range script.Blocks {
+		for segmentIndex := range script.Blocks[blockIndex].Segments {
+			refs = append(refs, japaneseSegmentRef{
+				blockIndex:   blockIndex,
+				segmentIndex: segmentIndex,
+				globalIndex:  globalIndex,
+			})
+			globalIndex++
+		}
+	}
+
+	concatPaths := make([]string, 0, len(refs)*2)
+	cursorMS := 0
+	for idx, ref := range refs {
+		blockAudioPath := ""
+		if ref.blockIndex >= 0 && ref.blockIndex < len(blockAudioPaths) {
+			blockAudioPath = blockAudioPaths[ref.blockIndex]
+		}
+		if strings.TrimSpace(blockAudioPath) == "" || !fileExists(blockAudioPath) {
+			return nil, 0, fmt.Errorf("dialogue block audio missing for block index %d", ref.blockIndex)
+		}
+
+		seg := script.Blocks[ref.blockIndex].Segments[ref.segmentIndex]
+		if seg.EndMS <= seg.StartMS {
+			return nil, 0, fmt.Errorf("japanese segment timing missing for %s", seg.SegmentID)
+		}
+		clipPath := unitAudioPath(artifacts.dialogueClipsDir, ref.globalIndex, seg.SegmentID, "mp3")
+		if err := extractAudioClip(blockAudioPath, clipPath, seg.StartMS, seg.EndMS); err != nil {
+			return nil, 0, err
+		}
+
+		shiftSegmentTiming(&seg, cursorMS-seg.StartMS)
+		script.Blocks[ref.blockIndex].Segments[ref.segmentIndex] = seg
+		concatPaths = append(concatPaths, clipPath)
+		cursorMS = seg.EndMS
+
+		if idx == len(refs)-1 {
+			continue
+		}
+		next := script.Blocks[refs[idx+1].blockIndex].Segments[refs[idx+1].segmentIndex]
+		nextGapMS, nextGapPath := japaneseGapAfterSegment(seg, next, gapMs, sameSpeakerGapMs, artifacts.silencePath, artifacts.shortSilencePath)
+		if nextGapMS > 0 && strings.TrimSpace(nextGapPath) != "" {
+			concatPaths = append(concatPaths, nextGapPath)
+			cursorMS += nextGapMS
+		}
+	}
+
+	script.RefreshSegmentsFromBlocks()
+	return concatPaths, cursorMS, nil
+}
+
+func japaneseGapAfterSegment(current, next dto.PodcastSegment, defaultGapMs, sameSpeakerGapMs int, defaultGapPath, sameSpeakerGapPath string) (int, string) {
+	if strings.EqualFold(strings.TrimSpace(current.Speaker), strings.TrimSpace(next.Speaker)) {
+		if sameSpeakerGapMs > 0 && strings.TrimSpace(sameSpeakerGapPath) != "" {
+			return sameSpeakerGapMs, sameSpeakerGapPath
+		}
+	}
+	if defaultGapMs > 0 && strings.TrimSpace(defaultGapPath) != "" {
+		return defaultGapMs, defaultGapPath
+	}
+	return 0, ""
+}
+
+func extractAudioClip(inputPath, outputPath string, startMS, endMS int) error {
+	if strings.TrimSpace(inputPath) == "" || strings.TrimSpace(outputPath) == "" {
+		return fmt.Errorf("audio clip path is required")
+	}
+	if endMS <= startMS {
+		return fmt.Errorf("invalid audio clip window start=%d end=%d", startMS, endMS)
+	}
+	startSec := float64(startMS) / 1000.0
+	durationSec := float64(endMS-startMS) / 1000.0
+	return ffmpegcommon.RunFFmpeg(
+		"-y",
+		"-i", inputPath,
+		"-ss", fmt.Sprintf("%.3f", startSec),
+		"-t", fmt.Sprintf("%.3f", durationSec),
+		"-c:a", "libmp3lame",
+		"-q:a", "2",
+		outputPath,
+	)
 }
 
 func loadDirectProjectArtifacts(sourceProjectName, targetDialoguePath, targetAlignedPath string) (*GenerateResult, error) {
@@ -787,10 +874,10 @@ func requirePodcastLanguage(value string) (string, error) {
 func validateScriptLanguage(scriptLanguage, payloadLanguage string) error {
 	scriptLang, err := requirePodcastLanguage(scriptLanguage)
 	if err != nil {
-		return fmt.Errorf("script language mismatch: script=%q payload=%q", strings.TrimSpace(scriptLanguage), payloadLanguage)
+		return services.NonRetryableError{Err: fmt.Errorf("script language mismatch: script=%q payload=%q", strings.TrimSpace(scriptLanguage), payloadLanguage)}
 	}
 	if scriptLang != payloadLanguage {
-		return fmt.Errorf("script language mismatch: script=%q payload=%q", scriptLang, payloadLanguage)
+		return services.NonRetryableError{Err: fmt.Errorf("script language mismatch: script=%q payload=%q", scriptLang, payloadLanguage)}
 	}
 	return nil
 }

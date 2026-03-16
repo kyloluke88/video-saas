@@ -1,0 +1,154 @@
+{
+  "language": "zh",
+  "audience_language": "en",
+  "difficulty_level": "HSK2-HSK3",
+  "target_duration_minutes": 5,
+  "title": "中文频道开头模板",
+  "youtube": {
+    "publish_title": "Chinese Channel Opening Template | 中文频道开头模板",
+    "chapters": [
+      {
+        "chapter_id": "ch_001",
+        "title_en": "Opening",
+        "title_zh": "开头模板",
+        "block_ids": ["intro.1"]
+      }
+    ],
+    "in_this_episode_you_will_learn": [
+      "How the hosts introduce themselves naturally in Chinese.",
+      "How to welcome listeners in a warm way.",
+      "How to add a light subscription prompt at the opening."
+    ],
+    "description_intro": [
+      "This is a short Chinese opening template for the podcast channel.",
+      "It includes self-introduction, a welcome, and a light subscription reminder before the main episode starts."
+    ]
+  },
+  "blocks": [
+    {
+      "macro_block": "intro",
+      "chapter_id": "ch_001",
+      "tts_block_id": "intro.1",
+      "purpose": "欢迎听众、完成自我介绍，并轻提醒关注频道后自然进入正文",
+      "segments": [
+        {
+          "segment_id": "seg_001",
+          "speaker": "female",
+          "zh": "大家好，欢迎来到我们的中文频道，我是小赵。",
+          "en": "Hi everyone, welcome to our Chinese channel. I'm Xiao Zhao.",
+          "summary": false,
+          "tokens": [
+            { "char": "大", "pinyin": "dà" },
+            { "char": "家", "pinyin": "jiā" },
+            { "char": "好", "pinyin": "hǎo" },
+            { "char": "，", "pinyin": "" },
+            { "char": "欢", "pinyin": "huān" },
+            { "char": "迎", "pinyin": "yíng" },
+            { "char": "来", "pinyin": "lái" },
+            { "char": "到", "pinyin": "dào" },
+            { "char": "我", "pinyin": "wǒ" },
+            { "char": "们", "pinyin": "men" },
+            { "char": "的", "pinyin": "de" },
+            { "char": "中", "pinyin": "zhōng" },
+            { "char": "文", "pinyin": "wén" },
+            { "char": "频", "pinyin": "pín" },
+            { "char": "道", "pinyin": "dào" },
+            { "char": "，", "pinyin": "" },
+            { "char": "我", "pinyin": "wǒ" },
+            { "char": "是", "pinyin": "shì" },
+            { "char": "小", "pinyin": "xiǎo" },
+            { "char": "赵", "pinyin": "zhào" },
+            { "char": "。", "pinyin": "" }
+          ]
+        },
+        {
+          "segment_id": "seg_002",
+          "speaker": "male",
+          "zh": "大家好，我是小路，很高兴又和你一起练中文。",
+          "en": "Hi everyone, I'm Xiao Lu. I'm happy to practice Chinese with you again.",
+          "summary": false,
+          "tokens": [
+            { "char": "大", "pinyin": "dà" },
+            { "char": "家", "pinyin": "jiā" },
+            { "char": "好", "pinyin": "hǎo" },
+            { "char": "，", "pinyin": "" },
+            { "char": "我", "pinyin": "wǒ" },
+            { "char": "是", "pinyin": "shì" },
+            { "char": "小", "pinyin": "xiǎo" },
+            { "char": "路", "pinyin": "lù" },
+            { "char": "，", "pinyin": "" },
+            { "char": "很", "pinyin": "hěn" },
+            { "char": "高", "pinyin": "gāo" },
+            { "char": "兴", "pinyin": "xìng" },
+            { "char": "又", "pinyin": "yòu" },
+            { "char": "和", "pinyin": "hé" },
+            { "char": "你", "pinyin": "nǐ" },
+            { "char": "一", "pinyin": "yì" },
+            { "char": "起", "pinyin": "qǐ" },
+            { "char": "练", "pinyin": "liàn" },
+            { "char": "中", "pinyin": "zhōng" },
+            { "char": "文", "pinyin": "wén" },
+            { "char": "。", "pinyin": "" }
+          ]
+        },
+        {
+          "segment_id": "seg_003",
+          "speaker": "female",
+          "zh": "如果你喜欢这种轻松一点的中文聊天，欢迎订阅我们。",
+          "en": "If you like this kind of relaxed Chinese conversation, you're welcome to subscribe.",
+          "summary": false,
+          "tokens": [
+            { "char": "如", "pinyin": "rú" },
+            { "char": "果", "pinyin": "guǒ" },
+            { "char": "你", "pinyin": "nǐ" },
+            { "char": "喜", "pinyin": "xǐ" },
+            { "char": "欢", "pinyin": "huān" },
+            { "char": "这", "pinyin": "zhè" },
+            { "char": "种", "pinyin": "zhǒng" },
+            { "char": "轻", "pinyin": "qīng" },
+            { "char": "松", "pinyin": "sōng" },
+            { "char": "一", "pinyin": "yì" },
+            { "char": "点", "pinyin": "diǎn" },
+            { "char": "的", "pinyin": "de" },
+            { "char": "中", "pinyin": "zhōng" },
+            { "char": "文", "pinyin": "wén" },
+            { "char": "聊", "pinyin": "liáo" },
+            { "char": "天", "pinyin": "tiān" },
+            { "char": "，", "pinyin": "" },
+            { "char": "欢", "pinyin": "huān" },
+            { "char": "迎", "pinyin": "yíng" },
+            { "char": "订", "pinyin": "dìng" },
+            { "char": "阅", "pinyin": "yuè" },
+            { "char": "我", "pinyin": "wǒ" },
+            { "char": "们", "pinyin": "men" },
+            { "char": "。", "pinyin": "" }
+          ]
+        },
+        {
+          "segment_id": "seg_004",
+          "speaker": "male",
+          "zh": "好，那我们就开始今天的内容吧。",
+          "en": "All right, then let's start today's episode.",
+          "summary": false,
+          "tokens": [
+            { "char": "好", "pinyin": "hǎo" },
+            { "char": "，", "pinyin": "" },
+            { "char": "那", "pinyin": "nà" },
+            { "char": "我", "pinyin": "wǒ" },
+            { "char": "们", "pinyin": "men" },
+            { "char": "就", "pinyin": "jiù" },
+            { "char": "开", "pinyin": "kāi" },
+            { "char": "始", "pinyin": "shǐ" },
+            { "char": "今", "pinyin": "jīn" },
+            { "char": "天", "pinyin": "tiān" },
+            { "char": "的", "pinyin": "de" },
+            { "char": "内", "pinyin": "nèi" },
+            { "char": "容", "pinyin": "róng" },
+            { "char": "吧", "pinyin": "ba" },
+            { "char": "。", "pinyin": "" }
+          ]
+        }
+      ]
+    }
+  ]
+}

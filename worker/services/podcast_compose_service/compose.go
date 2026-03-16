@@ -10,6 +10,7 @@ import (
 
 	"worker/internal/dto"
 	conf "worker/pkg/config"
+	services "worker/services"
 	ffmpegpodcast "worker/services/ffmpeg_service/podcast"
 )
 
@@ -125,10 +126,10 @@ func requirePodcastLanguage(value string) (string, error) {
 func validateScriptLanguage(scriptLanguage, payloadLanguage string) error {
 	scriptLang, err := requirePodcastLanguage(scriptLanguage)
 	if err != nil {
-		return fmt.Errorf("script language mismatch: script=%q payload=%q", strings.TrimSpace(scriptLanguage), payloadLanguage)
+		return services.NonRetryableError{Err: fmt.Errorf("script language mismatch: script=%q payload=%q", strings.TrimSpace(scriptLanguage), payloadLanguage)}
 	}
 	if scriptLang != payloadLanguage {
-		return fmt.Errorf("script language mismatch: script=%q payload=%q", scriptLang, payloadLanguage)
+		return services.NonRetryableError{Err: fmt.Errorf("script language mismatch: script=%q payload=%q", scriptLang, payloadLanguage)}
 	}
 	return nil
 }

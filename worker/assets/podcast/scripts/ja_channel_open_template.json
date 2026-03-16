@@ -1,0 +1,85 @@
+{
+  "language": "ja",
+  "audience_language": "en",
+  "difficulty_level": "N3-N2",
+  "target_duration_minutes": 5,
+  "title": "日本語チャンネル開頭テンプレート",
+  "youtube": {
+    "publish_title": "Japanese Channel Opening Template | 日本語チャンネル開頭テンプレート",
+    "chapters": [
+      {
+        "chapter_id": "ch_001",
+        "title_en": "Opening",
+        "title_ja": "オープニング",
+        "block_ids": ["intro.1"]
+      }
+    ],
+    "in_this_episode_you_will_learn": [
+      "How the hosts introduce themselves naturally in Japanese.",
+      "How to welcome listeners warmly.",
+      "How to add a light subscription prompt at the opening."
+    ],
+    "description_intro": [
+      "This is a short Japanese opening template for the podcast channel.",
+      "It includes self-introduction, a warm welcome, and a light subscription reminder before the main episode starts."
+    ]
+  },
+  "blocks": [
+    {
+      "macro_block": "intro",
+      "chapter_id": "ch_001",
+      "tts_block_id": "intro.1",
+      "purpose": "歓迎、自己紹介、軽いチャンネル登録案内から本編へ自然につなぐ",
+      "segments": [
+        {
+          "segment_id": "seg_001",
+          "speaker": "female",
+          "display_ja": "みなさん、こんにちは。このチャンネルへようこそ。ユイです。",
+          "tts_ja": "みなさん、こんにちは。このチャンネルへようこそ。ユイです。",
+          "en": "Hi everyone. Welcome to this channel. I'm Yui.",
+          "summary": false,
+          "ruby_tokens": []
+        },
+        {
+          "segment_id": "seg_002",
+          "speaker": "male",
+          "display_ja": "こんにちは、アキラです。今日もいっしょに日本語を楽しんでいきましょう。",
+          "tts_ja": "こんにちは、アキラです。今日もいっしょに日本語を楽しんでいきましょう。",
+          "en": "Hi, I'm Akira. Let's enjoy Japanese together again today.",
+          "summary": false,
+          "ruby_tokens": [
+            { "surface": "今日", "reading": "きょう" },
+            { "surface": "日本語", "reading": "にほんご" },
+            { "surface": "楽", "reading": "たの" }
+          ]
+        },
+        {
+          "segment_id": "seg_003",
+          "speaker": "female",
+          "display_ja": "こういう自然な会話が好きな方は、ぜひチャンネル登録してください。",
+          "tts_ja": "こういう自然な会話が好きな方は、ぜひチャンネル登録してください。",
+          "en": "If you enjoy this kind of natural conversation, please subscribe to the channel.",
+          "summary": false,
+          "ruby_tokens": [
+            { "surface": "自然", "reading": "しぜん" },
+            { "surface": "会話", "reading": "かいわ" },
+            { "surface": "好", "reading": "す" },
+            { "surface": "登録", "reading": "とうろく" }
+          ]
+        },
+        {
+          "segment_id": "seg_004",
+          "speaker": "male",
+          "display_ja": "では、さっそく今日のテーマに入っていきましょう。",
+          "tts_ja": "では、さっそく今日のテーマに入っていきましょう。",
+          "en": "All right, let's jump into today's topic.",
+          "summary": false,
+          "ruby_tokens": [
+            { "surface": "今日", "reading": "きょう" },
+            { "surface": "入", "reading": "はい" }
+          ]
+        }
+      ]
+    }
+  ]
+}
