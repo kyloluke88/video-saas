@@ -7,6 +7,10 @@
 ### 音色列表
  - https://cloud.tencent.com/document/product/1073/92668
 
+
+### 音色调试
+ - https://console.cloud.tencent.com/tts/complexaudio
+
 EleventLabs
 
 ### 女生

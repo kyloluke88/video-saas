@@ -20,6 +20,9 @@ import (
 
 type GenerateInput struct {
 	ProjectID       string
+	Language        string
+	ContentProfile  string
+	IsDirect        bool
 	ScriptFilename  string
 	MaleVoiceType   *int64
 	FemaleVoiceType *int64
@@ -44,17 +47,46 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 	if strings.TrimSpace(input.ProjectID) == "" {
 		return GenerateResult{}, fmt.Errorf("project_id is required")
 	}
+	language, err := requirePodcastLanguage(input.Language)
+	if err != nil {
+		return GenerateResult{}, err
+	}
+	contentProfile := normalizeContentProfile(input.ContentProfile)
+	if !isJapaneseLanguage(language) && contentProfile == "" {
+		return GenerateResult{}, fmt.Errorf("content_profile must be daily, social_issue, or international")
+	}
 	log.Printf("🎧 podcast audio generate start project_id=%s script_filename=%s", input.ProjectID, input.ScriptFilename)
 
 	projectDir := projectDirFor(input.ProjectID)
 	if err := os.MkdirAll(projectDir, 0o755); err != nil {
 		return GenerateResult{}, err
 	}
+	artifacts, err := prepareAudioArtifacts(projectDir)
+	if err != nil {
+		return GenerateResult{}, err
+	}
 
-	dialoguePath := filepath.Join(projectDir, "dialogue.mp3")
-	alignedPath := filepath.Join(projectDir, "script_aligned.json")
 	if strings.TrimSpace(input.ScriptFilename) == "" {
 		return GenerateResult{}, fmt.Errorf("script_filename is required")
+	}
+
+	if input.IsDirect {
+		reusable, err := loadDirectProjectArtifacts(input.ScriptFilename, artifacts.dialoguePath, artifacts.alignedPath)
+		if err != nil {
+			return GenerateResult{}, err
+		}
+		if err := validateScriptLanguage(reusable.Script.Language, language); err != nil {
+			return GenerateResult{}, err
+		}
+		reusable.Script.Language = language
+		finalScript, err := finalizeAlignedScript(input.ProjectID, artifacts.alignedPath, reusable.Script, contentProfile)
+		if err != nil {
+			return GenerateResult{}, err
+		}
+		log.Printf("♻️ podcast direct reuse project_id=%s language=%s source_project=%s dialogue=%s script=%s",
+			input.ProjectID, language, filepath.Base(strings.TrimSpace(input.ScriptFilename)), reusable.DialogueAudioPath, reusable.AlignedScriptPath)
+		reusable.Script = finalScript
+		return *reusable, nil
 	}
 
 	scriptPath := scriptPathFor(input.ScriptFilename)
@@ -62,10 +94,11 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 	if err := readJSON(scriptPath, &script); err != nil {
 		return GenerateResult{}, err
 	}
-	if strings.TrimSpace(script.Language) == "" {
-		script.Language = "zh"
+	if err := validateScriptLanguage(script.Language, language); err != nil {
+		return GenerateResult{}, err
 	}
-	if normalizeLanguage(script.Language) == "ja" {
+	script.Language = language
+	if isJapaneseLanguage(language) {
 		if err := validateJapaneseScriptInput(script); err != nil {
 			return GenerateResult{}, err
 		}
@@ -76,30 +109,19 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 		}
 		script.RefreshSegmentsFromBlocks()
 	}
-	if !podcastEnabledForLanguage(script.Language) {
-		reusable, err := loadPodcastTestArtifacts(script.Language, dialoguePath, alignedPath)
-		if err != nil {
-			return GenerateResult{}, err
-		}
-		reusable.Script = mergeScriptPublishingMetadata(script, reusable.Script)
-		if err := writeJSON(alignedPath, reusable.Script); err != nil {
-			return GenerateResult{}, err
-		}
-		if err := exportYouTubePublishFiles(projectDir, reusable.Script); err != nil {
-			return GenerateResult{}, err
-		}
-		log.Printf("♻️ podcast audio test reuse project_id=%s language=%s source_dir=%s dialogue=%s script=%s",
-			input.ProjectID, script.Language, podcastTestDirForLanguage(script.Language), reusable.DialogueAudioPath, reusable.AlignedScriptPath)
-		return *reusable, nil
+	if !podcastEnabledForLanguage(language) {
+		return GenerateResult{}, fmt.Errorf("podcast generation disabled for language %s", language)
 	}
-	log.Printf("📝 podcast script loaded project_id=%s segments=%d language=%s path=%s", input.ProjectID, len(script.Segments), script.Language, scriptPath)
+	log.Printf("📝 podcast script loaded project_id=%s segments=%d language=%s path=%s", input.ProjectID, len(script.Segments), language, scriptPath)
 	if err := writeJSON(filepath.Join(projectDir, "script_input.json"), script); err != nil {
 		return GenerateResult{}, err
 	}
+	script = loadResumableScript(script, artifacts.alignedPath)
+	script.Language = language
 
-	maleProfile := resolveSpeakerProfile(script.Language, "male", input.MaleVoiceType)
-	femaleProfile := resolveSpeakerProfile(script.Language, "female", input.FemaleVoiceType)
-	if isJapaneseLanguage(script.Language) {
+	maleProfile := resolveSpeakerProfile(language, contentProfile, "male", input.MaleVoiceType)
+	femaleProfile := resolveSpeakerProfile(language, contentProfile, "female", input.FemaleVoiceType)
+	if isJapaneseLanguage(language) {
 		log.Printf("🗣️ podcast speaker profiles project_id=%s male_voice_id=%s female_voice_id=%s",
 			input.ProjectID, maleProfile.VoiceID, femaleProfile.VoiceID)
 	} else {
@@ -107,28 +129,30 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 			input.ProjectID, maleProfile.VoiceType, femaleProfile.VoiceType, maleProfile.VoiceID, femaleProfile.VoiceID, maleProfile.Speed, femaleProfile.Speed, maleProfile.SampleRate)
 	}
 
-	segmentsDir := filepath.Join(projectDir, "segments")
-	if err := os.MkdirAll(segmentsDir, 0o755); err != nil {
-		return GenerateResult{}, err
-	}
-	silencePath := filepath.Join(projectDir, "segment_gap.mp3")
-	gapMs := segmentGapMSForLanguage(script.Language)
+	gapMs := segmentGapMSForLanguage(language)
+	sameSpeakerGapMs := sameSpeakerGapMSForLanguage(language)
 	if gapMs > 0 {
-		if err := createSilenceAudio(silencePath, gapMs); err != nil {
+		if err := createSilenceAudio(artifacts.silencePath, gapMs); err != nil {
 			return GenerateResult{}, err
 		}
-		log.Printf("⏸️ podcast segment gap prepared project_id=%s gap_ms=%d path=%s", input.ProjectID, gapMs, silencePath)
+		log.Printf("⏸️ podcast segment gap prepared project_id=%s gap_ms=%d path=%s", input.ProjectID, gapMs, artifacts.silencePath)
+	}
+	if sameSpeakerGapMs > 0 && sameSpeakerGapMs != gapMs {
+		if err := createSilenceAudio(artifacts.shortSilencePath, sameSpeakerGapMs); err != nil {
+			return GenerateResult{}, err
+		}
+		log.Printf("⏸️ podcast same-speaker gap prepared project_id=%s gap_ms=%d path=%s", input.ProjectID, sameSpeakerGapMs, artifacts.shortSilencePath)
 	}
 
-	if isJapaneseLanguage(script.Language) {
-		return generateJapaneseDialogue(input.ProjectID, script, projectDir, dialoguePath, alignedPath, segmentsDir, silencePath, gapMs, maleProfile, femaleProfile)
+	if isJapaneseLanguage(language) {
+		return generateJapaneseDialogue(input.ProjectID, script, artifacts, gapMs, maleProfile, femaleProfile)
 	}
 
-	provider, err := newProvider(script.Language)
+	provider, err := newProvider(language)
 	if err != nil {
 		return GenerateResult{}, err
 	}
-	adapter := adapterFor(script.Language)
+	adapter := adapterFor(language)
 
 	concatPaths := make([]string, 0, len(script.Segments)*2)
 	cursorMs := 0
@@ -138,6 +162,18 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 			continue
 		}
 		seg = adapter.NormalizeSegment(seg)
+		if existingPath, ok := existingUnitAudioPath(artifacts.segmentsDir, i, seg.SegmentID, "mp3"); ok && segmentCheckpointComplete(language, seg, existingPath) {
+			log.Printf("♻️ segment resume project_id=%s segment_id=%s audio=%s window_ms=%d-%d",
+				input.ProjectID, seg.SegmentID, existingPath, seg.StartMS, seg.EndMS)
+			nextGapMs, nextGapPath := chineseGapAfterSegment(script.Segments, i, gapMs, sameSpeakerGapMs, artifacts.silencePath, artifacts.shortSilencePath)
+			concatPaths = appendConcatPath(concatPaths, existingPath, nextGapMs > 0 && nextGapPath != "", nextGapPath)
+			cursorMs = seg.EndMS
+			if nextGapMs > 0 {
+				cursorMs += nextGapMs
+			}
+			script.Segments[i] = seg
+			continue
+		}
 
 		profile := maleProfile
 		if strings.EqualFold(strings.TrimSpace(seg.Speaker), "female") {
@@ -148,7 +184,7 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 
 		result, synthErr := provider.Synthesize(context.Background(), tts.Request{
 			Text:             text,
-			Language:         normalizeLanguage(script.Language),
+			Language:         normalizeLanguage(language),
 			VoiceType:        int64Ptr(profile.VoiceType),
 			VoiceID:          stringPtr(profile.VoiceID),
 			Speed:            float64Ptr(profile.Speed),
@@ -168,9 +204,15 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 		if ext == "" {
 			ext = "mp3"
 		}
-		segmentPath := filepath.Join(segmentsDir, fmt.Sprintf("%03d_%s.%s", i+1, sanitizeSegmentID(seg.SegmentID), ext))
+		segmentPath := unitAudioPath(artifacts.segmentsDir, i, seg.SegmentID, ext)
 		if err := os.WriteFile(segmentPath, result.Audio, 0o644); err != nil {
 			return GenerateResult{}, err
+		}
+		if len(result.RawResponse) > 0 {
+			responsePath := unitAudioPath(artifacts.ttsResponsesDir, i, seg.SegmentID, "json")
+			if err := os.WriteFile(responsePath, result.RawResponse, 0o644); err != nil {
+				return GenerateResult{}, err
+			}
 		}
 		durationSec, err := ffmpegcommon.AudioDurationSec(segmentPath)
 		if err != nil {
@@ -184,40 +226,35 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 		log.Printf("✅ segment tts done project_id=%s segment_id=%s audio=%s duration_ms=%d subtitle_marks=%d token_timed=%d/%d window_ms=%d-%d",
 			input.ProjectID, seg.SegmentID, segmentPath, durationMs, len(result.Subtitles), matchedTokens, totalTokens, seg.StartMS, seg.EndMS)
 		script.Segments[i] = seg
+		if err := persistAlignedCheckpoint(artifacts.alignedPath, script); err != nil {
+			return GenerateResult{}, err
+		}
 		cursorMs = seg.EndMS
 
-		concatPaths = append(concatPaths, segmentPath)
-		if gapMs > 0 && i != len(script.Segments)-1 {
-			concatPaths = append(concatPaths, silencePath)
-			cursorMs += gapMs
+		nextGapMs, nextGapPath := chineseGapAfterSegment(script.Segments, i, gapMs, sameSpeakerGapMs, artifacts.silencePath, artifacts.shortSilencePath)
+		concatPaths = appendConcatPath(concatPaths, segmentPath, nextGapMs > 0 && nextGapPath != "", nextGapPath)
+		if nextGapMs > 0 {
+			cursorMs += nextGapMs
 		}
 	}
 
-	if err := concatAudioFiles(projectDir, concatPaths, dialoguePath); err != nil {
+	if err := concatAudioFiles(projectDir, concatPaths, artifacts.dialoguePath); err != nil {
 		return GenerateResult{}, err
 	}
-	log.Printf("🎼 dialogue audio ready project_id=%s path=%s parts=%d total_ms=%d", input.ProjectID, dialoguePath, len(concatPaths), cursorMs)
-
-	alignedScript := script
-	alignedScript.SyncBlocksFromSegments()
-	if err := writeJSON(alignedPath, alignedScript); err != nil {
+	log.Printf("🎼 dialogue audio ready project_id=%s path=%s parts=%d total_ms=%d", input.ProjectID, artifacts.dialoguePath, len(concatPaths), cursorMs)
+	alignedScript, err := finalizeAlignedScript(input.ProjectID, artifacts.alignedPath, script, contentProfile)
+	if err != nil {
 		return GenerateResult{}, err
 	}
-	if err := exportYouTubePublishFiles(projectDir, alignedScript); err != nil {
-		return GenerateResult{}, err
-	}
-	timedSegments, totalSegments, timedTokens, totalTokens := alignedStats(alignedScript)
-	log.Printf("🧭 script aligned ready project_id=%s path=%s segments_timed=%d/%d tokens_timed=%d/%d",
-		input.ProjectID, alignedPath, timedSegments, totalSegments, timedTokens, totalTokens)
 
 	return GenerateResult{
-		DialogueAudioPath: dialoguePath,
-		AlignedScriptPath: alignedPath,
+		DialogueAudioPath: artifacts.dialoguePath,
+		AlignedScriptPath: artifacts.alignedPath,
 		Script:            alignedScript,
 	}, nil
 }
 
-func generateJapaneseDialogue(projectID string, script dto.PodcastScript, projectDir, dialoguePath, alignedPath, segmentsDir, silencePath string, gapMs int, maleProfile, femaleProfile speakerProfile) (GenerateResult, error) {
+func generateJapaneseDialogue(projectID string, script dto.PodcastScript, artifacts audioArtifacts, gapMs int, maleProfile, femaleProfile speakerProfile) (GenerateResult, error) {
 	cfg := providerConfigForLanguage(script.Language)
 	provider, err := elevenlabs.New(cfg)
 	if err != nil {
@@ -229,6 +266,16 @@ func generateJapaneseDialogue(projectID string, script dto.PodcastScript, projec
 	cursorMs := 0
 	for blockIndex, block := range script.Blocks {
 		if len(block.Segments) == 0 {
+			continue
+		}
+		if existingPath, ok := existingUnitAudioPath(artifacts.segmentsDir, blockIndex, block.TTSBlockID, "mp3"); ok && blockCheckpointComplete(block, existingPath) {
+			log.Printf("♻️ dialogue block resume project_id=%s block=%s audio=%s window_end=%d",
+				projectID, block.TTSBlockID, existingPath, blockEndMS(block))
+			concatPaths = appendConcatPath(concatPaths, existingPath, gapMs > 0 && blockIndex != len(script.Blocks)-1, artifacts.silencePath)
+			cursorMs = blockEndMS(block)
+			if gapMs > 0 && blockIndex != len(script.Blocks)-1 {
+				cursorMs += gapMs
+			}
 			continue
 		}
 
@@ -266,7 +313,7 @@ func generateJapaneseDialogue(projectID string, script dto.PodcastScript, projec
 		if ext == "" {
 			ext = "mp3"
 		}
-		blockPath := filepath.Join(segmentsDir, fmt.Sprintf("%03d_%s.%s", blockIndex+1, sanitizeSegmentID(block.TTSBlockID), ext))
+		blockPath := unitAudioPath(artifacts.segmentsDir, blockIndex, block.TTSBlockID, ext)
 		if err := os.WriteFile(blockPath, result.Audio, 0o644); err != nil {
 			return GenerateResult{}, err
 		}
@@ -277,67 +324,64 @@ func generateJapaneseDialogue(projectID string, script dto.PodcastScript, projec
 		durationMs := int(durationSec * 1000)
 		assignDialogueBlockTimes(&block, result, cursorMs, durationMs)
 		script.Blocks[blockIndex] = block
+		script.RefreshSegmentsFromBlocks()
+		if err := persistAlignedCheckpoint(artifacts.alignedPath, script); err != nil {
+			return GenerateResult{}, err
+		}
 
-		concatPaths = append(concatPaths, blockPath)
+		concatPaths = appendConcatPath(concatPaths, blockPath, gapMs > 0 && blockIndex != len(script.Blocks)-1, artifacts.silencePath)
 		cursorMs += durationMs
 		if gapMs > 0 && blockIndex != len(script.Blocks)-1 {
-			concatPaths = append(concatPaths, silencePath)
 			cursorMs += gapMs
 		}
 		log.Printf("✅ dialogue block done project_id=%s block=%s audio=%s duration_ms=%d timed_segments=%d",
-			projectID, block.TTSBlockID, blockPath, durationMs, len(block.Segments))
+			projectID, block.TTSBlockID, blockPath, durationMs, blockTimedSegments(block))
 	}
 
-	if err := concatAudioFiles(projectDir, concatPaths, dialoguePath); err != nil {
+	if err := concatAudioFiles(artifacts.projectDir, concatPaths, artifacts.dialoguePath); err != nil {
 		return GenerateResult{}, err
 	}
 	script.RefreshSegmentsFromBlocks()
-	log.Printf("🎼 dialogue audio ready project_id=%s path=%s parts=%d total_ms=%d", projectID, dialoguePath, len(concatPaths), cursorMs)
-
-	if err := writeJSON(alignedPath, script); err != nil {
+	log.Printf("🎼 dialogue audio ready project_id=%s path=%s parts=%d total_ms=%d", projectID, artifacts.dialoguePath, len(concatPaths), cursorMs)
+	finalScript, err := finalizeAlignedScript(projectID, artifacts.alignedPath, script, "")
+	if err != nil {
 		return GenerateResult{}, err
 	}
-	if err := exportYouTubePublishFiles(projectDir, script); err != nil {
-		return GenerateResult{}, err
-	}
-	timedSegments, totalSegments, timedTokens, totalTokens := alignedStats(script)
-	log.Printf("🧭 script aligned ready project_id=%s path=%s segments_timed=%d/%d tokens_timed=%d/%d",
-		projectID, alignedPath, timedSegments, totalSegments, timedTokens, totalTokens)
 
 	return GenerateResult{
-		DialogueAudioPath: dialoguePath,
-		AlignedScriptPath: alignedPath,
-		Script:            script,
+		DialogueAudioPath: artifacts.dialoguePath,
+		AlignedScriptPath: artifacts.alignedPath,
+		Script:            finalScript,
 	}, nil
 }
 
-func loadPodcastTestArtifacts(language, targetDialoguePath, targetAlignedPath string) (*GenerateResult, error) {
-	sourceDir := podcastTestDirForLanguage(language)
+func loadDirectProjectArtifacts(sourceProjectName, targetDialoguePath, targetAlignedPath string) (*GenerateResult, error) {
+	sourceDir := directProjectSourceDir(sourceProjectName)
 	sourceDialoguePath := filepath.Join(sourceDir, "dialogue.mp3")
 	sourceAlignedPath := filepath.Join(sourceDir, "script_aligned.json")
 
 	if _, err := os.Stat(sourceDialoguePath); err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("podcast test dialogue missing: %s", sourceDialoguePath)
+			return nil, fmt.Errorf("direct project dialogue missing: %s", sourceDialoguePath)
 		}
 		return nil, err
 	}
 	if _, err := os.Stat(sourceAlignedPath); err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("podcast test aligned script missing: %s", sourceAlignedPath)
+			return nil, fmt.Errorf("direct project aligned script missing: %s", sourceAlignedPath)
 		}
 		return nil, err
 	}
 	if err := copyFile(sourceDialoguePath, targetDialoguePath); err != nil {
-		return nil, fmt.Errorf("copy podcast test dialogue failed: %w", err)
+		return nil, fmt.Errorf("copy direct project dialogue failed: %w", err)
 	}
 	if err := copyFile(sourceAlignedPath, targetAlignedPath); err != nil {
-		return nil, fmt.Errorf("copy podcast test aligned script failed: %w", err)
+		return nil, fmt.Errorf("copy direct project aligned script failed: %w", err)
 	}
 
 	var script dto.PodcastScript
 	if err := readJSON(targetAlignedPath, &script); err != nil {
-		return nil, fmt.Errorf("read podcast test aligned script failed: %w", err)
+		return nil, fmt.Errorf("read direct project aligned script failed: %w", err)
 	}
 	return &GenerateResult{
 		DialogueAudioPath: targetDialoguePath,
@@ -594,7 +638,7 @@ func clampMS(value, minValue, maxValue int) int {
 	return value
 }
 
-func resolveSpeakerProfile(language, speaker string, overrideVoice *int64) speakerProfile {
+func resolveSpeakerProfile(language, contentProfile, speaker string, overrideVoice *int64) speakerProfile {
 	key := "male"
 	if strings.EqualFold(strings.TrimSpace(speaker), "female") {
 		key = "female"
@@ -606,9 +650,10 @@ func resolveSpeakerProfile(language, speaker string, overrideVoice *int64) speak
 		}
 	}
 
+	voiceProfilePrefix := chineseVoiceProfilePrefix(contentProfile)
 	profile := speakerProfile{
-		VoiceType:        conf.Get[int64]("worker.tencent_podcast_" + key + "_voice_type"),
-		Speed:            conf.Get[float64]("worker.tencent_podcast_" + key + "_speed"),
+		VoiceType:        conf.Get[int64]("worker.tencent_podcast_" + voiceProfilePrefix + "_" + key + "_voice_type"),
+		Speed:            conf.Get[float64]("worker.tencent_podcast_" + voiceProfilePrefix + "_" + key + "_speed"),
 		SampleRate:       conf.Get[int64]("worker.tencent_podcast_tts_sample_rate"),
 		EmotionCategory:  conf.Get[string]("worker.tencent_podcast_" + key + "_emotion"),
 		EmotionIntensity: conf.Get[int64]("worker.tencent_podcast_" + key + "_emotion_intensity"),
@@ -626,6 +671,26 @@ func resolveSpeakerProfile(language, speaker string, overrideVoice *int64) speak
 		profile.EmotionIntensity = 100
 	}
 	return profile
+}
+
+func normalizeContentProfile(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "daily":
+		return "daily"
+	case "social_issue", "international":
+		return strings.ToLower(strings.TrimSpace(value))
+	default:
+		return ""
+	}
+}
+
+func chineseVoiceProfilePrefix(contentProfile string) string {
+	switch normalizeContentProfile(contentProfile) {
+	case "social_issue", "international":
+		return "public"
+	default:
+		return "daily"
+	}
 }
 
 func providerConfigForLanguage(language string) tts.Config {
@@ -660,6 +725,36 @@ func segmentGapMSForLanguage(language string) int {
 	return conf.Get[int]("worker.tencent_podcast_segment_gap_ms")
 }
 
+func sameSpeakerGapMSForLanguage(language string) int {
+	if isJapaneseLanguage(language) {
+		return conf.Get[int]("worker.elevenlabs_podcast_same_speaker_gap_ms")
+	}
+	return conf.Get[int]("worker.tencent_podcast_same_speaker_gap_ms")
+}
+
+func chineseGapAfterSegment(segments []dto.PodcastSegment, index, defaultGapMs, sameSpeakerGapMs int, defaultGapPath, sameSpeakerGapPath string) (int, string) {
+	if index < 0 || index >= len(segments)-1 {
+		return 0, ""
+	}
+	current := strings.TrimSpace(defaultSpeaker(segments[index].Speaker))
+	for next := index + 1; next < len(segments); next++ {
+		if strings.TrimSpace(segments[next].ZH) == "" {
+			continue
+		}
+		if current != "" && strings.EqualFold(current, strings.TrimSpace(defaultSpeaker(segments[next].Speaker))) {
+			if sameSpeakerGapMs > 0 && strings.TrimSpace(sameSpeakerGapPath) != "" {
+				return sameSpeakerGapMs, sameSpeakerGapPath
+			}
+			return 0, ""
+		}
+		if defaultGapMs > 0 && strings.TrimSpace(defaultGapPath) != "" {
+			return defaultGapMs, defaultGapPath
+		}
+		return 0, ""
+	}
+	return 0, ""
+}
+
 func isJapaneseLanguage(language string) bool {
 	switch strings.ToLower(strings.TrimSpace(language)) {
 	case "ja", "ja-jp":
@@ -671,11 +766,33 @@ func isJapaneseLanguage(language string) bool {
 
 func normalizeLanguage(language string) string {
 	switch strings.TrimSpace(strings.ToLower(language)) {
-	case "", "zh":
+	case "zh":
 		return "zh-CN"
 	default:
 		return language
 	}
+}
+
+func requirePodcastLanguage(value string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "zh":
+		return "zh", nil
+	case "ja":
+		return "ja", nil
+	default:
+		return "", fmt.Errorf("lang must be zh or ja")
+	}
+}
+
+func validateScriptLanguage(scriptLanguage, payloadLanguage string) error {
+	scriptLang, err := requirePodcastLanguage(scriptLanguage)
+	if err != nil {
+		return fmt.Errorf("script language mismatch: script=%q payload=%q", strings.TrimSpace(scriptLanguage), payloadLanguage)
+	}
+	if scriptLang != payloadLanguage {
+		return fmt.Errorf("script language mismatch: script=%q payload=%q", scriptLang, payloadLanguage)
+	}
+	return nil
 }
 
 func createSilenceAudio(path string, durationMs int) error {
@@ -722,42 +839,42 @@ func projectDirFor(projectID string) string {
 	return filepath.Join(conf.Get[string]("worker.ffmpeg_work_dir"), "projects", projectID)
 }
 
-func podcastTestDir() string {
-	return filepath.Join(conf.Get[string]("worker.ffmpeg_work_dir"), "podcast_test")
-}
-
-func podcastTestDirForLanguage(language string) string {
-	baseDir := podcastTestDir()
-	switch strings.ToLower(strings.TrimSpace(language)) {
-	case "ja", "ja-jp":
-		if dirExists(filepath.Join(baseDir, "ja")) {
-			return filepath.Join(baseDir, "ja")
-		}
-	case "zh", "zh-cn", "":
-		if dirExists(filepath.Join(baseDir, "zh")) {
-			return filepath.Join(baseDir, "zh")
-		}
-	}
-	return baseDir
-}
-
 func podcastEnabledForLanguage(language string) bool {
 	if isJapaneseLanguage(language) {
-		return conf.Get[bool]("worker.ja_podcast_enabled")
+		return conf.Get[bool]("worker.elevenlabs_tts_enabled")
 	}
-	return conf.Get[bool]("worker.zh_podcast_enabled")
+	return conf.Get[bool]("worker.tencent_tts_enabled")
 }
 
-func dirExists(path string) bool {
-	info, err := os.Stat(path)
-	if err != nil {
+func directProjectSourceDir(name string) string {
+	return filepath.Join(conf.Get[string]("worker.ffmpeg_work_dir"), "projects", filepath.Base(strings.TrimSpace(name)))
+}
+
+func chineseTokenAlignmentLooksUniform(seg dto.PodcastSegment) bool {
+	if len(seg.Tokens) == 0 || seg.EndMS <= seg.StartMS {
 		return false
 	}
-	return info.IsDir()
+	durations := make(map[int]struct{})
+	timed := 0
+	firstStart := -1
+	for _, token := range seg.Tokens {
+		if token.EndMS <= token.StartMS {
+			continue
+		}
+		timed++
+		if firstStart == -1 {
+			firstStart = token.StartMS
+		}
+		durations[token.EndMS-token.StartMS] = struct{}{}
+	}
+	if timed == 0 || firstStart != seg.StartMS {
+		return false
+	}
+	return len(durations) <= 2
 }
 
 func scriptPathFor(filename string) string {
-	return filepath.Join(conf.Get[string]("worker.ffmpeg_work_dir"), "podcast", "scripts", filepath.Base(strings.TrimSpace(filename)))
+	return filepath.Join(conf.Get[string]("worker.worker_assets_dir"), "podcast", "scripts", filepath.Base(strings.TrimSpace(filename)))
 }
 
 func sanitizeSegmentID(segmentID string) string {

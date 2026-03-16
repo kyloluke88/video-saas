@@ -116,6 +116,7 @@ type subtitleLayout struct {
 	EnglishBold         int
 }
 
+// 中文和日文公用一种布局计算方式，但预设参数不同
 func newSubtitleLayout(playW, playH int, preset subtitlePreset) subtitleLayout {
 	scale := float64(playH) / 1080.0
 
@@ -145,7 +146,7 @@ func newSubtitleLayout(playW, playH int, preset subtitlePreset) subtitleLayout {
 		HanziSize:           maxInt(24, int(float64(preset.HanziSize)*scale)),
 		EnglishSize:         maxInt(18, int(float64(preset.EnglishSize)*scale)),
 		BaseGap:             maxInt(2, int(float64(preset.BaseGap)*scale)),
-		RowGap:              maxInt(4, int(float64(preset.RowGap)*scale)),
+		RowGap:              maxInt(1, int(float64(preset.RowGap)*scale)),
 		TokenLineGap:        maxInt(6, int(float64(preset.TokenLineGap)*scale)),
 		EnglishLineGap:      maxInt(4, int(float64(preset.EnglishLineGap)*scale)),
 		TopSectionTop:       boxTop + int(float64(boxHeight)*preset.TopSectionTopInset),
@@ -207,26 +208,26 @@ func chineseSubtitlePresetFor(style int) subtitlePreset {
 			RubyFontName:          "Tenor Sans",
 			HanziFontName:         "ChillKai Regular",
 			EnglishFontName:       "Jacques Francois",
-			BoxLeftRatio:          0,
-			BoxTopRatio:           0.56,
-			BoxWidthRatio:         1,
-			BoxHeightRatio:        0.40,
-			TextWidthRatio:        0.90,
-			TopSectionRatio:       0.60,
-			BottomSectionRatio:    0.24,
-			TopSectionTopInset:    0.06,
-			BottomSectionTopInset: 0.02,
-			RubySize:              42,
-			HanziSize:             70,
-			EnglishSize:           42,
-			BaseGap:               4,
-			RowGap:                10,
+			BoxLeftRatio:          0,      // 字幕底框左边距占画面宽度比例
+			BoxTopRatio:           0.5561, // 字幕底框顶部位置占画面高度比例
+			BoxWidthRatio:         1,      // 字幕底框宽度占画面宽度比例
+			BoxHeightRatio:        0.4029, // 字幕底框高度占画面高度比例
+			TextWidthRatio:        0.94,   // 正文可用排版宽度占底框宽度比例
+			TopSectionRatio:       0.7301, // 汉字区域高度占底框高度比例
+			BottomSectionRatio:    0.2699, // 英文区域高度占底框高度比例
+			TopSectionTopInset:    0,      // 上半区顶部额外内边距比例
+			BottomSectionTopInset: 0,      // 下半区顶部额外内边距比例
+			RubySize:              39,     // 假名字号
+			HanziSize:             76,     // 中文正文字号
+			EnglishSize:           46,     // 英文字号
+			BaseGap:               1,      // 字与字之间的基础间距
+			RowGap:                1,
 			TokenLineGap:          18,
-			EnglishLineGap:        8,
+			EnglishLineGap:        6,
 			BoxColor:              "&HFF000000",
-			RubyColor:             "&H00EDF4F7",
-			HanziColor:            "&H00F3F8FA",
-			EnglishColor:          "&H0019D8FF",
+			RubyColor:             "&H00000000",
+			HanziColor:            "&H00000000",
+			EnglishColor:          "&H00066F8A",
 			OutlineColor:          "&H003B5B55",
 			RubyBold:              0,
 			HanziBold:             1,
@@ -237,26 +238,26 @@ func chineseSubtitlePresetFor(style int) subtitlePreset {
 			RubyFontName:          "Tenor Sans",
 			HanziFontName:         "HYWenRunSongYun J",
 			EnglishFontName:       "Radley",
-			BoxLeftRatio:          0,
-			BoxTopRatio:           0.415,
-			BoxWidthRatio:         1,
-			BoxHeightRatio:        0.535,
-			TextWidthRatio:        0.92,
-			TopSectionRatio:       0.748,
-			BottomSectionRatio:    0.252,
-			TopSectionTopInset:    0,
-			BottomSectionTopInset: 0,
-			RubySize:              42,
-			HanziSize:             70,
-			EnglishSize:           42,
-			BaseGap:               4,
-			RowGap:                12,
+			BoxLeftRatio:          0,      // 字幕底框左边距占画面宽度比例
+			BoxTopRatio:           0.5561, // 字幕底框顶部位置占画面高度比例
+			BoxWidthRatio:         1,      // 字幕底框宽度占画面宽度比例
+			BoxHeightRatio:        0.4029, // 字幕底框高度占画面高度比例
+			TextWidthRatio:        0.94,   // 正文可用排版宽度占底框宽度比例
+			TopSectionRatio:       0.7301, // 汉字区域高度占底框高度比例
+			BottomSectionRatio:    0.2699, // 英文区域高度占底框高度比例
+			TopSectionTopInset:    0,      // 上半区顶部额外内边距比例
+			BottomSectionTopInset: 0,      // 下半区顶部额外内边距比例
+			RubySize:              39,     // 假名字号
+			HanziSize:             76,     // 中文正文字号
+			EnglishSize:           46,     // 英文字号
+			BaseGap:               1,      // 字与字之间的基础间距
+			RowGap:                1,
 			TokenLineGap:          18,
-			EnglishLineGap:        10,
+			EnglishLineGap:        8,
 			BoxColor:              "&HFF000000",
-			RubyColor:             "&H00686868",
-			HanziColor:            "&H00434343",
-			EnglishColor:          "&H008878D8",
+			RubyColor:             "&H00000000",
+			HanziColor:            "&H00000000",
+			EnglishColor:          "&H00494393",
 			OutlineColor:          "&H00DDD6CF",
 			RubyBold:              0,
 			HanziBold:             1,
@@ -277,16 +278,16 @@ func chineseSubtitlePresetFor(style int) subtitlePreset {
 			TopSectionTopInset:    0.07,
 			BottomSectionTopInset: 0.02,
 			RubySize:              42,
-			HanziSize:             70,
-			EnglishSize:           42,
-			BaseGap:               4,
-			RowGap:                10,
+			HanziSize:             76,
+			EnglishSize:           46,
+			BaseGap:               3,
+			RowGap:                1,
 			TokenLineGap:          14,
-			EnglishLineGap:        8,
+			EnglishLineGap:        6,
 			BoxColor:              "&H3A000000",
-			RubyColor:             "&H00EAEAEA",
-			HanziColor:            "&H00FFFFFF",
-			EnglishColor:          "&H00A8F9FF",
+			RubyColor:             "&H00000000",
+			HanziColor:            "&H00000000",
+			EnglishColor:          "&H0059A2AA",
 			OutlineColor:          "&H00101010",
 			RubyBold:              0,
 			HanziBold:             1,
@@ -348,7 +349,7 @@ func writeASSHeader(b *strings.Builder, layout subtitleLayout) {
 	b.WriteString("Style: Box," + layout.HanziFontName + ",20," + layout.BoxColor + "," + layout.BoxColor + "," + layout.BoxColor + "," + layout.BoxColor + ",0,0,0,0,100,100,0,0,1,0,0,7,0,0,0,1\n")
 	b.WriteString("Style: Ruby," + layout.RubyFontName + "," + strconv.Itoa(layout.RubySize) + "," + layout.RubyColor + "," + layout.RubyColor + "," + layout.OutlineColor + ",&H64000000," + strconv.Itoa(layout.RubyBold) + ",0,0,0,100,100,0,0,1,1,0,5,10,10,10,1\n")
 	b.WriteString("Style: Hanzi," + layout.HanziFontName + "," + strconv.Itoa(layout.HanziSize) + "," + layout.HanziColor + "," + layout.HanziColor + "," + layout.OutlineColor + ",&H64000000," + strconv.Itoa(layout.HanziBold) + ",0,0,0,100,100,0,0,1,1,0,5,10,10,10,1\n")
-	b.WriteString("Style: HanziActive," + layout.HanziFontName + "," + strconv.Itoa(layout.HanziSize) + ",&H0078ECFF,&H0078ECFF," + layout.OutlineColor + ",&H64000000,0,0,0,0,100,100,0,0,1,1,0,5,10,10,10,1\n")
+	b.WriteString("Style: HanziActive," + layout.HanziFontName + "," + strconv.Itoa(layout.HanziSize) + ",&H00CC66CC,&H00CC66CC," + layout.OutlineColor + ",&H64000000,0,0,0,0,100,100,0,0,1,1,0,5,10,10,10,1\n")
 	b.WriteString("Style: English," + layout.EnglishFontName + "," + strconv.Itoa(layout.EnglishSize) + "," + layout.EnglishColor + "," + layout.EnglishColor + "," + layout.OutlineColor + ",&H64000000," + strconv.Itoa(layout.EnglishBold) + ",0,0,0,100,100,0,0,1,1,0,5,10,10,10,1\n\n")
 
 	b.WriteString("[Events]\n")
@@ -371,7 +372,8 @@ type topSectionRow struct {
 
 func buildTokenCells(tokens []dto.PodcastToken, layout subtitleLayout) []tokenCell {
 	out := make([]tokenCell, 0, len(tokens))
-	for _, tk := range tokens {
+	for i := 0; i < len(tokens); i++ {
+		tk := tokens[i]
 		hanzi := strings.TrimSpace(tk.Char)
 		ruby := strings.TrimSpace(tk.Pinyin)
 		if hanzi == "" && ruby == "" {

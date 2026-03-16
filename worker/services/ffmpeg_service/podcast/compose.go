@@ -27,6 +27,10 @@ func ComposeVideo(input ComposeInput) error {
 	x264Preset := podcastX264Preset()
 
 	baseOutput := filepath.Join(projectDir, "podcast_base.mp4")
+	contentOutput := input.OutputPath
+	if shouldKeepPodcastContentVideo(input) {
+		contentOutput = filepath.Join(projectDir, "podcast_content.mp4")
+	}
 	bgFilter := fmt.Sprintf("[0:v]scale=%s", scale)
 	if strings.TrimSpace(wave.BackgroundFilter) != "" {
 		bgFilter += "," + wave.BackgroundFilter
@@ -52,7 +56,12 @@ func ComposeVideo(input ComposeInput) error {
 	}
 
 	if input.Script == nil {
-		return os.Rename(baseOutput, input.OutputPath)
+		return common.RunFFmpeg(
+			"-y",
+			"-i", baseOutput,
+			"-c", "copy",
+			input.OutputPath,
+		)
 	}
 
 	assPath, err := WritePodcastASS(*input.Script, projectDir, input.Resolution, input.DesignStyle)
@@ -60,7 +69,12 @@ func ComposeVideo(input ComposeInput) error {
 		return err
 	}
 	if strings.TrimSpace(assPath) == "" {
-		return os.Rename(baseOutput, input.OutputPath)
+		return common.RunFFmpeg(
+			"-y",
+			"-i", baseOutput,
+			"-c", "copy",
+			input.OutputPath,
+		)
 	}
 
 	filter := fmt.Sprintf("subtitles=%s:fontsdir=%s", escapeFFmpegPath(assPath), escapeFFmpegPath(podcastFontsDir()))
@@ -72,12 +86,11 @@ func ComposeVideo(input ComposeInput) error {
 		"-preset", x264Preset,
 		"-pix_fmt", "yuv420p",
 		"-c:a", "copy",
-		input.OutputPath,
+		contentOutput,
 	); err != nil {
 		return err
 	}
-	_ = os.Remove(baseOutput)
-	if err := prependPodcastIntroIfNeeded(input, x264Preset); err != nil {
+	if err := prependPodcastIntroIfNeeded(input, contentOutput, x264Preset); err != nil {
 		return err
 	}
 	return nil
@@ -107,18 +120,44 @@ func podcastX264Preset() string {
 	return strings.TrimSpace(conf.Get[string]("worker.podcast_x264_preset", "veryfast"))
 }
 
-func prependPodcastIntroIfNeeded(input ComposeInput, x264Preset string) error {
-	if input.Script == nil || strings.TrimSpace(input.Script.Language) != "zh" {
+func prependPodcastIntroIfNeeded(input ComposeInput, contentOutput, x264Preset string) error {
+	if input.Script == nil || strings.TrimSpace(contentOutput) == "" {
+		return nil
+	}
+	language := strings.TrimSpace(strings.ToLower(input.Script.Language))
+	if language != "zh" && language != "ja" {
+		if contentOutput == input.OutputPath {
+			return nil
+		}
+		return common.RunFFmpeg(
+			"-y",
+			"-i", contentOutput,
+			"-c", "copy",
+			input.OutputPath,
+		)
+	}
+
+	if contentOutput == input.OutputPath {
 		return nil
 	}
 
-	introPath := podcastIntroAnimationPath("zh")
+	introPath := podcastIntroAnimationPath(language)
 	if strings.TrimSpace(introPath) == "" {
-		return nil
+		return common.RunFFmpeg(
+			"-y",
+			"-i", contentOutput,
+			"-c", "copy",
+			input.OutputPath,
+		)
 	}
 	if _, err := os.Stat(introPath); err != nil {
 		if os.IsNotExist(err) {
-			return nil
+			return common.RunFFmpeg(
+				"-y",
+				"-i", contentOutput,
+				"-c", "copy",
+				input.OutputPath,
+			)
 		}
 		return err
 	}
@@ -128,19 +167,20 @@ func prependPodcastIntroIfNeeded(input ComposeInput, x264Preset string) error {
 		return err
 	}
 	if introDurationSec <= 0 {
-		return nil
+		return common.RunFFmpeg(
+			"-y",
+			"-i", contentOutput,
+			"-c", "copy",
+			input.OutputPath,
+		)
 	}
 
-	tempOutput := strings.TrimSuffix(input.OutputPath, filepath.Ext(input.OutputPath)) + "_with_intro.mp4"
 	scale := common.ResolutionToScale(input.Resolution)
-	filter := fmt.Sprintf("[0:v]scale=%s,setsar=1[v0];[1:v]setsar=1[v1];[v0][2:a][v1][1:a]concat=n=2:v=1:a=1[v][a]", scale)
+	filter := fmt.Sprintf("[0:v]scale=%s,setsar=1[v0];[0:a]aresample=48000,asetpts=N/SR/TB[a0];[1:v]setsar=1[v1];[1:a]aresample=48000,asetpts=N/SR/TB[a1];[v0][a0][v1][a1]concat=n=2:v=1:a=1[v][a]", scale)
 	if err := common.RunFFmpeg(
 		"-y",
 		"-i", introPath,
-		"-i", input.OutputPath,
-		"-f", "lavfi",
-		"-t", fmt.Sprintf("%.3f", introDurationSec),
-		"-i", "anullsrc=r=48000:cl=stereo",
+		"-i", contentOutput,
 		"-filter_complex", filter,
 		"-map", "[v]",
 		"-map", "[a]",
@@ -148,15 +188,19 @@ func prependPodcastIntroIfNeeded(input ComposeInput, x264Preset string) error {
 		"-preset", x264Preset,
 		"-pix_fmt", "yuv420p",
 		"-c:a", "aac",
-		tempOutput,
+		input.OutputPath,
 	); err != nil {
 		return err
 	}
+	return nil
+}
 
-	if err := os.Remove(input.OutputPath); err != nil && !os.IsNotExist(err) {
-		return err
+func shouldKeepPodcastContentVideo(input ComposeInput) bool {
+	if input.Script == nil {
+		return false
 	}
-	return os.Rename(tempOutput, input.OutputPath)
+	language := strings.TrimSpace(strings.ToLower(input.Script.Language))
+	return language == "zh" || language == "ja"
 }
 
 func podcastIntroAnimationPath(language string) string {
@@ -165,9 +209,10 @@ func podcastIntroAnimationPath(language string) string {
 		return ""
 	}
 	candidates := []string{
-		filepath.Join(conf.Get[string]("worker.ffmpeg_work_dir"), "podcast", "animation", language+"_open.mp4"),
-		filepath.Join("artifacts", "podcast", "animation", language+"_open.mp4"),
-		filepath.Join("/Users/luca/go/github.com/luca/video-saas/artifacts/podcast/animation", language+"_open.mp4"),
+		filepath.Join(conf.Get[string]("worker.worker_assets_dir"), "podcast", "animation", language+"_open.mp4"),
+		filepath.Join("assets", "podcast", "animation", language+"_open.mp4"),
+		filepath.Join("worker", "assets", "podcast", "animation", language+"_open.mp4"),
+		filepath.Join("/Users/luca/go/github.com/luca/video-saas/worker/assets/podcast/animation", language+"_open.mp4"),
 	}
 	for _, candidate := range candidates {
 		if _, err := os.Stat(candidate); err == nil {

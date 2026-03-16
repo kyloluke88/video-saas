@@ -70,6 +70,11 @@ func alignChineseTokens(seg dto.PodcastSegment, subtitles []tts.Subtitle) []dto.
 		return nil
 	}
 
+	if alignChineseTokensByRange(tokens, subtitles, seg.StartMS) {
+		fillUnalignedChineseTokens(tokens, seg.StartMS, seg.EndMS)
+		return tokens
+	}
+
 	subIdx := 0
 	for i := range tokens {
 		charText := strings.TrimSpace(tokens[i].Char)
@@ -96,6 +101,84 @@ func alignChineseTokens(seg dto.PodcastSegment, subtitles []tts.Subtitle) []dto.
 	return tokens
 }
 
+func alignChineseTokensByRange(tokens []dto.PodcastToken, subtitles []tts.Subtitle, segmentStartMS int) bool {
+	matched := 0
+	for _, sub := range subtitles {
+		startIdx, endIdx, ok := chineseSubtitleTokenRange(tokens, sub)
+		if !ok {
+			continue
+		}
+
+		covered := make([]int, 0, endIdx-startIdx+1)
+		for i := startIdx; i <= endIdx; i++ {
+			charText := strings.TrimSpace(tokens[i].Char)
+			if charText == "" || isSilentToken(charText) {
+				continue
+			}
+			covered = append(covered, i)
+		}
+		if len(covered) == 0 {
+			continue
+		}
+
+		beginMS := segmentStartMS + maxInt(0, sub.BeginTime)
+		endMS := segmentStartMS + maxInt(sub.BeginTime, sub.EndTime)
+		if endMS <= beginMS {
+			endMS = beginMS + len(covered)
+		}
+
+		duration := endMS - beginMS
+		for order, tokenIdx := range covered {
+			tokenStart := beginMS + duration*order/len(covered)
+			tokenEnd := beginMS + duration*(order+1)/len(covered)
+			if tokenEnd <= tokenStart {
+				tokenEnd = tokenStart + 1
+			}
+			tokens[tokenIdx].StartMS = tokenStart
+			tokens[tokenIdx].EndMS = tokenEnd
+			matched++
+		}
+	}
+	return matched > 0
+}
+
+func chineseSubtitleTokenRange(tokens []dto.PodcastToken, sub tts.Subtitle) (int, int, bool) {
+	if len(tokens) == 0 {
+		return 0, 0, false
+	}
+
+	start := sub.BeginIndex
+	end := sub.EndIndex
+	if start < 0 || end < start {
+		return 0, 0, false
+	}
+
+	textRunes := []rune(strings.TrimSpace(sub.Text))
+	if len(textRunes) == 0 {
+		return 0, 0, false
+	}
+
+	// Tencent's EndIndex is occasionally inclusive and occasionally behaves like
+	// an exclusive bound depending on the subtitle payload; normalize against the
+	// returned text length so we still get stable per-char timing.
+	if end-start == len(textRunes) {
+		end--
+	}
+	if end-start+1 < len(textRunes) {
+		end = start + len(textRunes) - 1
+	}
+	if start >= len(tokens) {
+		return 0, 0, false
+	}
+	if end >= len(tokens) {
+		end = len(tokens) - 1
+	}
+	if end < start {
+		return 0, 0, false
+	}
+	return start, end, true
+}
+
 func chineseSegmentTokens(seg dto.PodcastSegment) []dto.PodcastToken {
 	if len(seg.Tokens) == 0 {
 		return nil
@@ -106,21 +189,48 @@ func chineseSegmentTokens(seg dto.PodcastSegment) []dto.PodcastToken {
 }
 
 func fillUnalignedChineseTokens(tokens []dto.PodcastToken, segmentStartMS, segmentEndMS int) {
-	lastEnd := segmentStartMS
-	for i := range tokens {
-		if tokens[i].StartMS > 0 || tokens[i].EndMS > 0 {
-			lastEnd = maxInt(lastEnd, tokens[i].EndMS)
+	if len(tokens) == 0 {
+		return
+	}
+
+	start := maxInt(0, segmentStartMS)
+	end := maxInt(start+1, segmentEndMS)
+
+	for i := 0; i < len(tokens); {
+		if tokens[i].EndMS > tokens[i].StartMS {
+			i++
 			continue
 		}
-		nextStart := segmentEndMS
-		for j := i + 1; j < len(tokens); j++ {
-			if tokens[j].StartMS > 0 || tokens[j].EndMS > 0 {
-				nextStart = firstPositive(tokens[j].StartMS, tokens[j].EndMS, segmentEndMS)
-				break
-			}
+
+		j := i
+		for j < len(tokens) && tokens[j].EndMS <= tokens[j].StartMS {
+			j++
 		}
-		tokens[i].StartMS = lastEnd
-		tokens[i].EndMS = maxInt(lastEnd, nextStart)
+
+		windowStart := start
+		if i > 0 && tokens[i-1].EndMS > tokens[i-1].StartMS {
+			windowStart = tokens[i-1].EndMS
+		}
+		windowEnd := end
+		if j < len(tokens) && tokens[j].EndMS > tokens[j].StartMS {
+			windowEnd = tokens[j].StartMS
+		}
+		if windowEnd <= windowStart {
+			windowEnd = windowStart + (j - i)
+		}
+
+		step := maxInt(1, (windowEnd-windowStart)/maxInt(1, j-i))
+		cursor := windowStart
+		for k := i; k < j; k++ {
+			tokens[k].StartMS = cursor
+			if k == j-1 {
+				tokens[k].EndMS = maxInt(cursor+1, windowEnd)
+			} else {
+				tokens[k].EndMS = maxInt(cursor+1, cursor+step)
+			}
+			cursor = tokens[k].EndMS
+		}
+		i = j
 	}
 }
 

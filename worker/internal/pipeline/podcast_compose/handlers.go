@@ -21,9 +21,13 @@ func HandleCompose(ch *amqp.Channel, task dto.VideoTaskMessage) error {
 	if strings.TrimSpace(payload.ProjectID) == "" {
 		return fmt.Errorf("project_id is required")
 	}
+	if strings.TrimSpace(payload.Lang) == "" {
+		return fmt.Errorf("lang is required")
+	}
 
 	result, err := podcastcomposeservice.Compose(podcastcomposeservice.ComposeInput{
 		ProjectID:     payload.ProjectID,
+		Language:      payload.Lang,
 		BgImgFilename: payload.BgImgFilename,
 		Resolution:    payload.Resolution,
 		DesignStyle:   payload.DesignStyle,

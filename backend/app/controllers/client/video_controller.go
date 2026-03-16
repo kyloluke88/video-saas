@@ -151,14 +151,18 @@ func (ctrl *VideoController) CreatePodcastDialogue(c *gin.Context) {
 		return
 	}
 
+	lang := normalizePodcastLang(req.Lang)
 	projectSeed := req.Title
 	if strings.TrimSpace(projectSeed) == "" {
 		projectSeed = req.ScriptFilename
 	}
-	projectID := buildProjectID(projectSeed)
+	projectID := buildPodcastProjectID(lang, projectSeed)
 
 	payload := map[string]interface{}{
 		"project_id":      projectID,
+		"lang":            lang,
+		"content_profile": strings.TrimSpace(req.ContentProfile),
+		"is_direct":       req.IsDirect,
 		"title":           strings.TrimSpace(req.Title),
 		"script_filename": strings.TrimSpace(req.ScriptFilename),
 		"bg_img_filename": strings.TrimSpace(req.BgImgFilename),
@@ -193,6 +197,21 @@ func buildProjectID(seed string) string {
 	englishName := strings.TrimSpace(seed)
 	slug := slugForID(englishName)
 	return fmt.Sprintf("pro_%d_%s", time.Now().UnixNano(), slug)
+}
+
+func buildPodcastProjectID(lang, seed string) string {
+	prefix := normalizePodcastLang(lang) + "_podcast"
+	slug := slugForID(strings.TrimSpace(seed))
+	return fmt.Sprintf("%s_%s_%s", prefix, time.Now().Format("20060102150405"), slug)
+}
+
+func normalizePodcastLang(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "ja":
+		return "ja"
+	default:
+		return "zh"
+	}
 }
 
 func defaultIfEmpty(value, fallback string) string {

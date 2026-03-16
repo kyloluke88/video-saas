@@ -41,9 +41,10 @@ type Request struct {
 }
 
 type Result struct {
-	Audio     []byte
-	Ext       string
-	Subtitles []Subtitle
+	Audio       []byte
+	Ext         string
+	Subtitles   []Subtitle
+	RawResponse []byte
 }
 
 type Subtitle struct {

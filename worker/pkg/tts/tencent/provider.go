@@ -3,6 +3,7 @@ package tencent
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -108,14 +109,19 @@ func (p *Provider) Synthesize(ctx context.Context, req shared.Request) (shared.R
 	if err != nil {
 		return shared.Result{}, err
 	}
+	rawResponse, err := json.MarshalIndent(response, "", "  ")
+	if err != nil {
+		return shared.Result{}, err
+	}
 	ext := strings.ToLower(strings.TrimSpace(p.codec))
 	if ext == "" {
 		ext = "mp3"
 	}
 	return shared.Result{
-		Audio:     audioBytes,
-		Ext:       ext,
-		Subtitles: convertSubtitles(response.Response.Subtitles),
+		Audio:       audioBytes,
+		Ext:         ext,
+		Subtitles:   convertSubtitles(response.Response.Subtitles),
+		RawResponse: rawResponse,
 	}, nil
 }
 

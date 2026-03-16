@@ -24,6 +24,12 @@ func HandleGenerate(ch *amqp.Channel, task dto.VideoTaskMessage) error {
 	if strings.TrimSpace(payload.ProjectID) == "" {
 		return fmt.Errorf("project_id is required")
 	}
+	if !validPodcastLanguage(payload.Lang) {
+		return fmt.Errorf("lang must be zh or ja")
+	}
+	if !validContentProfile(payload.ContentProfile) {
+		return fmt.Errorf("content_profile must be daily, social_issue, or international")
+	}
 	if strings.TrimSpace(payload.ScriptFilename) == "" {
 		return fmt.Errorf("script_filename is required")
 	}
@@ -36,6 +42,9 @@ func HandleGenerate(ch *amqp.Channel, task dto.VideoTaskMessage) error {
 
 	result, err := podcastaudioservice.Generate(podcastaudioservice.GenerateInput{
 		ProjectID:       payload.ProjectID,
+		Language:        payload.Lang,
+		ContentProfile:  payload.ContentProfile,
+		IsDirect:        payload.IsDirect == 1,
 		ScriptFilename:  payload.ScriptFilename,
 		MaleVoiceType:   payload.MaleVoiceType,
 		FemaleVoiceType: payload.FemaleVoiceType,
@@ -47,6 +56,7 @@ func HandleGenerate(ch *amqp.Channel, task dto.VideoTaskMessage) error {
 	log.Printf("🎧 podcast audio generated project_id=%s audio=%s script=%s", payload.ProjectID, result.DialogueAudioPath, result.AlignedScriptPath)
 	return pipeline.PublishTask(ch, "podcast.compose.v1", map[string]interface{}{
 		"project_id":      payload.ProjectID,
+		"lang":            payload.Lang,
 		"title":           payload.Title,
 		"bg_img_filename": payload.BgImgFilename,
 		"target_platform": payload.TargetPlatform,
@@ -54,6 +64,24 @@ func HandleGenerate(ch *amqp.Channel, task dto.VideoTaskMessage) error {
 		"resolution":      payload.Resolution,
 		"design_style":    payload.DesignStyle,
 	})
+}
+
+func validPodcastLanguage(value string) bool {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "zh", "ja":
+		return true
+	default:
+		return false
+	}
+}
+
+func validContentProfile(value string) bool {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "daily", "social_issue", "international":
+		return true
+	default:
+		return false
+	}
 }
 
 func decodePayload(raw map[string]interface{}) (dto.PodcastAudioGeneratePayload, error) {

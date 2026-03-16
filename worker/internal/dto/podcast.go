@@ -2,6 +2,9 @@ package dto
 
 type PodcastAudioGeneratePayload struct {
 	ProjectID       string `json:"project_id"`
+	Lang            string `json:"lang"`
+	ContentProfile  string `json:"content_profile"`
+	IsDirect        int    `json:"is_direct,omitempty"`
 	Title           string `json:"title,omitempty"`
 	ScriptFilename  string `json:"script_filename"`
 	BgImgFilename   string `json:"bg_img_filename"`
@@ -15,6 +18,7 @@ type PodcastAudioGeneratePayload struct {
 
 type PodcastComposePayload struct {
 	ProjectID      string `json:"project_id"`
+	Lang           string `json:"lang"`
 	Title          string `json:"title,omitempty"`
 	BgImgFilename  string `json:"bg_img_filename"`
 	TargetPlatform string `json:"target_platform,omitempty"`
@@ -54,7 +58,6 @@ type PodcastYouTubeChapter struct {
 	TitleEN   string   `json:"title_en,omitempty"`
 	TitleJA   string   `json:"title_ja,omitempty"`
 	TitleZH   string   `json:"title_zh,omitempty"`
-	Summary   string   `json:"summary,omitempty"`
 	BlockIDs  []string `json:"block_ids,omitempty"`
 }
 

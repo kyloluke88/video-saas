@@ -177,9 +177,10 @@ func (p *Provider) Synthesize(ctx context.Context, req shared.Request) (shared.R
 	}
 
 	return shared.Result{
-		Audio:     audioBytes,
-		Ext:       outputExtForFormat(p.outputFormat),
-		Subtitles: convertAlignment(parsed.Alignment, parsed.NormalizedAlignment),
+		Audio:       audioBytes,
+		Ext:         outputExtForFormat(p.outputFormat),
+		Subtitles:   convertAlignment(parsed.Alignment, parsed.NormalizedAlignment),
+		RawResponse: respBody,
 	}, nil
 }
 

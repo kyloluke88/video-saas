@@ -15,6 +15,7 @@ import (
 
 type ComposeInput struct {
 	ProjectID     string
+	Language      string
 	BgImgFilename string
 	Resolution    string
 	DesignStyle   int
@@ -27,6 +28,10 @@ type ComposeResult struct {
 func Compose(input ComposeInput) (ComposeResult, error) {
 	if strings.TrimSpace(input.ProjectID) == "" {
 		return ComposeResult{}, fmt.Errorf("project_id is required")
+	}
+	language, err := requirePodcastLanguage(input.Language)
+	if err != nil {
+		return ComposeResult{}, err
 	}
 	if strings.TrimSpace(input.BgImgFilename) == "" {
 		return ComposeResult{}, fmt.Errorf("bg_img_filename is required")
@@ -51,6 +56,10 @@ func Compose(input ComposeInput) (ComposeResult, error) {
 	if err := readJSON(scriptPath, &script); err != nil {
 		return ComposeResult{}, err
 	}
+	if err := validateScriptLanguage(script.Language, language); err != nil {
+		return ComposeResult{}, err
+	}
+	script.Language = language
 	script.RefreshSegmentsFromBlocks()
 	log.Printf("📝 podcast compose script project_id=%s segments=%d", input.ProjectID, len(script.Segments))
 
@@ -66,10 +75,6 @@ func Compose(input ComposeInput) (ComposeResult, error) {
 		return ComposeResult{}, err
 	}
 	log.Printf("✅ podcast compose output project_id=%s final=%s", input.ProjectID, finalPath)
-	if err := cleanupProjectArtifacts(projectDir); err != nil {
-		return ComposeResult{}, err
-	}
-
 	return ComposeResult{FinalVideoPath: finalPath}, nil
 }
 
@@ -78,7 +83,7 @@ func projectDirFor(projectID string) string {
 }
 
 func backgroundImagePathFor(filename string) string {
-	return filepath.Join(conf.Get[string]("worker.ffmpeg_work_dir"), "podcast", "bg-images", filepath.Base(strings.TrimSpace(filename)))
+	return filepath.Join(conf.Get[string]("worker.worker_assets_dir"), "podcast", "bg-images", filepath.Base(strings.TrimSpace(filename)))
 }
 
 func readJSON(path string, out interface{}) error {
@@ -106,28 +111,24 @@ func defaultPodcastResolution(value string) string {
 	return "480p"
 }
 
-func cleanupProjectArtifacts(projectDir string) error {
-	keep := map[string]struct{}{
-		"podcast_final.mp4":   {},
-		"dialogue.mp3":        {},
-		"script_aligned.json": {},
+func requirePodcastLanguage(value string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "zh":
+		return "zh", nil
+	case "ja":
+		return "ja", nil
+	default:
+		return "", fmt.Errorf("lang must be zh or ja")
 	}
-	if conf.Get[bool]("worker.podcast_keep_ass", false) {
-		keep["podcast_subtitles.ass"] = struct{}{}
-	}
+}
 
-	entries, err := os.ReadDir(projectDir)
+func validateScriptLanguage(scriptLanguage, payloadLanguage string) error {
+	scriptLang, err := requirePodcastLanguage(scriptLanguage)
 	if err != nil {
-		return err
+		return fmt.Errorf("script language mismatch: script=%q payload=%q", strings.TrimSpace(scriptLanguage), payloadLanguage)
 	}
-	for _, entry := range entries {
-		name := entry.Name()
-		if _, ok := keep[name]; ok {
-			continue
-		}
-		if err := os.RemoveAll(filepath.Join(projectDir, name)); err != nil {
-			return fmt.Errorf("cleanup %s failed: %w", name, err)
-		}
+	if scriptLang != payloadLanguage {
+		return fmt.Errorf("script language mismatch: script=%q payload=%q", scriptLang, payloadLanguage)
 	}
 	return nil
 }

@@ -13,6 +13,10 @@ func RunFFmpeg(args ...string) error {
 	return runCommand("ffmpeg", args...)
 }
 
+func RunFFmpegOutput(args ...string) (string, error) {
+	return runCommandOutput("ffmpeg", args...)
+}
+
 func RunFFprobe(args ...string) (string, error) {
 	return runCommandOutput("ffprobe", args...)
 }

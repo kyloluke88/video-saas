@@ -38,6 +38,8 @@ artifacts/
 
 # Worker & Backend
 worker/storage/logs/
+worker/outputs/
+worker/worker/
 backend/storage/logs/
 
 # Env files
