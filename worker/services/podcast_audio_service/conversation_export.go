@@ -89,7 +89,7 @@ func exportDisplayText(language string, seg dto.PodcastSegment) string {
 	if isJapaneseLanguage(language) {
 		return japaneseDisplayText(seg)
 	}
-	return strings.TrimSpace(seg.ZH)
+	return strings.TrimSpace(seg.Text)
 }
 
 func exportRuby(language string, seg dto.PodcastSegment, displayText string) []conversationExportRuby {
@@ -102,8 +102,8 @@ func exportRuby(language string, seg dto.PodcastSegment, displayText string) []c
 func exportChineseRuby(seg dto.PodcastSegment) []conversationExportRuby {
 	out := make([]conversationExportRuby, 0, len(seg.Tokens))
 	for _, token := range seg.Tokens {
-		surface := strings.TrimSpace(token.Char)
-		reading := strings.TrimSpace(token.Pinyin)
+		surface := strings.TrimSpace(token.Text)
+		reading := strings.TrimSpace(token.Reading)
 		if surface == "" || reading == "" || isSilentToken(surface) {
 			continue
 		}
@@ -119,17 +119,17 @@ func exportChineseRuby(seg dto.PodcastSegment) []conversationExportRuby {
 }
 
 func exportJapaneseRuby(seg dto.PodcastSegment, displayText string) []conversationExportRuby {
-	if len(seg.RubySpans) == 0 {
+	if len(seg.TokenSpans) == 0 {
 		return nil
 	}
 	runes := []rune(displayText)
-	out := make([]conversationExportRuby, 0, len(seg.RubySpans))
-	for _, span := range seg.RubySpans {
+	out := make([]conversationExportRuby, 0, len(seg.TokenSpans))
+	for _, span := range seg.TokenSpans {
 		if span.StartIndex < 0 || span.EndIndex < span.StartIndex || span.EndIndex >= len(runes) {
 			continue
 		}
 		surface := strings.TrimSpace(string(runes[span.StartIndex : span.EndIndex+1]))
-		reading := strings.TrimSpace(span.Ruby)
+		reading := strings.TrimSpace(span.Reading)
 		if surface == "" || reading == "" {
 			continue
 		}

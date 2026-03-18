@@ -11,7 +11,9 @@
         "chapter_id": "ch_001",
         "title_en": "Channel CTA",
         "title_zh": "频道互动",
-        "block_ids": ["channel_cta.1"]
+        "block_ids": [
+          "channel_cta.1"
+        ]
       }
     ],
     "in_this_episode_you_will_learn": [
@@ -34,104 +36,320 @@
         {
           "segment_id": "seg_001",
           "speaker": "female",
-          "zh": "如果今天这集对你有帮助，欢迎订阅我们，也别忘了点个赞。",
           "en": "If today's episode was helpful, feel free to subscribe and don't forget to leave a like.",
           "summary": false,
           "tokens": [
-            { "char": "如", "pinyin": "rú" },
-            { "char": "果", "pinyin": "guǒ" },
-            { "char": "今", "pinyin": "jīn" },
-            { "char": "天", "pinyin": "tiān" },
-            { "char": "这", "pinyin": "zhè" },
-            { "char": "集", "pinyin": "jí" },
-            { "char": "对", "pinyin": "duì" },
-            { "char": "你", "pinyin": "nǐ" },
-            { "char": "有", "pinyin": "yǒu" },
-            { "char": "帮", "pinyin": "bāng" },
-            { "char": "助", "pinyin": "zhù" },
-            { "char": "，", "pinyin": "" },
-            { "char": "欢", "pinyin": "huān" },
-            { "char": "迎", "pinyin": "yíng" },
-            { "char": "订", "pinyin": "dìng" },
-            { "char": "阅", "pinyin": "yuè" },
-            { "char": "我", "pinyin": "wǒ" },
-            { "char": "们", "pinyin": "men" },
-            { "char": "，", "pinyin": "" },
-            { "char": "也", "pinyin": "yě" },
-            { "char": "别", "pinyin": "bié" },
-            { "char": "忘", "pinyin": "wàng" },
-            { "char": "了", "pinyin": "le" },
-            { "char": "点", "pinyin": "diǎn" },
-            { "char": "个", "pinyin": "gè" },
-            { "char": "赞", "pinyin": "zàn" },
-            { "char": "。", "pinyin": "" }
-          ]
+            {
+              "text": "如",
+              "reading": "rú"
+            },
+            {
+              "text": "果",
+              "reading": "guǒ"
+            },
+            {
+              "text": "今",
+              "reading": "jīn"
+            },
+            {
+              "text": "天",
+              "reading": "tiān"
+            },
+            {
+              "text": "这",
+              "reading": "zhè"
+            },
+            {
+              "text": "集",
+              "reading": "jí"
+            },
+            {
+              "text": "对",
+              "reading": "duì"
+            },
+            {
+              "text": "你",
+              "reading": "nǐ"
+            },
+            {
+              "text": "有",
+              "reading": "yǒu"
+            },
+            {
+              "text": "帮",
+              "reading": "bāng"
+            },
+            {
+              "text": "助",
+              "reading": "zhù"
+            },
+            {
+              "text": "，"
+            },
+            {
+              "text": "欢",
+              "reading": "huān"
+            },
+            {
+              "text": "迎",
+              "reading": "yíng"
+            },
+            {
+              "text": "订",
+              "reading": "dìng"
+            },
+            {
+              "text": "阅",
+              "reading": "yuè"
+            },
+            {
+              "text": "我",
+              "reading": "wǒ"
+            },
+            {
+              "text": "们",
+              "reading": "men"
+            },
+            {
+              "text": "，"
+            },
+            {
+              "text": "也",
+              "reading": "yě"
+            },
+            {
+              "text": "别",
+              "reading": "bié"
+            },
+            {
+              "text": "忘",
+              "reading": "wàng"
+            },
+            {
+              "text": "了",
+              "reading": "le"
+            },
+            {
+              "text": "点",
+              "reading": "diǎn"
+            },
+            {
+              "text": "个",
+              "reading": "gè"
+            },
+            {
+              "text": "赞",
+              "reading": "zàn"
+            },
+            {
+              "text": "。"
+            }
+          ],
+          "text": "如果今天这集对你有帮助，欢迎订阅我们，也别忘了点个赞。"
         },
         {
           "segment_id": "seg_002",
           "speaker": "male",
-          "zh": "有你的支持，我们会继续做自然又好懂的中文节目。",
           "en": "With your support, we'll keep making natural and easy-to-follow Chinese episodes.",
           "summary": false,
           "tokens": [
-            { "char": "有", "pinyin": "yǒu" },
-            { "char": "你", "pinyin": "nǐ" },
-            { "char": "的", "pinyin": "de" },
-            { "char": "支", "pinyin": "zhī" },
-            { "char": "持", "pinyin": "chí" },
-            { "char": "，", "pinyin": "" },
-            { "char": "我", "pinyin": "wǒ" },
-            { "char": "们", "pinyin": "men" },
-            { "char": "会", "pinyin": "huì" },
-            { "char": "继", "pinyin": "jì" },
-            { "char": "续", "pinyin": "xù" },
-            { "char": "做", "pinyin": "zuò" },
-            { "char": "自", "pinyin": "zì" },
-            { "char": "然", "pinyin": "rán" },
-            { "char": "又", "pinyin": "yòu" },
-            { "char": "好", "pinyin": "hǎo" },
-            { "char": "懂", "pinyin": "dǒng" },
-            { "char": "的", "pinyin": "de" },
-            { "char": "中", "pinyin": "zhōng" },
-            { "char": "文", "pinyin": "wén" },
-            { "char": "节", "pinyin": "jié" },
-            { "char": "目", "pinyin": "mù" },
-            { "char": "。", "pinyin": "" }
-          ]
+            {
+              "text": "有",
+              "reading": "yǒu"
+            },
+            {
+              "text": "你",
+              "reading": "nǐ"
+            },
+            {
+              "text": "的",
+              "reading": "de"
+            },
+            {
+              "text": "支",
+              "reading": "zhī"
+            },
+            {
+              "text": "持",
+              "reading": "chí"
+            },
+            {
+              "text": "，"
+            },
+            {
+              "text": "我",
+              "reading": "wǒ"
+            },
+            {
+              "text": "们",
+              "reading": "men"
+            },
+            {
+              "text": "会",
+              "reading": "huì"
+            },
+            {
+              "text": "继",
+              "reading": "jì"
+            },
+            {
+              "text": "续",
+              "reading": "xù"
+            },
+            {
+              "text": "做",
+              "reading": "zuò"
+            },
+            {
+              "text": "自",
+              "reading": "zì"
+            },
+            {
+              "text": "然",
+              "reading": "rán"
+            },
+            {
+              "text": "又",
+              "reading": "yòu"
+            },
+            {
+              "text": "好",
+              "reading": "hǎo"
+            },
+            {
+              "text": "懂",
+              "reading": "dǒng"
+            },
+            {
+              "text": "的",
+              "reading": "de"
+            },
+            {
+              "text": "中",
+              "reading": "zhōng"
+            },
+            {
+              "text": "文",
+              "reading": "wén"
+            },
+            {
+              "text": "节",
+              "reading": "jié"
+            },
+            {
+              "text": "目",
+              "reading": "mù"
+            },
+            {
+              "text": "。"
+            }
+          ],
+          "text": "有你的支持，我们会继续做自然又好懂的中文节目。"
         },
         {
           "segment_id": "seg_003",
           "speaker": "female",
-          "zh": "我们下次再见，也欢迎你继续听、继续说、继续练中文。",
           "en": "See you next time, and you're always welcome to keep listening, keep speaking, and keep practicing Chinese.",
           "summary": false,
           "tokens": [
-            { "char": "我", "pinyin": "wǒ" },
-            { "char": "们", "pinyin": "men" },
-            { "char": "下", "pinyin": "xià" },
-            { "char": "次", "pinyin": "cì" },
-            { "char": "再", "pinyin": "zài" },
-            { "char": "见", "pinyin": "jiàn" },
-            { "char": "，", "pinyin": "" },
-            { "char": "也", "pinyin": "yě" },
-            { "char": "欢", "pinyin": "huān" },
-            { "char": "迎", "pinyin": "yíng" },
-            { "char": "你", "pinyin": "nǐ" },
-            { "char": "继", "pinyin": "jì" },
-            { "char": "续", "pinyin": "xù" },
-            { "char": "听", "pinyin": "tīng" },
-            { "char": "、", "pinyin": "" },
-            { "char": "继", "pinyin": "jì" },
-            { "char": "续", "pinyin": "xù" },
-            { "char": "说", "pinyin": "shuō" },
-            { "char": "、", "pinyin": "" },
-            { "char": "继", "pinyin": "jì" },
-            { "char": "续", "pinyin": "xù" },
-            { "char": "练", "pinyin": "liàn" },
-            { "char": "中", "pinyin": "zhōng" },
-            { "char": "文", "pinyin": "wén" },
-            { "char": "。", "pinyin": "" }
-          ]
+            {
+              "text": "我",
+              "reading": "wǒ"
+            },
+            {
+              "text": "们",
+              "reading": "men"
+            },
+            {
+              "text": "下",
+              "reading": "xià"
+            },
+            {
+              "text": "次",
+              "reading": "cì"
+            },
+            {
+              "text": "再",
+              "reading": "zài"
+            },
+            {
+              "text": "见",
+              "reading": "jiàn"
+            },
+            {
+              "text": "，"
+            },
+            {
+              "text": "也",
+              "reading": "yě"
+            },
+            {
+              "text": "欢",
+              "reading": "huān"
+            },
+            {
+              "text": "迎",
+              "reading": "yíng"
+            },
+            {
+              "text": "你",
+              "reading": "nǐ"
+            },
+            {
+              "text": "继",
+              "reading": "jì"
+            },
+            {
+              "text": "续",
+              "reading": "xù"
+            },
+            {
+              "text": "听",
+              "reading": "tīng"
+            },
+            {
+              "text": "、"
+            },
+            {
+              "text": "继",
+              "reading": "jì"
+            },
+            {
+              "text": "续",
+              "reading": "xù"
+            },
+            {
+              "text": "说",
+              "reading": "shuō"
+            },
+            {
+              "text": "、"
+            },
+            {
+              "text": "继",
+              "reading": "jì"
+            },
+            {
+              "text": "续",
+              "reading": "xù"
+            },
+            {
+              "text": "练",
+              "reading": "liàn"
+            },
+            {
+              "text": "中",
+              "reading": "zhōng"
+            },
+            {
+              "text": "文",
+              "reading": "wén"
+            },
+            {
+              "text": "。"
+            }
+          ],
+          "text": "我们下次再见，也欢迎你继续听、继续说、继续练中文。"
         }
       ]
     }

@@ -30,44 +30,56 @@ func writeJapaneseASS(script dto.PodcastScript, projectDir, resolution string, s
 
 		start := formatASSTimestampMS(seg.StartMS)
 		end := formatASSTimestampMS(seg.EndMS)
-		rows := computeJapaneseRows(layout, lineCountForJapaneseCells(cells))
+		pages := paginateJapaneseCellPages(seg, cells, layout)
+		pageWindows := buildSubtitlePageWindows(seg.StartMS, seg.EndMS, japanesePageStartTimes(pages))
 
 		b.WriteString(dialogueLine("Box", start, end, boxText(layout)))
-		for _, cell := range cells {
-			if cell.Line >= len(rows) {
+		for pageIndex, page := range pages {
+			if pageIndex >= len(pageWindows) || len(page) == 0 {
+				break
+			}
+			rows := computeJapaneseRows(layout, 1)
+			if len(rows) == 0 {
 				continue
 			}
-			row := rows[cell.Line]
-			b.WriteString(dialogueLine("JaBase", start, end, posText(cell.CenterX, row.BaseY, cell.Char)))
-			if cell.EndMS > cell.StartMS {
-				b.WriteString(dialogueLine("JaActive", formatASSTimestampMS(cell.StartMS), formatASSTimestampMS(cell.EndMS), posText(cell.CenterX, row.BaseY, cell.Char)))
+			row := rows[0]
+			window := pageWindows[pageIndex]
+			pageStart := formatASSTimestampMS(window.StartMS)
+			pageEnd := formatASSTimestampMS(window.EndMS)
+			for _, cell := range page {
+				b.WriteString(dialogueLine("JaBase", pageStart, pageEnd, posText(cell.CenterX, row.BaseY, cell.Char)))
+				if cell.EndMS > cell.StartMS {
+					b.WriteString(dialogueLine("JaActive", formatASSTimestampMS(cell.StartMS), formatASSTimestampMS(cell.EndMS), posText(cell.CenterX, row.BaseY, cell.Char)))
+				}
 			}
-		}
 
-		rubySpans := seg.RubySpans
-		if len(rubySpans) == 0 && len(seg.RubyTokens) > 0 {
-			rubySpans = buildJapaneseRubySpans(seg)
-		}
-		for _, span := range rubySpans {
-			ruby := strings.TrimSpace(span.Ruby)
-			if ruby == "" {
-				continue
+			tokenSpans := seg.TokenSpans
+			if len(tokenSpans) == 0 && len(seg.Tokens) > 0 {
+				tokenSpans = buildJapaneseTokenSpans(seg)
 			}
-			centerX, line, ok := japaneseRubyCenter(span, cells)
-			if !ok || line >= len(rows) {
-				continue
+			for _, span := range tokenSpans {
+				ruby := strings.TrimSpace(span.Reading)
+				if ruby == "" {
+					continue
+				}
+				centerX, line, ok := japaneseRubyCenter(span, page)
+				if !ok || line >= len(rows) {
+					continue
+				}
+				b.WriteString(dialogueLine("Ruby", pageStart, pageEnd, posText(centerX, rows[line].RubyY, ruby)))
 			}
-			b.WriteString(dialogueLine("Ruby", start, end, posText(centerX, rows[line].RubyY, ruby)))
 		}
 
 		if english := strings.TrimSpace(seg.EN); english != "" {
-			lines := splitEnglishLines(english, layout, 2)
-			englishRows := computeBottomSectionRows(layout, len(lines))
-			for i, line := range lines {
-				if i >= len(englishRows) {
+			englishPages := splitEnglishPagesSynced(english, layout, len(pageWindows))
+			englishRows := computeBottomSectionRows(layout, 1)
+			for i, line := range englishPages {
+				if i >= len(pageWindows) || len(englishRows) == 0 || strings.TrimSpace(line) == "" {
 					break
 				}
-				b.WriteString(dialogueLine("English", start, end, posText(playW/2, englishRows[i], line)))
+				pageStart := formatASSTimestampMS(pageWindows[i].StartMS)
+				pageEnd := formatASSTimestampMS(pageWindows[i].EndMS)
+				b.WriteString(dialogueLine("English", pageStart, pageEnd, posText(playW/2, englishRows[0], line)))
 			}
 		}
 	}
@@ -105,44 +117,24 @@ type japaneseTokenGroup struct {
 }
 
 func buildJapaneseCharCells(seg dto.PodcastSegment, layout subtitleLayout) []japaneseCharCell {
-	chars := japaneseSegmentChars(seg)
-	if len(chars) == 0 {
+	tokens := japaneseSegmentTokens(seg)
+	if len(tokens) == 0 {
 		return nil
 	}
-
-	layoutCells := buildJapaneseLayoutCells(chars, layout)
-	lines := splitJapaneseTokenLines(seg, layoutCells, layout.MaxTextWidth, 2)
-	if len(lines) == 0 {
-		return nil
-	}
-
-	out := make([]japaneseCharCell, 0, len(layoutCells))
-	for lineIdx, line := range lines {
-		centers := computeJapaneseCellCenters(line, layout)
-		for i := range line {
-			if i >= len(centers) {
-				break
-			}
-			cell := line[i]
-			cell.CenterX = centers[i]
-			cell.Line = lineIdx
-			out = append(out, cell)
-		}
-	}
-	return out
+	return buildJapaneseLayoutCells(tokens, layout)
 }
 
-func buildJapaneseLayoutCells(chars []dto.PodcastCharToken, layout subtitleLayout) []japaneseCharCell {
-	out := make([]japaneseCharCell, 0, len(chars))
-	for i := 0; i < len(chars); {
+func buildJapaneseLayoutCells(tokens []dto.PodcastToken, layout subtitleLayout) []japaneseCharCell {
+	out := make([]japaneseCharCell, 0, len(tokens))
+	for i := 0; i < len(tokens); {
 		out = append(out, japaneseCharCell{
-			StartIndex: chars[i].Index,
-			EndIndex:   chars[i].Index,
-			Char:       chars[i].Char,
-			Width:      estimateJapaneseCellWidth(chars[i].Char, layout),
-			Gap:        japaneseCharGap(chars[i].Char, layout),
-			StartMS:    chars[i].StartMS,
-			EndMS:      chars[i].EndMS,
+			StartIndex: i,
+			EndIndex:   i,
+			Char:       tokens[i].Text,
+			Width:      estimateJapaneseCellWidth(tokens[i].Text, layout),
+			Gap:        japaneseCharGap(tokens[i].Text, layout),
+			StartMS:    tokens[i].StartMS,
+			EndMS:      tokens[i].EndMS,
 		})
 		i++
 	}
@@ -287,15 +279,138 @@ func splitJapaneseCells(cells []japaneseCharCell, maxWidth int, maxLines int) []
 	return lines
 }
 
+func paginateJapaneseCellPages(seg dto.PodcastSegment, cells []japaneseCharCell, layout subtitleLayout) [][]japaneseCharCell {
+	if len(cells) == 0 {
+		return nil
+	}
+	groups := buildJapaneseTokenGroups(seg, cells)
+	if len(groups) == 0 {
+		groups = make([]japaneseTokenGroup, 0, len(cells))
+		for _, cell := range cells {
+			groups = append(groups, japaneseTokenGroup{Cells: []japaneseCharCell{cell}})
+		}
+	}
+
+	pages := make([][]japaneseCharCell, 0, 2)
+	for start := 0; start < len(groups); {
+		end := chooseJapanesePageBreak(groups, start, layout)
+		if end <= start {
+			end = start + 1
+		}
+		pages = append(pages, layoutJapanesePage(flattenJapaneseTokenGroups(groups[start:end]), layout))
+		start = end
+	}
+	return pages
+}
+
+func chooseJapanesePageBreak(groups []japaneseTokenGroup, start int, layout subtitleLayout) int {
+	if start >= len(groups) {
+		return start
+	}
+	charCount := 0
+	width := 0.0
+	limit := float64(layout.MaxTextWidth)
+	bestEnd := start
+	bestPunctEnd := -1
+	bestPunctChars := 0
+
+	for i := start; i < len(groups); i++ {
+		groupChars := japaneseTokenGroupRuneCount(groups[i])
+		if groupChars <= 0 {
+			groupChars = 1
+		}
+		groupWidth := japaneseTokenGroupWidth(groups[i].Cells)
+		nextWidth := width
+		if i > start && len(groups[i-1].Cells) > 0 {
+			prevCells := groups[i-1].Cells
+			nextWidth += prevCells[len(prevCells)-1].Gap
+		}
+		nextWidth += groupWidth
+		if i > start && (charCount+groupChars > subtitlePageMaxChars || nextWidth > limit) {
+			break
+		}
+
+		charCount += groupChars
+		width = nextWidth
+		bestEnd = i + 1
+		if japaneseTokenGroupEndsWithPunctuation(groups[i]) {
+			bestPunctEnd = i + 1
+			bestPunctChars = charCount
+		}
+		if charCount >= subtitlePageMaxChars {
+			break
+		}
+	}
+	if bestEnd == start {
+		return start + 1
+	}
+	if bestPunctEnd > start && charCount-bestPunctChars <= 4 {
+		return bestPunctEnd
+	}
+	return bestEnd
+}
+
+func layoutJapanesePage(cells []japaneseCharCell, layout subtitleLayout) []japaneseCharCell {
+	if len(cells) == 0 {
+		return nil
+	}
+	tokenCells := make([]tokenCell, 0, len(cells))
+	for _, cell := range cells {
+		tokenCells = append(tokenCells, tokenCell{
+			Hanzi: cell.Char,
+			Width: cell.Width,
+			Gap:   cell.Gap,
+		})
+	}
+	centers := computeCellCenters(tokenCells, layout)
+	out := make([]japaneseCharCell, 0, len(cells))
+	for i, cell := range cells {
+		cell.CenterX = centers[i]
+		cell.Line = 0
+		out = append(out, cell)
+	}
+	return out
+}
+
+func japanesePageStartTimes(pages [][]japaneseCharCell) []int {
+	out := make([]int, 0, len(pages))
+	for _, page := range pages {
+		start := 0
+		for _, cell := range page {
+			if cell.StartMS > 0 {
+				start = cell.StartMS
+				break
+			}
+		}
+		out = append(out, start)
+	}
+	return out
+}
+
+func japaneseTokenGroupRuneCount(group japaneseTokenGroup) int {
+	total := 0
+	for _, cell := range group.Cells {
+		total += subtitleRuneCount(cell.Char)
+	}
+	return total
+}
+
+func japaneseTokenGroupEndsWithPunctuation(group japaneseTokenGroup) bool {
+	if len(group.Cells) == 0 {
+		return false
+	}
+	return subtitleEndsWithPunctuation(group.Cells[len(group.Cells)-1].Char)
+}
+
 func buildJapaneseTokenGroups(seg dto.PodcastSegment, cells []japaneseCharCell) []japaneseTokenGroup {
 	if len(cells) == 0 {
 		return nil
 	}
-	rubySpans := seg.RubySpans
-	if len(rubySpans) == 0 && len(seg.RubyTokens) > 0 {
-		rubySpans = buildJapaneseRubySpans(seg)
+	tokenSpans := seg.TokenSpans
+	if len(tokenSpans) == 0 && len(seg.Tokens) > 0 {
+		tokenSpans = buildJapaneseTokenSpans(seg)
 	}
-	if len(rubySpans) == 0 {
+	if len(tokenSpans) == 0 {
 		out := make([]japaneseTokenGroup, 0, len(cells))
 		for _, cell := range cells {
 			out = append(out, japaneseTokenGroup{Cells: []japaneseCharCell{cell}})
@@ -306,9 +421,9 @@ func buildJapaneseTokenGroups(seg dto.PodcastSegment, cells []japaneseCharCell) 
 	out := make([]japaneseTokenGroup, 0, len(cells))
 	spanIndex := 0
 	for i := 0; i < len(cells); {
-		if spanIndex < len(rubySpans) && cells[i].StartIndex == rubySpans[spanIndex].StartIndex {
+		if spanIndex < len(tokenSpans) && cells[i].StartIndex == tokenSpans[spanIndex].StartIndex {
 			endCell := i
-			for endCell < len(cells) && cells[endCell].EndIndex < rubySpans[spanIndex].EndIndex {
+			for endCell < len(cells) && cells[endCell].EndIndex < tokenSpans[spanIndex].EndIndex {
 				endCell++
 			}
 			if endCell >= len(cells) {
@@ -363,23 +478,16 @@ func absFloat(v float64) float64 {
 	return v
 }
 
-func japaneseSegmentChars(seg dto.PodcastSegment) []dto.PodcastCharToken {
-	if len(seg.Chars) > 0 {
-		return seg.Chars
+func japaneseSegmentTokens(seg dto.PodcastSegment) []dto.PodcastToken {
+	if len(seg.Tokens) > 0 {
+		return seg.Tokens
 	}
-	text := strings.TrimSpace(seg.DisplayJA)
-	if text == "" {
-		text = strings.TrimSpace(seg.JA)
-	}
-	if text == "" {
-		text = strings.TrimSpace(seg.ZH)
-	}
+	text := strings.TrimSpace(seg.Text)
 	runes := []rune(text)
-	out := make([]dto.PodcastCharToken, 0, len(runes))
-	for i, r := range runes {
-		out = append(out, dto.PodcastCharToken{
-			Index: i,
-			Char:  string(r),
+	out := make([]dto.PodcastToken, 0, len(runes))
+	for _, r := range runes {
+		out = append(out, dto.PodcastToken{
+			Text: string(r),
 		})
 	}
 	return out
@@ -441,7 +549,7 @@ func computeJapaneseRows(layout subtitleLayout, lineCount int) []japaneseSubtitl
 	return rows
 }
 
-func japaneseRubyCenter(span dto.PodcastRubySpan, cells []japaneseCharCell) (int, int, bool) {
+func japaneseRubyCenter(span dto.PodcastTokenSpan, cells []japaneseCharCell) (int, int, bool) {
 	var left, right float64
 	found := false
 	line := 0
@@ -560,19 +668,16 @@ func japaneseSubtitlePresetFor(style int) subtitlePreset {
 	}
 }
 
-func buildJapaneseRubySpans(seg dto.PodcastSegment) []dto.PodcastRubySpan {
-	text := strings.TrimSpace(seg.DisplayJA)
-	if text == "" {
-		text = strings.TrimSpace(seg.JA)
-	}
-	if text == "" || len(seg.RubyTokens) == 0 {
+func buildJapaneseTokenSpans(seg dto.PodcastSegment) []dto.PodcastTokenSpan {
+	text := strings.TrimSpace(seg.Text)
+	if text == "" || len(seg.Tokens) == 0 {
 		return nil
 	}
 	runes := []rune(text)
-	out := make([]dto.PodcastRubySpan, 0, len(seg.RubyTokens))
+	out := make([]dto.PodcastTokenSpan, 0, len(seg.Tokens))
 	searchFrom := 0
-	for _, token := range seg.RubyTokens {
-		surface := strings.TrimSpace(token.Surface)
+	for _, token := range seg.Tokens {
+		surface := strings.TrimSpace(token.Text)
 		reading := strings.TrimSpace(token.Reading)
 		if surface == "" || reading == "" {
 			continue
@@ -581,10 +686,10 @@ func buildJapaneseRubySpans(seg dto.PodcastSegment) []dto.PodcastRubySpan {
 		if !ok {
 			continue
 		}
-		span, ok := normalizeJapaneseRubySpanRange(runes, dto.PodcastRubySpan{
+		span, ok := normalizeJapaneseRubySpanRange(runes, dto.PodcastTokenSpan{
 			StartIndex: start,
 			EndIndex:   end,
-			Ruby:       reading,
+			Reading:    reading,
 		})
 		if !ok {
 			searchFrom = end + 1
@@ -593,7 +698,7 @@ func buildJapaneseRubySpans(seg dto.PodcastSegment) []dto.PodcastRubySpan {
 		out = append(out, span)
 		searchFrom = end + 1
 	}
-	return dedupeJapaneseRubySpans(out)
+	return dedupeJapaneseTokenSpans(out)
 }
 
 func findJapaneseRubySurfaceRange(textRunes, surfaceRunes []rune, searchFrom int) (int, int, bool) {
@@ -616,7 +721,7 @@ func findJapaneseRubySurfaceRange(textRunes, surfaceRunes []rune, searchFrom int
 	return 0, 0, false
 }
 
-func normalizeJapaneseRubySpanRange(runes []rune, span dto.PodcastRubySpan) (dto.PodcastRubySpan, bool) {
+func normalizeJapaneseRubySpanRange(runes []rune, span dto.PodcastTokenSpan) (dto.PodcastTokenSpan, bool) {
 	firstHan := -1
 	lastHan := -1
 	for i := span.StartIndex; i <= span.EndIndex; i++ {
@@ -628,7 +733,7 @@ func normalizeJapaneseRubySpanRange(runes []rune, span dto.PodcastRubySpan) (dto
 		}
 	}
 	if firstHan == -1 {
-		return dto.PodcastRubySpan{}, false
+		return dto.PodcastTokenSpan{}, false
 	}
 	for firstHan > 0 && unicode.In(runes[firstHan-1], unicode.Han) {
 		firstHan--
@@ -641,11 +746,11 @@ func normalizeJapaneseRubySpanRange(runes []rune, span dto.PodcastRubySpan) (dto
 	return span, true
 }
 
-func dedupeJapaneseRubySpans(spans []dto.PodcastRubySpan) []dto.PodcastRubySpan {
+func dedupeJapaneseTokenSpans(spans []dto.PodcastTokenSpan) []dto.PodcastTokenSpan {
 	if len(spans) == 0 {
 		return nil
 	}
-	out := make([]dto.PodcastRubySpan, 0, len(spans))
+	out := make([]dto.PodcastTokenSpan, 0, len(spans))
 	lastEnd := -1
 	for _, span := range spans {
 		if span.StartIndex <= lastEnd {

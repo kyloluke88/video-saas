@@ -6,19 +6,17 @@ import (
 )
 
 type PodcastAudioGeneratePayload struct {
-	ProjectID       string `json:"project_id"`
-	Lang            string `json:"lang"`
-	ContentProfile  string `json:"content_profile"`
-	IsDirect        int    `json:"is_direct,omitempty"`
-	Title           string `json:"title,omitempty"`
-	ScriptFilename  string `json:"script_filename"`
-	BgImgFilename   string `json:"bg_img_filename"`
-	TargetPlatform  string `json:"target_platform,omitempty"`
-	AspectRatio     string `json:"aspect_ratio,omitempty"`
-	Resolution      string `json:"resolution,omitempty"`
-	DesignStyle     int    `json:"design_style,omitempty"`
-	MaleVoiceType   *int64 `json:"male_voice_type,omitempty"`
-	FemaleVoiceType *int64 `json:"female_voice_type,omitempty"`
+	ProjectID      string `json:"project_id"`
+	Lang           string `json:"lang"`
+	ContentProfile string `json:"content_profile"`
+	IsDirect       int    `json:"is_direct,omitempty"`
+	Title          string `json:"title,omitempty"`
+	ScriptFilename string `json:"script_filename"`
+	BgImgFilename  string `json:"bg_img_filename"`
+	TargetPlatform string `json:"target_platform,omitempty"`
+	AspectRatio    string `json:"aspect_ratio,omitempty"`
+	Resolution     string `json:"resolution,omitempty"`
+	DesignStyle    int    `json:"design_style,omitempty"`
 }
 
 type PodcastComposePayload struct {
@@ -33,22 +31,18 @@ type PodcastComposePayload struct {
 }
 
 type PodcastScript struct {
-	Language              string           `json:"language,omitempty"`
-	AudienceLanguage      string           `json:"audience_language,omitempty"`
-	DifficultyLevel       string           `json:"difficulty_level,omitempty"`
-	TargetDurationMinutes int              `json:"target_duration_minutes,omitempty"`
-	Title                 string           `json:"title,omitempty"`
-	YouTube               PodcastYouTube   `json:"youtube,omitempty"`
-	Blocks                []PodcastBlock   `json:"blocks,omitempty"`
-	Segments              []PodcastSegment `json:"segments,omitempty"`
+	Language string           `json:"language,omitempty"`
+	Title    string           `json:"title,omitempty"`
+	YouTube  PodcastYouTube   `json:"youtube,omitempty"`
+	Blocks   []PodcastBlock   `json:"blocks,omitempty"`
+	Segments []PodcastSegment `json:"segments,omitempty"`
 }
 
 type PodcastBlock struct {
-	MacroBlock string           `json:"macro_block,omitempty"`
-	ChapterID  string           `json:"chapter_id,omitempty"`
-	TTSBlockID string           `json:"tts_block_id,omitempty"`
-	Purpose    string           `json:"purpose,omitempty"`
-	Segments   []PodcastSegment `json:"segments,omitempty"`
+	ChapterID string           `json:"chapter_id,omitempty"`
+	BlockID   string           `json:"block_id,omitempty"`
+	Purpose   string           `json:"purpose,omitempty"`
+	Segments  []PodcastSegment `json:"segments,omitempty"`
 }
 
 type PodcastYouTube struct {
@@ -61,52 +55,27 @@ type PodcastYouTube struct {
 type PodcastYouTubeChapter struct {
 	ChapterID string   `json:"chapter_id,omitempty"`
 	TitleEN   string   `json:"title_en,omitempty"`
-	TitleJA   string   `json:"title_ja,omitempty"`
-	TitleZH   string   `json:"title_zh,omitempty"`
+	Title     string   `json:"title,omitempty"`
 	BlockIDs  []string `json:"block_ids,omitempty"`
 }
 
 type PodcastSegment struct {
 	SegmentID string `json:"segment_id"`
 	Speaker   string `json:"speaker,omitempty"`
-	ZH        string `json:"zh,omitempty"`
-	JA        string `json:"ja,omitempty"`
-	DisplayJA string `json:"display_ja,omitempty"`
-	TTSJA     string `json:"tts_ja,omitempty"`
+	Text      string `json:"text,omitempty"`
 	EN        string `json:"en,omitempty"`
 	Summary   bool   `json:"summary,omitempty"`
 	StartMS   int    `json:"start_ms,omitempty"`
 	EndMS     int    `json:"end_ms,omitempty"`
 
-	Tokens     []PodcastToken     `json:"tokens,omitempty"`
-	Chars      []PodcastCharToken `json:"chars,omitempty"`
-	RubyTokens []PodcastRubyToken `json:"ruby_tokens,omitempty"`
-	RubySpans  []PodcastRubySpan  `json:"ruby_spans,omitempty"`
+	Tokens []PodcastToken `json:"tokens,omitempty"`
 }
 
 type PodcastToken struct {
 	Char    string `json:"char"`
-	Pinyin  string `json:"pinyin,omitempty"`
+	Reading string `json:"reading,omitempty"`
 	StartMS int    `json:"start_ms,omitempty"`
 	EndMS   int    `json:"end_ms,omitempty"`
-}
-
-type PodcastCharToken struct {
-	Index   int    `json:"i"`
-	Char    string `json:"c"`
-	StartMS int    `json:"s,omitempty"`
-	EndMS   int    `json:"e,omitempty"`
-}
-
-type PodcastRubyToken struct {
-	Surface string `json:"surface"`
-	Reading string `json:"reading"`
-}
-
-type PodcastRubySpan struct {
-	StartIndex int    `json:"s"`
-	EndIndex   int    `json:"e"`
-	Ruby       string `json:"r"`
 }
 
 func (s *PodcastScript) RefreshSegmentsFromBlocks() {
@@ -181,20 +150,19 @@ func (s *PodcastScript) RenumberStructureIDs() {
 			chapters = append(chapters, PodcastYouTubeChapter{
 				ChapterID: newChapterID,
 				TitleEN:   meta.TitleEN,
-				TitleJA:   meta.TitleJA,
-				TitleZH:   meta.TitleZH,
+				Title:     meta.Title,
 				BlockIDs:  make([]string, 0, 2),
 			})
 			chapterIndexByNewID[newChapterID] = len(chapters) - 1
 		}
 
 		s.Blocks[i].ChapterID = newChapterID
-		s.Blocks[i].TTSBlockID = formatBlockID(blockIDPrefix(s.Blocks[i]), nextBlock)
+		s.Blocks[i].BlockID = formatBlockID(blockIDPrefix(s.Blocks[i]), nextBlock)
 		nextBlock++
 
 		chapters[chapterIndexByNewID[newChapterID]].BlockIDs = append(
 			chapters[chapterIndexByNewID[newChapterID]].BlockIDs,
-			s.Blocks[i].TTSBlockID,
+			s.Blocks[i].BlockID,
 		)
 
 		for j := range s.Blocks[i].Segments {
@@ -215,10 +183,7 @@ func normalizedBlockChapterKey(block PodcastBlock, index int) string {
 }
 
 func blockIDPrefix(block PodcastBlock) string {
-	if value := strings.TrimSpace(block.MacroBlock); value != "" {
-		return value
-	}
-	raw := strings.TrimSpace(block.TTSBlockID)
+	raw := strings.TrimSpace(block.BlockID)
 	if raw == "" {
 		return "block"
 	}

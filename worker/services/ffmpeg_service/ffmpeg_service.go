@@ -13,7 +13,6 @@ import (
 	"time"
 	conf "worker/pkg/config"
 	"worker/pkg/helpers"
-	"worker/pkg/tts"
 	services "worker/services"
 )
 
@@ -102,67 +101,6 @@ func formatSRTTime(sec int) string {
 	m := (sec % 3600) / 60
 	s := sec % 60
 	return fmt.Sprintf("%02d:%02d:%02d,000", h, m, s)
-}
-
-func SynthesizeNarrationAudio(plan services.ProjectPlanResult, projectDir string) (string, error) {
-	if plan.NarrationFull == "" {
-		return "", nil
-	}
-	if !conf.Get[bool]("worker.idiom_tts_enabled") {
-		return "", nil
-	}
-
-	provider, err := tts.NewProvider(providerConfigForLanguage(plan.NarrationLanguage))
-	if err != nil {
-		return "", err
-	}
-
-	result, err := provider.Synthesize(context.Background(), tts.Request{
-		Text:     plan.NarrationFull,
-		Language: strings.TrimSpace(plan.NarrationLanguage),
-	})
-	if err != nil {
-		return "", err
-	}
-	if len(result.Audio) == 0 {
-		return "", errors.New("tts returned empty audio")
-	}
-
-	ext := strings.TrimSpace(strings.ToLower(result.Ext))
-	if ext == "" {
-		ext = "mp3"
-	}
-	out := filepath.Join(projectDir, "narration."+ext)
-	if err := os.WriteFile(out, result.Audio, 0o644); err != nil {
-		return "", err
-	}
-	return out, nil
-}
-
-func providerConfigForLanguage(language string) tts.Config {
-	switch strings.ToLower(strings.TrimSpace(language)) {
-	case "ja", "ja-jp":
-		return tts.Config{
-			Provider:               "elevenlabs",
-			ElevenLabsBaseURL:      conf.Get[string]("worker.elevenlabs_tts_base_url"),
-			ElevenLabsAPIKey:       conf.Get[string]("worker.elevenlabs_tts_api_key"),
-			ElevenLabsVoiceID:      conf.Get[string]("worker.elevenlabs_tts_voice_id"),
-			ElevenLabsModelID:      conf.Get[string]("worker.elevenlabs_tts_model_id"),
-			ElevenLabsOutputFormat: conf.Get[string]("worker.elevenlabs_tts_output_format"),
-			ElevenLabsEnableLog:    conf.Get[bool]("worker.elevenlabs_tts_enable_logging"),
-		}
-	default:
-		return tts.Config{
-			Provider:               "tencent",
-			TencentRegion:          conf.Get[string]("worker.tencent_tts_region"),
-			TencentSecretID:        conf.Get[string]("worker.tencent_tts_secret_id"),
-			TencentSecretKey:       conf.Get[string]("worker.tencent_tts_secret_key"),
-			TencentVoiceType:       conf.Get[int64]("worker.tencent_tts_voice_type"),
-			TencentPrimaryLanguage: conf.Get[int64]("worker.tencent_tts_primary_language"),
-			TencentModelType:       conf.Get[int64]("worker.tencent_tts_model_type"),
-			TencentCodec:           conf.Get[string]("worker.tencent_tts_codec"),
-		}
-	}
 }
 
 func SelectRandomBGM() (string, error) {

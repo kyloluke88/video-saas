@@ -41,6 +41,7 @@ worker/storage/logs/
 worker/outputs/
 worker/worker/
 worker/.cache/
+worker/credentials/
 worker/doc/contentLLM/temp.md
 backend/storage/logs/
 

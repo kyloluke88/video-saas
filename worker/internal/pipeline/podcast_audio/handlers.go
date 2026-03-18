@@ -41,13 +41,11 @@ func HandleGenerate(ch *amqp.Channel, task dto.VideoTaskMessage) error {
 	}
 
 	result, err := podcastaudioservice.Generate(podcastaudioservice.GenerateInput{
-		ProjectID:       payload.ProjectID,
-		Language:        payload.Lang,
-		ContentProfile:  payload.ContentProfile,
-		IsDirect:        payload.IsDirect == 1,
-		ScriptFilename:  payload.ScriptFilename,
-		MaleVoiceType:   payload.MaleVoiceType,
-		FemaleVoiceType: payload.FemaleVoiceType,
+		ProjectID:      payload.ProjectID,
+		Language:       payload.Lang,
+		ContentProfile: payload.ContentProfile,
+		IsDirect:       payload.IsDirect == 1,
+		ScriptFilename: payload.ScriptFilename,
 	})
 	if err != nil {
 		return err

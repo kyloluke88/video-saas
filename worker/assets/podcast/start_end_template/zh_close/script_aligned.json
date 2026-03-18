@@ -36,472 +36,472 @@
         {
           "segment_id": "seg_001",
           "speaker": "female",
-          "zh": "如果今天这集对你有帮助，欢迎订阅我们，也别忘了点个赞。",
           "en": "If today's episode was helpful, feel free to subscribe and don't forget to leave a like.",
           "end_ms": 6288,
           "tokens": [
             {
-              "char": "如",
-              "pinyin": "rú",
+              "text": "如",
+              "reading": "rú",
               "start_ms": 116,
               "end_ms": 313
             },
             {
-              "char": "果",
-              "pinyin": "guǒ",
+              "text": "果",
+              "reading": "guǒ",
               "start_ms": 313,
               "end_ms": 673
             },
             {
-              "char": "今",
-              "pinyin": "jīn",
+              "text": "今",
+              "reading": "jīn",
               "start_ms": 673,
               "end_ms": 847
             },
             {
-              "char": "天",
-              "pinyin": "tiān",
+              "text": "天",
+              "reading": "tiān",
               "start_ms": 847,
               "end_ms": 1079
             },
             {
-              "char": "这",
-              "pinyin": "zhè",
+              "text": "这",
+              "reading": "zhè",
               "start_ms": 1079,
               "end_ms": 1277
             },
             {
-              "char": "集",
-              "pinyin": "jí",
+              "text": "集",
+              "reading": "jí",
               "start_ms": 1277,
               "end_ms": 1451
             },
             {
-              "char": "对",
-              "pinyin": "duì",
+              "text": "对",
+              "reading": "duì",
               "start_ms": 1451,
               "end_ms": 1625
             },
             {
-              "char": "你",
-              "pinyin": "nǐ",
+              "text": "你",
+              "reading": "nǐ",
               "start_ms": 1625,
               "end_ms": 1753
             },
             {
-              "char": "有",
-              "pinyin": "yǒu",
+              "text": "有",
+              "reading": "yǒu",
               "start_ms": 1753,
               "end_ms": 1869
             },
             {
-              "char": "帮",
-              "pinyin": "bāng",
+              "text": "帮",
+              "reading": "bāng",
               "start_ms": 1869,
               "end_ms": 2159
             },
             {
-              "char": "助",
-              "pinyin": "zhù",
+              "text": "助",
+              "reading": "zhù",
               "start_ms": 2159,
               "end_ms": 2484
             },
             {
-              "char": "，",
+              "text": "，",
               "start_ms": 2484,
               "end_ms": 2658
             },
             {
-              "char": "欢",
-              "pinyin": "huān",
+              "text": "欢",
+              "reading": "huān",
               "start_ms": 2658,
               "end_ms": 2902
             },
             {
-              "char": "迎",
-              "pinyin": "yíng",
+              "text": "迎",
+              "reading": "yíng",
               "start_ms": 2902,
               "end_ms": 3030
             },
             {
-              "char": "订",
-              "pinyin": "dìng",
+              "text": "订",
+              "reading": "dìng",
               "start_ms": 3030,
               "end_ms": 3262
             },
             {
-              "char": "阅",
-              "pinyin": "yuè",
+              "text": "阅",
+              "reading": "yuè",
               "start_ms": 3262,
               "end_ms": 3448
             },
             {
-              "char": "我",
-              "pinyin": "wǒ",
+              "text": "我",
+              "reading": "wǒ",
               "start_ms": 3448,
               "end_ms": 3610
             },
             {
-              "char": "们",
-              "pinyin": "men",
+              "text": "们",
+              "reading": "men",
               "start_ms": 3610,
               "end_ms": 3889
             },
             {
-              "char": "，",
+              "text": "，",
               "start_ms": 3889,
               "end_ms": 4063
             },
             {
-              "char": "也",
-              "pinyin": "yě",
+              "text": "也",
+              "reading": "yě",
               "start_ms": 4063,
               "end_ms": 4284
             },
             {
-              "char": "别",
-              "pinyin": "bié",
+              "text": "别",
+              "reading": "bié",
               "start_ms": 4284,
               "end_ms": 4516
             },
             {
-              "char": "忘",
-              "pinyin": "wàng",
+              "text": "忘",
+              "reading": "wàng",
               "start_ms": 4516,
               "end_ms": 4713
             },
             {
-              "char": "了",
-              "pinyin": "le",
+              "text": "了",
+              "reading": "le",
               "start_ms": 4713,
               "end_ms": 4829
             },
             {
-              "char": "点",
-              "pinyin": "diǎn",
+              "text": "点",
+              "reading": "diǎn",
               "start_ms": 4829,
               "end_ms": 5038
             },
             {
-              "char": "个",
-              "pinyin": "gè",
+              "text": "个",
+              "reading": "gè",
               "start_ms": 5038,
               "end_ms": 5154
             },
             {
-              "char": "赞",
-              "pinyin": "zàn",
+              "text": "赞",
+              "reading": "zàn",
               "start_ms": 5154,
               "end_ms": 5445
             },
             {
-              "char": "。",
+              "text": "。",
               "start_ms": 5445,
               "end_ms": 6288
             }
-          ]
+          ],
+          "text": "如果今天这集对你有帮助，欢迎订阅我们，也别忘了点个赞。"
         },
         {
           "segment_id": "seg_002",
           "speaker": "male",
-          "zh": "有你的支持，我们会继续做自然又好懂的中文节目。",
           "en": "With your support, we'll keep making natural and easy-to-follow Chinese episodes.",
           "start_ms": 6508,
           "end_ms": 10996,
           "tokens": [
             {
-              "char": "有",
-              "pinyin": "yǒu",
+              "text": "有",
+              "reading": "yǒu",
               "start_ms": 6542,
               "end_ms": 6763
             },
             {
-              "char": "你",
-              "pinyin": "nǐ",
+              "text": "你",
+              "reading": "nǐ",
               "start_ms": 6763,
               "end_ms": 6902
             },
             {
-              "char": "的",
-              "pinyin": "de",
+              "text": "的",
+              "reading": "de",
               "start_ms": 6902,
               "end_ms": 6995
             },
             {
-              "char": "支",
-              "pinyin": "zhī",
+              "text": "支",
+              "reading": "zhī",
               "start_ms": 6995,
               "end_ms": 7169
             },
             {
-              "char": "持",
-              "pinyin": "chí",
+              "text": "持",
+              "reading": "chí",
               "start_ms": 7169,
               "end_ms": 7448
             },
             {
-              "char": "，",
+              "text": "，",
               "start_ms": 7448,
               "end_ms": 7587
             },
             {
-              "char": "我",
-              "pinyin": "wǒ",
+              "text": "我",
+              "reading": "wǒ",
               "start_ms": 7587,
               "end_ms": 7727
             },
             {
-              "char": "们",
-              "pinyin": "men",
+              "text": "们",
+              "reading": "men",
               "start_ms": 7727,
               "end_ms": 7831
             },
             {
-              "char": "会",
-              "pinyin": "huì",
+              "text": "会",
+              "reading": "huì",
               "start_ms": 7831,
               "end_ms": 8028
             },
             {
-              "char": "继",
-              "pinyin": "jì",
+              "text": "继",
+              "reading": "jì",
               "start_ms": 8028,
               "end_ms": 8203
             },
             {
-              "char": "续",
-              "pinyin": "xù",
+              "text": "续",
+              "reading": "xù",
               "start_ms": 8203,
               "end_ms": 8342
             },
             {
-              "char": "做",
-              "pinyin": "zuò",
+              "text": "做",
+              "reading": "zuò",
               "start_ms": 8342,
               "end_ms": 8586
             },
             {
-              "char": "自",
-              "pinyin": "zì",
+              "text": "自",
+              "reading": "zì",
               "start_ms": 8586,
               "end_ms": 8795
             },
             {
-              "char": "然",
-              "pinyin": "rán",
+              "text": "然",
+              "reading": "rán",
               "start_ms": 8795,
               "end_ms": 8957
             },
             {
-              "char": "又",
-              "pinyin": "yòu",
+              "text": "又",
+              "reading": "yòu",
               "start_ms": 8957,
               "end_ms": 9097
             },
             {
-              "char": "好",
-              "pinyin": "hǎo",
+              "text": "好",
+              "reading": "hǎo",
               "start_ms": 9097,
               "end_ms": 9340
             },
             {
-              "char": "懂",
-              "pinyin": "dǒng",
+              "text": "懂",
+              "reading": "dǒng",
               "start_ms": 9340,
               "end_ms": 9491
             },
             {
-              "char": "的",
-              "pinyin": "de",
+              "text": "的",
+              "reading": "de",
               "start_ms": 9491,
               "end_ms": 9619
             },
             {
-              "char": "中",
-              "pinyin": "zhōng",
+              "text": "中",
+              "reading": "zhōng",
               "start_ms": 9619,
               "end_ms": 9793
             },
             {
-              "char": "文",
-              "pinyin": "wén",
+              "text": "文",
+              "reading": "wén",
               "start_ms": 9793,
               "end_ms": 9909
             },
             {
-              "char": "节",
-              "pinyin": "jié",
+              "text": "节",
+              "reading": "jié",
               "start_ms": 9909,
               "end_ms": 10153
             },
             {
-              "char": "目",
-              "pinyin": "mù",
+              "text": "目",
+              "reading": "mù",
               "start_ms": 10153,
               "end_ms": 10304
             },
             {
-              "char": "。",
+              "text": "。",
               "start_ms": 10304,
               "end_ms": 10996
             }
-          ]
+          ],
+          "text": "有你的支持，我们会继续做自然又好懂的中文节目。"
         },
         {
           "segment_id": "seg_003",
           "speaker": "female",
-          "zh": "我们下次再见，也欢迎你继续听、继续说、继续练中文。",
           "en": "See you next time, and you're always welcome to keep listening, keep speaking, and keep practicing Chinese.",
           "start_ms": 11216,
           "end_ms": 17408,
           "tokens": [
             {
-              "char": "我",
-              "pinyin": "wǒ",
+              "text": "我",
+              "reading": "wǒ",
               "start_ms": 11262,
               "end_ms": 11436
             },
             {
-              "char": "们",
-              "pinyin": "men",
+              "text": "们",
+              "reading": "men",
               "start_ms": 11436,
               "end_ms": 11715
             },
             {
-              "char": "下",
-              "pinyin": "xià",
+              "text": "下",
+              "reading": "xià",
               "start_ms": 11715,
               "end_ms": 11970
             },
             {
-              "char": "次",
-              "pinyin": "cì",
+              "text": "次",
+              "reading": "cì",
               "start_ms": 11970,
               "end_ms": 12098
             },
             {
-              "char": "再",
-              "pinyin": "zài",
+              "text": "再",
+              "reading": "zài",
               "start_ms": 12098,
               "end_ms": 12342
             },
             {
-              "char": "见",
-              "pinyin": "jiàn",
+              "text": "见",
+              "reading": "jiàn",
               "start_ms": 12342,
               "end_ms": 12678
             },
             {
-              "char": "，",
+              "text": "，",
               "start_ms": 12678,
               "end_ms": 12864
             },
             {
-              "char": "也",
-              "pinyin": "yě",
+              "text": "也",
+              "reading": "yě",
               "start_ms": 12864,
               "end_ms": 13131
             },
             {
-              "char": "欢",
-              "pinyin": "huān",
+              "text": "欢",
+              "reading": "huān",
               "start_ms": 13131,
               "end_ms": 13329
             },
             {
-              "char": "迎",
-              "pinyin": "yíng",
+              "text": "迎",
+              "reading": "yíng",
               "start_ms": 13329,
               "end_ms": 13468
             },
             {
-              "char": "你",
-              "pinyin": "nǐ",
+              "text": "你",
+              "reading": "nǐ",
               "start_ms": 13468,
               "end_ms": 13596
             },
             {
-              "char": "继",
-              "pinyin": "jì",
+              "text": "继",
+              "reading": "jì",
               "start_ms": 13596,
               "end_ms": 13735
             },
             {
-              "char": "续",
-              "pinyin": "xù",
+              "text": "续",
+              "reading": "xù",
               "start_ms": 13735,
               "end_ms": 13886
             },
             {
-              "char": "听",
-              "pinyin": "tīng",
+              "text": "听",
+              "reading": "tīng",
               "start_ms": 13886,
               "end_ms": 14281
             },
             {
-              "char": "、",
+              "text": "、",
               "start_ms": 14281,
               "end_ms": 14466
             },
             {
-              "char": "继",
-              "pinyin": "jì",
+              "text": "继",
+              "reading": "jì",
               "start_ms": 14466,
               "end_ms": 14617
             },
             {
-              "char": "续",
-              "pinyin": "xù",
+              "text": "续",
+              "reading": "xù",
               "start_ms": 14617,
               "end_ms": 14768
             },
             {
-              "char": "说",
-              "pinyin": "shuō",
+              "text": "说",
+              "reading": "shuō",
               "start_ms": 14768,
               "end_ms": 15175
             },
             {
-              "char": "、",
+              "text": "、",
               "start_ms": 15175,
               "end_ms": 15360
             },
             {
-              "char": "继",
-              "pinyin": "jì",
+              "text": "继",
+              "reading": "jì",
               "start_ms": 15360,
               "end_ms": 15523
             },
             {
-              "char": "续",
-              "pinyin": "xù",
+              "text": "续",
+              "reading": "xù",
               "start_ms": 15523,
               "end_ms": 15674
             },
             {
-              "char": "练",
-              "pinyin": "liàn",
+              "text": "练",
+              "reading": "liàn",
               "start_ms": 15674,
               "end_ms": 15859
             },
             {
-              "char": "中",
-              "pinyin": "zhōng",
+              "text": "中",
+              "reading": "zhōng",
               "start_ms": 15859,
               "end_ms": 16127
             },
             {
-              "char": "文",
-              "pinyin": "wén",
+              "text": "文",
+              "reading": "wén",
               "start_ms": 16127,
               "end_ms": 16498
             },
             {
-              "char": "。",
+              "text": "。",
               "start_ms": 16498,
               "end_ms": 17408
             }
-          ]
+          ],
+          "text": "我们下次再见，也欢迎你继续听、继续说、继续练中文。"
         }
       ]
     }
@@ -510,472 +510,472 @@
     {
       "segment_id": "seg_001",
       "speaker": "female",
-      "zh": "如果今天这集对你有帮助，欢迎订阅我们，也别忘了点个赞。",
       "en": "If today's episode was helpful, feel free to subscribe and don't forget to leave a like.",
       "end_ms": 6288,
       "tokens": [
         {
-          "char": "如",
-          "pinyin": "rú",
+          "text": "如",
+          "reading": "rú",
           "start_ms": 116,
           "end_ms": 313
         },
         {
-          "char": "果",
-          "pinyin": "guǒ",
+          "text": "果",
+          "reading": "guǒ",
           "start_ms": 313,
           "end_ms": 673
         },
         {
-          "char": "今",
-          "pinyin": "jīn",
+          "text": "今",
+          "reading": "jīn",
           "start_ms": 673,
           "end_ms": 847
         },
         {
-          "char": "天",
-          "pinyin": "tiān",
+          "text": "天",
+          "reading": "tiān",
           "start_ms": 847,
           "end_ms": 1079
         },
         {
-          "char": "这",
-          "pinyin": "zhè",
+          "text": "这",
+          "reading": "zhè",
           "start_ms": 1079,
           "end_ms": 1277
         },
         {
-          "char": "集",
-          "pinyin": "jí",
+          "text": "集",
+          "reading": "jí",
           "start_ms": 1277,
           "end_ms": 1451
         },
         {
-          "char": "对",
-          "pinyin": "duì",
+          "text": "对",
+          "reading": "duì",
           "start_ms": 1451,
           "end_ms": 1625
         },
         {
-          "char": "你",
-          "pinyin": "nǐ",
+          "text": "你",
+          "reading": "nǐ",
           "start_ms": 1625,
           "end_ms": 1753
         },
         {
-          "char": "有",
-          "pinyin": "yǒu",
+          "text": "有",
+          "reading": "yǒu",
           "start_ms": 1753,
           "end_ms": 1869
         },
         {
-          "char": "帮",
-          "pinyin": "bāng",
+          "text": "帮",
+          "reading": "bāng",
           "start_ms": 1869,
           "end_ms": 2159
         },
         {
-          "char": "助",
-          "pinyin": "zhù",
+          "text": "助",
+          "reading": "zhù",
           "start_ms": 2159,
           "end_ms": 2484
         },
         {
-          "char": "，",
+          "text": "，",
           "start_ms": 2484,
           "end_ms": 2658
         },
         {
-          "char": "欢",
-          "pinyin": "huān",
+          "text": "欢",
+          "reading": "huān",
           "start_ms": 2658,
           "end_ms": 2902
         },
         {
-          "char": "迎",
-          "pinyin": "yíng",
+          "text": "迎",
+          "reading": "yíng",
           "start_ms": 2902,
           "end_ms": 3030
         },
         {
-          "char": "订",
-          "pinyin": "dìng",
+          "text": "订",
+          "reading": "dìng",
           "start_ms": 3030,
           "end_ms": 3262
         },
         {
-          "char": "阅",
-          "pinyin": "yuè",
+          "text": "阅",
+          "reading": "yuè",
           "start_ms": 3262,
           "end_ms": 3448
         },
         {
-          "char": "我",
-          "pinyin": "wǒ",
+          "text": "我",
+          "reading": "wǒ",
           "start_ms": 3448,
           "end_ms": 3610
         },
         {
-          "char": "们",
-          "pinyin": "men",
+          "text": "们",
+          "reading": "men",
           "start_ms": 3610,
           "end_ms": 3889
         },
         {
-          "char": "，",
+          "text": "，",
           "start_ms": 3889,
           "end_ms": 4063
         },
         {
-          "char": "也",
-          "pinyin": "yě",
+          "text": "也",
+          "reading": "yě",
           "start_ms": 4063,
           "end_ms": 4284
         },
         {
-          "char": "别",
-          "pinyin": "bié",
+          "text": "别",
+          "reading": "bié",
           "start_ms": 4284,
           "end_ms": 4516
         },
         {
-          "char": "忘",
-          "pinyin": "wàng",
+          "text": "忘",
+          "reading": "wàng",
           "start_ms": 4516,
           "end_ms": 4713
         },
         {
-          "char": "了",
-          "pinyin": "le",
+          "text": "了",
+          "reading": "le",
           "start_ms": 4713,
           "end_ms": 4829
         },
         {
-          "char": "点",
-          "pinyin": "diǎn",
+          "text": "点",
+          "reading": "diǎn",
           "start_ms": 4829,
           "end_ms": 5038
         },
         {
-          "char": "个",
-          "pinyin": "gè",
+          "text": "个",
+          "reading": "gè",
           "start_ms": 5038,
           "end_ms": 5154
         },
         {
-          "char": "赞",
-          "pinyin": "zàn",
+          "text": "赞",
+          "reading": "zàn",
           "start_ms": 5154,
           "end_ms": 5445
         },
         {
-          "char": "。",
+          "text": "。",
           "start_ms": 5445,
           "end_ms": 6288
         }
-      ]
+      ],
+      "text": "如果今天这集对你有帮助，欢迎订阅我们，也别忘了点个赞。"
     },
     {
       "segment_id": "seg_002",
       "speaker": "male",
-      "zh": "有你的支持，我们会继续做自然又好懂的中文节目。",
       "en": "With your support, we'll keep making natural and easy-to-follow Chinese episodes.",
       "start_ms": 6508,
       "end_ms": 10996,
       "tokens": [
         {
-          "char": "有",
-          "pinyin": "yǒu",
+          "text": "有",
+          "reading": "yǒu",
           "start_ms": 6542,
           "end_ms": 6763
         },
         {
-          "char": "你",
-          "pinyin": "nǐ",
+          "text": "你",
+          "reading": "nǐ",
           "start_ms": 6763,
           "end_ms": 6902
         },
         {
-          "char": "的",
-          "pinyin": "de",
+          "text": "的",
+          "reading": "de",
           "start_ms": 6902,
           "end_ms": 6995
         },
         {
-          "char": "支",
-          "pinyin": "zhī",
+          "text": "支",
+          "reading": "zhī",
           "start_ms": 6995,
           "end_ms": 7169
         },
         {
-          "char": "持",
-          "pinyin": "chí",
+          "text": "持",
+          "reading": "chí",
           "start_ms": 7169,
           "end_ms": 7448
         },
         {
-          "char": "，",
+          "text": "，",
           "start_ms": 7448,
           "end_ms": 7587
         },
         {
-          "char": "我",
-          "pinyin": "wǒ",
+          "text": "我",
+          "reading": "wǒ",
           "start_ms": 7587,
           "end_ms": 7727
         },
         {
-          "char": "们",
-          "pinyin": "men",
+          "text": "们",
+          "reading": "men",
           "start_ms": 7727,
           "end_ms": 7831
         },
         {
-          "char": "会",
-          "pinyin": "huì",
+          "text": "会",
+          "reading": "huì",
           "start_ms": 7831,
           "end_ms": 8028
         },
         {
-          "char": "继",
-          "pinyin": "jì",
+          "text": "继",
+          "reading": "jì",
           "start_ms": 8028,
           "end_ms": 8203
         },
         {
-          "char": "续",
-          "pinyin": "xù",
+          "text": "续",
+          "reading": "xù",
           "start_ms": 8203,
           "end_ms": 8342
         },
         {
-          "char": "做",
-          "pinyin": "zuò",
+          "text": "做",
+          "reading": "zuò",
           "start_ms": 8342,
           "end_ms": 8586
         },
         {
-          "char": "自",
-          "pinyin": "zì",
+          "text": "自",
+          "reading": "zì",
           "start_ms": 8586,
           "end_ms": 8795
         },
         {
-          "char": "然",
-          "pinyin": "rán",
+          "text": "然",
+          "reading": "rán",
           "start_ms": 8795,
           "end_ms": 8957
         },
         {
-          "char": "又",
-          "pinyin": "yòu",
+          "text": "又",
+          "reading": "yòu",
           "start_ms": 8957,
           "end_ms": 9097
         },
         {
-          "char": "好",
-          "pinyin": "hǎo",
+          "text": "好",
+          "reading": "hǎo",
           "start_ms": 9097,
           "end_ms": 9340
         },
         {
-          "char": "懂",
-          "pinyin": "dǒng",
+          "text": "懂",
+          "reading": "dǒng",
           "start_ms": 9340,
           "end_ms": 9491
         },
         {
-          "char": "的",
-          "pinyin": "de",
+          "text": "的",
+          "reading": "de",
           "start_ms": 9491,
           "end_ms": 9619
         },
         {
-          "char": "中",
-          "pinyin": "zhōng",
+          "text": "中",
+          "reading": "zhōng",
           "start_ms": 9619,
           "end_ms": 9793
         },
         {
-          "char": "文",
-          "pinyin": "wén",
+          "text": "文",
+          "reading": "wén",
           "start_ms": 9793,
           "end_ms": 9909
         },
         {
-          "char": "节",
-          "pinyin": "jié",
+          "text": "节",
+          "reading": "jié",
           "start_ms": 9909,
           "end_ms": 10153
         },
         {
-          "char": "目",
-          "pinyin": "mù",
+          "text": "目",
+          "reading": "mù",
           "start_ms": 10153,
           "end_ms": 10304
         },
         {
-          "char": "。",
+          "text": "。",
           "start_ms": 10304,
           "end_ms": 10996
         }
-      ]
+      ],
+      "text": "有你的支持，我们会继续做自然又好懂的中文节目。"
     },
     {
       "segment_id": "seg_003",
       "speaker": "female",
-      "zh": "我们下次再见，也欢迎你继续听、继续说、继续练中文。",
       "en": "See you next time, and you're always welcome to keep listening, keep speaking, and keep practicing Chinese.",
       "start_ms": 11216,
       "end_ms": 17408,
       "tokens": [
         {
-          "char": "我",
-          "pinyin": "wǒ",
+          "text": "我",
+          "reading": "wǒ",
           "start_ms": 11262,
           "end_ms": 11436
         },
         {
-          "char": "们",
-          "pinyin": "men",
+          "text": "们",
+          "reading": "men",
           "start_ms": 11436,
           "end_ms": 11715
         },
         {
-          "char": "下",
-          "pinyin": "xià",
+          "text": "下",
+          "reading": "xià",
           "start_ms": 11715,
           "end_ms": 11970
         },
         {
-          "char": "次",
-          "pinyin": "cì",
+          "text": "次",
+          "reading": "cì",
           "start_ms": 11970,
           "end_ms": 12098
         },
         {
-          "char": "再",
-          "pinyin": "zài",
+          "text": "再",
+          "reading": "zài",
           "start_ms": 12098,
           "end_ms": 12342
         },
         {
-          "char": "见",
-          "pinyin": "jiàn",
+          "text": "见",
+          "reading": "jiàn",
           "start_ms": 12342,
           "end_ms": 12678
         },
         {
-          "char": "，",
+          "text": "，",
           "start_ms": 12678,
           "end_ms": 12864
         },
         {
-          "char": "也",
-          "pinyin": "yě",
+          "text": "也",
+          "reading": "yě",
           "start_ms": 12864,
           "end_ms": 13131
         },
         {
-          "char": "欢",
-          "pinyin": "huān",
+          "text": "欢",
+          "reading": "huān",
           "start_ms": 13131,
           "end_ms": 13329
         },
         {
-          "char": "迎",
-          "pinyin": "yíng",
+          "text": "迎",
+          "reading": "yíng",
           "start_ms": 13329,
           "end_ms": 13468
         },
         {
-          "char": "你",
-          "pinyin": "nǐ",
+          "text": "你",
+          "reading": "nǐ",
           "start_ms": 13468,
           "end_ms": 13596
         },
         {
-          "char": "继",
-          "pinyin": "jì",
+          "text": "继",
+          "reading": "jì",
           "start_ms": 13596,
           "end_ms": 13735
         },
         {
-          "char": "续",
-          "pinyin": "xù",
+          "text": "续",
+          "reading": "xù",
           "start_ms": 13735,
           "end_ms": 13886
         },
         {
-          "char": "听",
-          "pinyin": "tīng",
+          "text": "听",
+          "reading": "tīng",
           "start_ms": 13886,
           "end_ms": 14281
         },
         {
-          "char": "、",
+          "text": "、",
           "start_ms": 14281,
           "end_ms": 14466
         },
         {
-          "char": "继",
-          "pinyin": "jì",
+          "text": "继",
+          "reading": "jì",
           "start_ms": 14466,
           "end_ms": 14617
         },
         {
-          "char": "续",
-          "pinyin": "xù",
+          "text": "续",
+          "reading": "xù",
           "start_ms": 14617,
           "end_ms": 14768
         },
         {
-          "char": "说",
-          "pinyin": "shuō",
+          "text": "说",
+          "reading": "shuō",
           "start_ms": 14768,
           "end_ms": 15175
         },
         {
-          "char": "、",
+          "text": "、",
           "start_ms": 15175,
           "end_ms": 15360
         },
         {
-          "char": "继",
-          "pinyin": "jì",
+          "text": "继",
+          "reading": "jì",
           "start_ms": 15360,
           "end_ms": 15523
         },
         {
-          "char": "续",
-          "pinyin": "xù",
+          "text": "续",
+          "reading": "xù",
           "start_ms": 15523,
           "end_ms": 15674
         },
         {
-          "char": "练",
-          "pinyin": "liàn",
+          "text": "练",
+          "reading": "liàn",
           "start_ms": 15674,
           "end_ms": 15859
         },
         {
-          "char": "中",
-          "pinyin": "zhōng",
+          "text": "中",
+          "reading": "zhōng",
           "start_ms": 15859,
           "end_ms": 16127
         },
         {
-          "char": "文",
-          "pinyin": "wén",
+          "text": "文",
+          "reading": "wén",
           "start_ms": 16127,
           "end_ms": 16498
         },
         {
-          "char": "。",
+          "text": "。",
           "start_ms": 16498,
           "end_ms": 17408
         }
-      ]
+      ],
+      "text": "我们下次再见，也欢迎你继续听、继续说、继续练中文。"
     }
   ]
 }

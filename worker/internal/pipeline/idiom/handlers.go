@@ -195,11 +195,6 @@ func HandleProjectCompose(ch *amqp.Channel, task dto.VideoTaskMessage) error {
 	}
 
 	finalPath := filepath.Join(projectDir, "final.mp4")
-	narrationAudio, narrationErr := ffmpegservice.SynthesizeNarrationAudio(servicePlan, projectDir)
-	if narrationErr != nil {
-		log.Printf("⚠️ narration synth failed project_id=%s err=%v", projectID, narrationErr)
-		narrationAudio = ""
-	}
 	bgmPath := ""
 	if conf.Get[bool]("worker.bgm_enabled") {
 		var err error
@@ -214,7 +209,7 @@ func HandleProjectCompose(ch *amqp.Channel, task dto.VideoTaskMessage) error {
 	} else {
 		log.Printf("⏭️ BGM mix skipped by BGM_ENABLED=false project_id=%s", projectID)
 	}
-	if err := ffmpegservice.ComposeFinalVideo(servicePlan, withSubtitles, narrationAudio, bgmPath, finalPath); err != nil {
+	if err := ffmpegservice.ComposeFinalVideo(servicePlan, withSubtitles, "", bgmPath, finalPath); err != nil {
 		return err
 	}
 

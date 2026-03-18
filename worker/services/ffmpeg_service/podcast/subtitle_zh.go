@@ -33,42 +33,50 @@ func writeChineseASS(script dto.PodcastScript, projectDir, resolution string, st
 
 		start := formatASSTimestampMS(seg.StartMS)
 		end := formatASSTimestampMS(seg.EndMS)
-		hasRuby := hasAnyRuby(tokens)
 		hasEnglish := strings.TrimSpace(seg.EN) != ""
 
-		tokenLines := splitTokenLines(buildTokenCells(tokens, layout), layout.MaxTextWidth, 2)
-		englishLines := splitEnglishLines(strings.TrimSpace(seg.EN), layout, 2)
+		tokenPages := paginateTokenCells(buildTokenCells(tokens, layout), layout)
 
 		b.WriteString(dialogueLine("Box", start, end, boxText(layout)))
 
-		topRows := computeTopSectionRows(layout, len(tokenLines), hasRuby)
-		for lineIndex, line := range tokenLines {
-			if lineIndex >= len(topRows) {
+		pageWindows := buildSubtitlePageWindows(seg.StartMS, seg.EndMS, chinesePageStartTimes(tokenPages))
+		for pageIndex, page := range tokenPages {
+			if pageIndex >= len(pageWindows) || len(page) == 0 {
 				break
 			}
-			positions := computeCellCenters(line, layout)
-			row := topRows[lineIndex]
-			for i, cell := range line {
+			rows := computeTopSectionRows(layout, 1, chinesePageHasRuby(page))
+			if len(rows) == 0 {
+				continue
+			}
+			row := rows[0]
+			window := pageWindows[pageIndex]
+			pageStart := formatASSTimestampMS(window.StartMS)
+			pageEnd := formatASSTimestampMS(window.EndMS)
+			positions := computeCellCenters(page, layout)
+			for i, cell := range page {
 				x := positions[i]
 				if strings.TrimSpace(cell.Hanzi) != "" {
-					b.WriteString(dialogueLine("Hanzi", start, end, posText(x, row.HanziY, cell.Hanzi)))
+					b.WriteString(dialogueLine("Hanzi", pageStart, pageEnd, posText(x, row.HanziY, cell.Hanzi)))
 					if cell.EndMS > cell.StartMS {
 						b.WriteString(dialogueLine("HanziActive", formatASSTimestampMS(cell.StartMS), formatASSTimestampMS(cell.EndMS), posText(x, row.HanziY, cell.Hanzi)))
 					}
 				}
 				if strings.TrimSpace(cell.Ruby) != "" {
-					b.WriteString(dialogueLine("Ruby", start, end, posText(x, row.RubyY, cell.Ruby)))
+					b.WriteString(dialogueLine("Ruby", pageStart, pageEnd, posText(x, row.RubyY, cell.Ruby)))
 				}
 			}
 		}
 
 		if hasEnglish {
-			englishRows := computeBottomSectionRows(layout, len(englishLines))
-			for i, line := range englishLines {
-				if i >= len(englishRows) {
+			englishPages := splitEnglishPagesSynced(strings.TrimSpace(seg.EN), layout, len(pageWindows))
+			englishRows := computeBottomSectionRows(layout, 1)
+			for i, line := range englishPages {
+				if i >= len(pageWindows) || len(englishRows) == 0 || strings.TrimSpace(line) == "" {
 					break
 				}
-				b.WriteString(dialogueLine("English", start, end, posText(playW/2, englishRows[i], line)))
+				pageStart := formatASSTimestampMS(pageWindows[i].StartMS)
+				pageEnd := formatASSTimestampMS(pageWindows[i].EndMS)
+				b.WriteString(dialogueLine("English", pageStart, pageEnd, posText(playW/2, englishRows[0], line)))
 			}
 		}
 	}
@@ -373,9 +381,34 @@ type topSectionRow struct {
 func buildTokenCells(tokens []dto.PodcastToken, layout subtitleLayout) []tokenCell {
 	out := make([]tokenCell, 0, len(tokens))
 	for i := 0; i < len(tokens); i++ {
+		if end, ok := inlineEnglishTokenRun(tokens, i); ok {
+			word := strings.Builder{}
+			startMS := 0
+			endMS := 0
+			for j := i; j <= end; j++ {
+				word.WriteString(strings.TrimSpace(tokens[j].Text))
+				if startMS == 0 || (tokens[j].StartMS > 0 && tokens[j].StartMS < startMS) {
+					startMS = tokens[j].StartMS
+				}
+				if tokens[j].EndMS > endMS {
+					endMS = tokens[j].EndMS
+				}
+			}
+			text := word.String()
+			out = append(out, tokenCell{
+				Hanzi:   text,
+				Ruby:    "",
+				Width:   estimateTextWidth(text, float64(layout.HanziSize), false),
+				Gap:     float64(layout.BaseGap),
+				StartMS: startMS,
+				EndMS:   endMS,
+			})
+			i = end
+			continue
+		}
 		tk := tokens[i]
-		hanzi := strings.TrimSpace(tk.Char)
-		ruby := strings.TrimSpace(tk.Pinyin)
+		hanzi := strings.TrimSpace(tk.Text)
+		ruby := strings.TrimSpace(tk.Reading)
 		if hanzi == "" && ruby == "" {
 			continue
 		}
@@ -432,6 +465,161 @@ func splitTokenLines(cells []tokenCell, maxWidth int, maxLines int) [][]tokenCel
 		lines = append(lines[:maxLines-1], tail)
 	}
 	return lines
+}
+
+// Main subtitle pages are display-only splits. We keep natural long segments
+// intact in the audio/script, but prefer punctuation boundaries on screen and
+// cap each page to at most 18 visible characters.
+func paginateTokenCells(cells []tokenCell, layout subtitleLayout) [][]tokenCell {
+	if len(cells) == 0 {
+		return nil
+	}
+	pages := make([][]tokenCell, 0, 2)
+	for start := 0; start < len(cells); {
+		end := chooseChinesePageBreak(cells, start, layout)
+		if end <= start {
+			end = start + 1
+		}
+		pages = append(pages, append([]tokenCell(nil), cells[start:end]...))
+		start = end
+	}
+	return pages
+}
+
+func chooseChinesePageBreak(cells []tokenCell, start int, layout subtitleLayout) int {
+	if start >= len(cells) {
+		return start
+	}
+	charCount := 0
+	width := 0.0
+	limit := float64(layout.MaxTextWidth)
+	bestEnd := start
+	bestPunctEnd := -1
+	bestPunctChars := 0
+
+	for i := start; i < len(cells); i++ {
+		unitChars := subtitleRuneCount(cells[i].Hanzi)
+		if unitChars <= 0 {
+			unitChars = 1
+		}
+		nextWidth := width
+		if i > start {
+			nextWidth += cells[i-1].Gap
+		}
+		nextWidth += cells[i].Width
+		if i > start && (charCount+unitChars > subtitlePageMaxChars || nextWidth > limit) {
+			break
+		}
+
+		charCount += unitChars
+		width = nextWidth
+		bestEnd = i + 1
+		if subtitleEndsWithPunctuation(cells[i].Hanzi) {
+			bestPunctEnd = i + 1
+			bestPunctChars = charCount
+		}
+		if charCount >= subtitlePageMaxChars {
+			break
+		}
+	}
+	if bestEnd == start {
+		return start + 1
+	}
+	if bestPunctEnd > start && charCount-bestPunctChars <= 4 {
+		return bestPunctEnd
+	}
+	return bestEnd
+}
+
+func chinesePageStartTimes(pages [][]tokenCell) []int {
+	out := make([]int, 0, len(pages))
+	for _, page := range pages {
+		start := 0
+		for _, cell := range page {
+			if cell.StartMS > 0 {
+				start = cell.StartMS
+				break
+			}
+		}
+		out = append(out, start)
+	}
+	return out
+}
+
+func chinesePageHasRuby(page []tokenCell) bool {
+	for _, cell := range page {
+		if strings.TrimSpace(cell.Ruby) != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func splitEnglishPagesSynced(text string, layout subtitleLayout, pageCount int) []string {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return nil
+	}
+	if pageCount <= 1 {
+		return []string{text}
+	}
+	words := strings.Fields(text)
+	if len(words) == 0 {
+		return []string{text}
+	}
+
+	limit := float64(layout.MaxTextWidth) * 0.96
+	pages := make([]string, 0, pageCount)
+	index := 0
+	for page := 0; page < pageCount && index < len(words); page++ {
+		remainingPages := pageCount - page
+		remainingWords := len(words) - index
+		targetWords := (remainingWords + remainingPages - 1) / remainingPages
+
+		current := ""
+		lastGood := ""
+		lastGoodIndex := index
+		bestPunct := ""
+		bestPunctIndex := index
+		wordsUsed := 0
+
+		for j := index; j < len(words); j++ {
+			candidate := words[j]
+			if current != "" {
+				candidate = current + " " + words[j]
+			}
+			if current != "" && estimateTextWidth(candidate, float64(layout.EnglishSize), false) > limit {
+				break
+			}
+			current = candidate
+			wordsUsed++
+			lastGood = current
+			lastGoodIndex = j + 1
+			if subtitleEndsWithPunctuation(words[j]) {
+				bestPunct = current
+				bestPunctIndex = j + 1
+			}
+			if wordsUsed >= targetWords && bestPunct != "" {
+				break
+			}
+			if len(words)-(j+1) < remainingPages-1 {
+				break
+			}
+		}
+
+		if bestPunct != "" && lastGood != "" && lastGoodIndex-bestPunctIndex <= 3 {
+			pages = append(pages, bestPunct)
+			index = bestPunctIndex
+			continue
+		}
+		if lastGood == "" {
+			lastGood = words[index]
+			lastGoodIndex = index + 1
+		}
+		pages = append(pages, lastGood)
+		index = lastGoodIndex
+	}
+	return pages
 }
 
 func computeCellCenters(cells []tokenCell, layout subtitleLayout) []int {
@@ -576,7 +764,7 @@ func estimateTextWidth(text string, fontSize float64, cjk bool) float64 {
 
 func hasAnyRuby(tokens []dto.PodcastToken) bool {
 	for _, t := range tokens {
-		if strings.TrimSpace(t.Pinyin) != "" {
+		if strings.TrimSpace(t.Reading) != "" {
 			return true
 		}
 	}
@@ -593,6 +781,36 @@ func isPunctuationText(s string) bool {
 
 func isPunctuationRune(r rune) bool {
 	return unicode.IsPunct(r) || strings.ContainsRune("，。！？；：“”‘’（）《》、…", r)
+}
+
+func isInlineEnglishText(s string) bool {
+	trimmed := strings.TrimSpace(s)
+	if trimmed == "" {
+		return false
+	}
+	hasAlphaNum := false
+	for _, r := range []rune(trimmed) {
+		switch {
+		case unicode.In(unicode.ToLower(r), unicode.Latin), unicode.IsDigit(r):
+			hasAlphaNum = true
+		case r == '-' || r == '\'':
+			continue
+		default:
+			return false
+		}
+	}
+	return hasAlphaNum
+}
+
+func inlineEnglishTokenRun(tokens []dto.PodcastToken, start int) (int, bool) {
+	if start < 0 || start >= len(tokens) || !isInlineEnglishText(tokens[start].Text) {
+		return 0, false
+	}
+	end := start
+	for end+1 < len(tokens) && isInlineEnglishText(tokens[end+1].Text) {
+		end++
+	}
+	return end, true
 }
 
 func maxFloat(a, b float64) float64 {

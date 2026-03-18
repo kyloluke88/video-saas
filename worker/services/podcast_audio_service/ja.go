@@ -10,46 +10,44 @@ import (
 	"worker/internal/dto"
 )
 
-func buildJapaneseChars(seg dto.PodcastSegment) []dto.PodcastCharToken {
+func buildJapaneseTokens(seg dto.PodcastSegment) []dto.PodcastToken {
 	text := japaneseDisplayText(seg)
 	runes := []rune(text)
 	if len(runes) == 0 {
 		return nil
 	}
 
-	out := make([]dto.PodcastCharToken, 0, len(runes))
+	out := make([]dto.PodcastToken, 0, len(runes))
 	for i, r := range runes {
-		out = append(out, dto.PodcastCharToken{
-			Index: i,
-			Char:  string(r),
-		})
+		_ = i
+		out = append(out, dto.PodcastToken{Text: string(r)})
 	}
 	return out
 }
 
-func assignJapaneseCharTimes(seg dto.PodcastSegment) dto.PodcastSegment {
-	chars := buildJapaneseChars(seg)
-	if len(chars) == 0 {
-		seg.Chars = nil
+func assignJapaneseTokenTimes(seg dto.PodcastSegment) dto.PodcastSegment {
+	tokens := buildJapaneseTokens(seg)
+	if len(tokens) == 0 {
+		seg.Tokens = nil
 		return seg
 	}
 	duration := seg.EndMS - seg.StartMS
 	if duration <= 0 {
-		seg.Chars = chars
+		seg.Tokens = tokens
 		return seg
 	}
-	nonSpace := make([]int, 0, len(chars))
-	for i, ch := range chars {
-		if strings.TrimSpace(ch.Char) != "" {
+	nonSpace := make([]int, 0, len(tokens))
+	for i, token := range tokens {
+		if strings.TrimSpace(token.Text) != "" {
 			nonSpace = append(nonSpace, i)
 		}
 	}
 	if len(nonSpace) == 0 {
-		for i := range chars {
-			chars[i].StartMS = seg.StartMS
-			chars[i].EndMS = seg.EndMS
+		for i := range tokens {
+			tokens[i].StartMS = seg.StartMS
+			tokens[i].EndMS = seg.EndMS
 		}
-		seg.Chars = chars
+		seg.Tokens = tokens
 		return seg
 	}
 	step := float64(duration) / float64(len(nonSpace))
@@ -60,44 +58,44 @@ func assignJapaneseCharTimes(seg dto.PodcastSegment) dto.PodcastSegment {
 		if end <= start {
 			end = start + 1
 		}
-		chars[idx].StartMS = start
-		chars[idx].EndMS = end
+		tokens[idx].StartMS = start
+		tokens[idx].EndMS = end
 		lastStart = end
 	}
-	for i := range chars {
-		if strings.TrimSpace(chars[i].Char) != "" {
+	for i := range tokens {
+		if strings.TrimSpace(tokens[i].Text) != "" {
 			continue
 		}
-		chars[i].StartMS = seg.StartMS
-		chars[i].EndMS = maxInt(seg.StartMS, lastStart)
+		tokens[i].StartMS = seg.StartMS
+		tokens[i].EndMS = maxInt(seg.StartMS, lastStart)
 	}
-	seg.Chars = chars
+	seg.Tokens = tokens
 	return seg
 }
 
 func normalizeJapaneseSegment(seg dto.PodcastSegment) dto.PodcastSegment {
 	text := japaneseDisplayText(seg)
-	seg.RubySpans = buildRubySpansFromTokens(text, seg.RubyTokens)
-	seg.RubyTokens = nil
-	seg = assignJapaneseCharTimes(seg)
+	annotationTokens := seg.Tokens
+	seg.TokenSpans = buildTokenSpansFromTokens(text, annotationTokens)
+	seg = assignJapaneseTokenTimes(seg)
 	return seg
 }
 
 func japaneseAlignmentStats(seg dto.PodcastSegment) (int, int) {
 	matched := 0
-	for _, ch := range seg.Chars {
-		if ch.EndMS > ch.StartMS {
+	for _, token := range seg.Tokens {
+		if token.EndMS > token.StartMS {
 			matched++
 		}
 	}
-	return matched, len(seg.Chars)
+	return matched, len(seg.Tokens)
 }
 
 func japaneseCharacterCount(seg dto.PodcastSegment) int {
 	return utf8.RuneCountInString(strings.TrimSpace(japaneseDisplayText(seg)))
 }
 
-func buildRubySpansFromTokens(text string, tokens []dto.PodcastRubyToken) []dto.PodcastRubySpan {
+func buildTokenSpansFromTokens(text string, tokens []dto.PodcastToken) []dto.PodcastTokenSpan {
 	if len(tokens) == 0 {
 		return nil
 	}
@@ -106,10 +104,10 @@ func buildRubySpansFromTokens(text string, tokens []dto.PodcastRubyToken) []dto.
 		return nil
 	}
 
-	out := make([]dto.PodcastRubySpan, 0, len(tokens))
+	out := make([]dto.PodcastTokenSpan, 0, len(tokens))
 	searchFrom := 0
 	for _, token := range tokens {
-		surface := strings.TrimSpace(token.Surface)
+		surface := strings.TrimSpace(token.Text)
 		reading := strings.TrimSpace(token.Reading)
 		if surface == "" || reading == "" {
 			continue
@@ -118,10 +116,10 @@ func buildRubySpansFromTokens(text string, tokens []dto.PodcastRubyToken) []dto.
 		if !ok {
 			continue
 		}
-		span, ok := normalizeRubySpanRange(runes, dto.PodcastRubySpan{
+		span, ok := normalizeTokenSpanRange(runes, dto.PodcastTokenSpan{
 			StartIndex: matchStart,
 			EndIndex:   matchEnd,
-			Ruby:       reading,
+			Reading:    reading,
 		})
 		if !ok {
 			searchFrom = matchEnd + 1
@@ -131,10 +129,10 @@ func buildRubySpansFromTokens(text string, tokens []dto.PodcastRubyToken) []dto.
 		searchFrom = matchEnd + 1
 	}
 
-	return dedupeRubySpans(out)
+	return dedupeTokenSpans(out)
 }
 
-func dedupeRubySpans(spans []dto.PodcastRubySpan) []dto.PodcastRubySpan {
+func dedupeTokenSpans(spans []dto.PodcastTokenSpan) []dto.PodcastTokenSpan {
 	if len(spans) == 0 {
 		return nil
 	}
@@ -193,21 +191,21 @@ func validateJapaneseScriptInput(script dto.PodcastScript) error {
 			return fmt.Errorf("japanese podcast block %s has no segments", block.TTSBlockID)
 		}
 		for _, seg := range block.Segments {
-			if len(seg.RubySpans) > 0 {
-				return fmt.Errorf("segment %s uses deprecated ruby_spans; use ruby_tokens instead", seg.SegmentID)
+			if len(seg.TokenSpans) > 0 {
+				return fmt.Errorf("segment %s uses deprecated token_spans in input; use tokens instead", seg.SegmentID)
+			}
+			if strings.TrimSpace(seg.SegmentID) == "" {
+				return fmt.Errorf("japanese podcast segment_id is required")
 			}
 			if strings.TrimSpace(japaneseDisplayText(seg)) == "" {
-				return fmt.Errorf("segment %s display_ja is required", seg.SegmentID)
-			}
-			if strings.TrimSpace(japaneseTTSText(seg)) == "" {
-				return fmt.Errorf("segment %s tts_ja is required", seg.SegmentID)
+				return fmt.Errorf("segment %s text is required", seg.SegmentID)
 			}
 		}
 	}
 	return nil
 }
 
-func normalizeRubySpanRange(runes []rune, span dto.PodcastRubySpan) (dto.PodcastRubySpan, bool) {
+func normalizeTokenSpanRange(runes []rune, span dto.PodcastTokenSpan) (dto.PodcastTokenSpan, bool) {
 	start := span.StartIndex
 	end := span.EndIndex
 
@@ -222,7 +220,7 @@ func normalizeRubySpanRange(runes []rune, span dto.PodcastRubySpan) (dto.Podcast
 		}
 	}
 	if firstHan == -1 {
-		return dto.PodcastRubySpan{}, false
+		return dto.PodcastTokenSpan{}, false
 	}
 
 	for firstHan > 0 && unicode.In(runes[firstHan-1], unicode.Han) {
@@ -238,18 +236,9 @@ func normalizeRubySpanRange(runes []rune, span dto.PodcastRubySpan) (dto.Podcast
 }
 
 func japaneseDisplayText(seg dto.PodcastSegment) string {
-	if text := strings.TrimSpace(seg.DisplayJA); text != "" {
-		return text
-	}
-	return strings.TrimSpace(seg.JA)
+	return strings.TrimSpace(seg.Text)
 }
 
 func japaneseTTSText(seg dto.PodcastSegment) string {
-	if text := strings.TrimSpace(seg.TTSJA); text != "" {
-		return text
-	}
-	if text := strings.TrimSpace(seg.DisplayJA); text != "" {
-		return text
-	}
-	return strings.TrimSpace(seg.JA)
+	return strings.TrimSpace(seg.Text)
 }

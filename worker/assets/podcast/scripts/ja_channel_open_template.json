@@ -11,7 +11,9 @@
         "chapter_id": "ch_001",
         "title_en": "Opening",
         "title_ja": "オープニング",
-        "block_ids": ["intro.1"]
+        "block_ids": [
+          "intro.1"
+        ]
       }
     ],
     "in_this_episode_you_will_learn": [
@@ -34,49 +36,72 @@
         {
           "segment_id": "seg_001",
           "speaker": "female",
-          "display_ja": "みなさん、こんにちは。このチャンネルへようこそ。ユイです。",
-          "tts_ja": "みなさん、こんにちは。このチャンネルへようこそ。ユイです。",
           "en": "Hi everyone. Welcome to this channel. I'm Yui.",
           "summary": false,
-          "ruby_tokens": []
+          "text": "みなさん、こんにちは。このチャンネルへようこそ。ユイです。",
+          "tokens": []
         },
         {
           "segment_id": "seg_002",
           "speaker": "male",
-          "display_ja": "こんにちは、アキラです。今日もいっしょに日本語を楽しんでいきましょう。",
-          "tts_ja": "こんにちは、アキラです。今日もいっしょに日本語を楽しんでいきましょう。",
           "en": "Hi, I'm Akira. Let's enjoy Japanese together again today.",
           "summary": false,
-          "ruby_tokens": [
-            { "surface": "今日", "reading": "きょう" },
-            { "surface": "日本語", "reading": "にほんご" },
-            { "surface": "楽", "reading": "たの" }
+          "text": "こんにちは、アキラです。今日もいっしょに日本語を楽しんでいきましょう。",
+          "tokens": [
+            {
+              "text": "今日",
+              "reading": "きょう"
+            },
+            {
+              "text": "日本語",
+              "reading": "にほんご"
+            },
+            {
+              "text": "楽",
+              "reading": "たの"
+            }
           ]
         },
         {
           "segment_id": "seg_003",
           "speaker": "female",
-          "display_ja": "こういう自然な会話が好きな方は、ぜひチャンネル登録してください。",
-          "tts_ja": "こういう自然な会話が好きな方は、ぜひチャンネル登録してください。",
           "en": "If you enjoy this kind of natural conversation, please subscribe to the channel.",
           "summary": false,
-          "ruby_tokens": [
-            { "surface": "自然", "reading": "しぜん" },
-            { "surface": "会話", "reading": "かいわ" },
-            { "surface": "好", "reading": "す" },
-            { "surface": "登録", "reading": "とうろく" }
+          "text": "こういう自然な会話が好きな方は、ぜひチャンネル登録してください。",
+          "tokens": [
+            {
+              "text": "自然",
+              "reading": "しぜん"
+            },
+            {
+              "text": "会話",
+              "reading": "かいわ"
+            },
+            {
+              "text": "好",
+              "reading": "す"
+            },
+            {
+              "text": "登録",
+              "reading": "とうろく"
+            }
           ]
         },
         {
           "segment_id": "seg_004",
           "speaker": "male",
-          "display_ja": "では、さっそく今日のテーマに入っていきましょう。",
-          "tts_ja": "では、さっそく今日のテーマに入っていきましょう。",
           "en": "All right, let's jump into today's topic.",
           "summary": false,
-          "ruby_tokens": [
-            { "surface": "今日", "reading": "きょう" },
-            { "surface": "入", "reading": "はい" }
+          "text": "では、さっそく今日のテーマに入っていきましょう。",
+          "tokens": [
+            {
+              "text": "今日",
+              "reading": "きょう"
+            },
+            {
+              "text": "入",
+              "reading": "はい"
+            }
           ]
         }
       ]

@@ -25,10 +25,9 @@ func main() {
 	log.Printf("⚙️ BGM_ENABLED=%t", conf.Get[bool]("worker.bgm_enabled"))
 	log.Printf("⚙️ S3_ENABLED=%t", conf.Get[bool]("worker.s3_enabled"))
 	log.Printf("⚙️ SEEDANCE_ENABLED=%t", conf.Get[bool]("worker.seedance_enabled"))
-	log.Printf("⚙️ IDIOM_TTS_ENABLED=%t TENCENT_TTS_ENABLED=%t ELEVENLABS_TTS_ENABLED=%t",
-		conf.Get[bool]("worker.idiom_tts_enabled"),
-		conf.Get[bool]("worker.tencent_tts_enabled"),
-		conf.Get[bool]("worker.elevenlabs_tts_enabled"),
+	log.Printf("⚙️ GOOGLE_TTS_ENABLED=%t GOOGLE_TTS_MODEL=%s",
+		conf.Get[bool]("worker.google_tts_enabled"),
+		conf.Get[string]("worker.google_tts_model"),
 	)
 
 	amqpURL := buildAMQPURL()

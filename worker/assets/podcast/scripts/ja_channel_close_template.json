@@ -11,7 +11,9 @@
         "chapter_id": "ch_001",
         "title_en": "Channel CTA",
         "title_ja": "クロージング",
-        "block_ids": ["channel_cta.1"]
+        "block_ids": [
+          "channel_cta.1"
+        ]
       }
     ],
     "in_this_episode_you_will_learn": [
@@ -34,44 +36,80 @@
         {
           "segment_id": "seg_001",
           "speaker": "female",
-          "display_ja": "今日の内容が役に立ったら、チャンネル登録と高評価をお願いします。",
-          "tts_ja": "今日の内容が役に立ったら、チャンネル登録と高評価をお願いします。",
           "en": "If today's episode was helpful, please subscribe to the channel and leave a like.",
           "summary": false,
-          "ruby_tokens": [
-            { "surface": "今日", "reading": "きょう" },
-            { "surface": "内容", "reading": "ないよう" },
-            { "surface": "役", "reading": "やく" },
-            { "surface": "立", "reading": "た" },
-            { "surface": "登録", "reading": "とうろく" },
-            { "surface": "高評価", "reading": "こうひょうか" },
-            { "surface": "願", "reading": "ねが" }
+          "text": "今日の内容が役に立ったら、チャンネル登録と高評価をお願いします。",
+          "tokens": [
+            {
+              "text": "今日",
+              "reading": "きょう"
+            },
+            {
+              "text": "内容",
+              "reading": "ないよう"
+            },
+            {
+              "text": "役",
+              "reading": "やく"
+            },
+            {
+              "text": "立",
+              "reading": "た"
+            },
+            {
+              "text": "登録",
+              "reading": "とうろく"
+            },
+            {
+              "text": "高評価",
+              "reading": "こうひょうか"
+            },
+            {
+              "text": "願",
+              "reading": "ねが"
+            }
           ]
         },
         {
           "segment_id": "seg_002",
           "speaker": "male",
-          "display_ja": "みなさんの応援があると、これからも続ける力になります。",
-          "tts_ja": "みなさんの応援があると、これからも続ける力になります。",
           "en": "Your support gives us the strength to keep this going.",
           "summary": false,
-          "ruby_tokens": [
-            { "surface": "応援", "reading": "おうえん" },
-            { "surface": "続", "reading": "つづ" },
-            { "surface": "力", "reading": "ちから" }
+          "text": "みなさんの応援があると、これからも続ける力になります。",
+          "tokens": [
+            {
+              "text": "応援",
+              "reading": "おうえん"
+            },
+            {
+              "text": "続",
+              "reading": "つづ"
+            },
+            {
+              "text": "力",
+              "reading": "ちから"
+            }
           ]
         },
         {
           "segment_id": "seg_003",
           "speaker": "female",
-          "display_ja": "では、また次回もいっしょに日本語を練習しましょう。",
-          "tts_ja": "では、また次回もいっしょに日本語を練習しましょう。",
           "en": "All right, let's practice Japanese together again next time.",
           "summary": false,
-          "ruby_tokens": [
-            { "surface": "次回", "reading": "じかい" },
-            { "surface": "日本語", "reading": "にほんご" },
-            { "surface": "練習", "reading": "れんしゅう" }
+          "text": "では、また次回もいっしょに日本語を練習しましょう。",
+          "tokens": [
+            {
+              "text": "次回",
+              "reading": "じかい"
+            },
+            {
+              "text": "日本語",
+              "reading": "にほんご"
+            },
+            {
+              "text": "練習",
+              "reading": "れんしゅう"
+            }
           ]
         }
       ]

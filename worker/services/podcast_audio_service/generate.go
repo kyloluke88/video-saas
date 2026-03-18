@@ -2,31 +2,28 @@ package podcast_audio_service
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
-	"unicode"
 
 	"worker/internal/dto"
 	conf "worker/pkg/config"
-	"worker/pkg/tts"
-	"worker/pkg/tts/elevenlabs"
+	"worker/pkg/googlecloud"
+	"worker/pkg/mfa"
 	services "worker/services"
 	ffmpegcommon "worker/services/ffmpeg_service/common"
 )
 
 type GenerateInput struct {
-	ProjectID       string
-	Language        string
-	ContentProfile  string
-	IsDirect        bool
-	ScriptFilename  string
-	MaleVoiceType   *int64
-	FemaleVoiceType *int64
+	ProjectID      string
+	Language       string
+	ContentProfile string
+	IsDirect       bool
+	ScriptFilename string
 }
 
 type GenerateResult struct {
@@ -35,13 +32,10 @@ type GenerateResult struct {
 	Script            dto.PodcastScript
 }
 
-type speakerProfile struct {
-	VoiceType        int64
-	VoiceID          string
-	Speed            float64
-	SampleRate       int64
-	EmotionCategory  string
-	EmotionIntensity int64
+type blockSynthesisResult struct {
+	AudioPath    string
+	DurationMS   int
+	AlignedBlock dto.PodcastBlock
 }
 
 func Generate(input GenerateInput) (GenerateResult, error) {
@@ -56,7 +50,12 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 	if !isJapaneseLanguage(language) && contentProfile == "" {
 		return GenerateResult{}, fmt.Errorf("content_profile must be daily, social_issue, or international")
 	}
-	log.Printf("🎧 podcast audio generate start project_id=%s script_filename=%s", input.ProjectID, input.ScriptFilename)
+	if strings.TrimSpace(input.ScriptFilename) == "" {
+		return GenerateResult{}, fmt.Errorf("script_filename is required")
+	}
+	if !podcastEnabled() {
+		return GenerateResult{}, fmt.Errorf("podcast generation disabled")
+	}
 
 	projectDir := projectDirFor(input.ProjectID)
 	if err := os.MkdirAll(projectDir, 0o755); err != nil {
@@ -65,10 +64,6 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 	artifacts, err := prepareAudioArtifacts(projectDir)
 	if err != nil {
 		return GenerateResult{}, err
-	}
-
-	if strings.TrimSpace(input.ScriptFilename) == "" {
-		return GenerateResult{}, fmt.Errorf("script_filename is required")
 	}
 
 	if input.IsDirect {
@@ -84,166 +79,75 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 		if err != nil {
 			return GenerateResult{}, err
 		}
-		log.Printf("♻️ podcast direct reuse project_id=%s language=%s source_project=%s dialogue=%s script=%s",
-			input.ProjectID, language, filepath.Base(strings.TrimSpace(input.ScriptFilename)), reusable.DialogueAudioPath, reusable.AlignedScriptPath)
 		reusable.Script = finalScript
 		return *reusable, nil
 	}
 
-	scriptPath := scriptPathFor(input.ScriptFilename)
-	var script dto.PodcastScript
-	if err := readJSON(scriptPath, &script); err != nil {
-		return GenerateResult{}, err
-	}
-	if err := validateScriptLanguage(script.Language, language); err != nil {
-		return GenerateResult{}, err
-	}
-	script.Language = language
-	if isJapaneseLanguage(language) {
-		if err := validateJapaneseScriptInput(script); err != nil {
-			return GenerateResult{}, err
-		}
-		script.RefreshSegmentsFromBlocks()
-	} else {
-		if err := validateChineseScriptInput(script); err != nil {
-			return GenerateResult{}, err
-		}
-		script.RefreshSegmentsFromBlocks()
-	}
-	if !podcastEnabledForLanguage(language) {
-		return GenerateResult{}, fmt.Errorf("podcast generation disabled for language %s", language)
-	}
-	log.Printf("📝 podcast script loaded project_id=%s segments=%d language=%s path=%s", input.ProjectID, len(script.Segments), language, scriptPath)
-	if err := writeJSON(filepath.Join(projectDir, "script_input.json"), script); err != nil {
-		return GenerateResult{}, err
-	}
-	script = loadResumableScript(script, artifacts.alignedPath)
-	script.Language = language
-
-	maleProfile := resolveSpeakerProfile(language, contentProfile, "male", input.MaleVoiceType)
-	femaleProfile := resolveSpeakerProfile(language, contentProfile, "female", input.FemaleVoiceType)
-	if isJapaneseLanguage(language) {
-		log.Printf("🗣️ podcast speaker profiles project_id=%s male_voice_id=%s female_voice_id=%s",
-			input.ProjectID, maleProfile.VoiceID, femaleProfile.VoiceID)
-	} else {
-		log.Printf("🗣️ podcast speaker profiles project_id=%s male_voice=%d female_voice=%d male_voice_id=%s female_voice_id=%s male_speed=%.2f female_speed=%.2f sample_rate=%d",
-			input.ProjectID, maleProfile.VoiceType, femaleProfile.VoiceType, maleProfile.VoiceID, femaleProfile.VoiceID, maleProfile.Speed, femaleProfile.Speed, maleProfile.SampleRate)
-	}
-
-	gapMs := segmentGapMSForLanguage(language)
-	sameSpeakerGapMs := sameSpeakerGapMSForLanguage(language)
-	if gapMs > 0 {
-		if err := createSilenceAudio(artifacts.silencePath, gapMs); err != nil {
-			return GenerateResult{}, err
-		}
-		log.Printf("⏸️ podcast segment gap prepared project_id=%s gap_ms=%d path=%s", input.ProjectID, gapMs, artifacts.silencePath)
-	}
-	if sameSpeakerGapMs > 0 && sameSpeakerGapMs != gapMs {
-		if err := createSilenceAudio(artifacts.shortSilencePath, sameSpeakerGapMs); err != nil {
-			return GenerateResult{}, err
-		}
-		log.Printf("⏸️ podcast same-speaker gap prepared project_id=%s gap_ms=%d path=%s", input.ProjectID, sameSpeakerGapMs, artifacts.shortSilencePath)
-	}
-
-	if isJapaneseLanguage(language) {
-		return generateJapaneseDialogue(input.ProjectID, script, artifacts, gapMs, sameSpeakerGapMs, maleProfile, femaleProfile)
-	}
-
-	provider, err := newProvider(language)
+	script, err := loadScriptForGeneration(language, input.ScriptFilename)
 	if err != nil {
 		return GenerateResult{}, err
 	}
-	adapter := adapterFor(language)
+	if err := writeJSON(filepath.Join(projectDir, "script_input.json"), script); err != nil {
+		return GenerateResult{}, err
+	}
 
-	concatPaths := make([]string, 0, len(script.Segments)*2)
-	cursorMs := 0
-	for i, seg := range script.Segments {
-		text := strings.TrimSpace(adapter.SegmentText(seg))
-		if text == "" {
-			continue
-		}
-		seg = adapter.NormalizeSegment(seg)
-		if existingPath, ok := existingUnitAudioPath(artifacts.segmentsDir, i, seg.SegmentID, "mp3"); ok && segmentCheckpointComplete(language, seg, existingPath) {
-			log.Printf("♻️ segment resume project_id=%s segment_id=%s audio=%s window_ms=%d-%d",
-				input.ProjectID, seg.SegmentID, existingPath, seg.StartMS, seg.EndMS)
-			nextGapMs, nextGapPath := chineseGapAfterSegment(script.Segments, i, gapMs, sameSpeakerGapMs, artifacts.silencePath, artifacts.shortSilencePath)
-			concatPaths = appendConcatPath(concatPaths, existingPath, nextGapMs > 0 && nextGapPath != "", nextGapPath)
-			cursorMs = seg.EndMS
-			if nextGapMs > 0 {
-				cursorMs += nextGapMs
-			}
-			script.Segments[i] = seg
-			continue
-		}
+	client, err := newGoogleSpeechClient()
+	if err != nil {
+		return GenerateResult{}, err
+	}
+	alignClient := newMFAClient()
+	aligner := newBlockAligner(alignClient, chunkWorkingDir(projectDir))
 
-		profile := maleProfile
-		if strings.EqualFold(strings.TrimSpace(seg.Speaker), "female") {
-			profile = femaleProfile
-		}
-		log.Printf("🔊 segment tts start project_id=%s segment_id=%s speaker=%s chars=%d voice=%d speed=%.2f emotion=%s intensity=%d",
-			input.ProjectID, seg.SegmentID, defaultSpeaker(seg.Speaker), adapter.CharacterCount(seg), profile.VoiceType, profile.Speed, profile.EmotionCategory, profile.EmotionIntensity)
-
-		result, synthErr := provider.Synthesize(context.Background(), tts.Request{
-			Text:             text,
-			Language:         normalizeLanguage(language),
-			VoiceType:        int64Ptr(profile.VoiceType),
-			VoiceID:          stringPtr(profile.VoiceID),
-			Speed:            float64Ptr(profile.Speed),
-			SampleRate:       int64Ptr(profile.SampleRate),
-			EmotionCategory:  profile.EmotionCategory,
-			EmotionIntensity: int64Ptr(profile.EmotionIntensity),
-			EnableSubtitle:   boolPtr(true),
-		})
-		if synthErr != nil {
-			return GenerateResult{}, synthErr
-		}
-		if len(result.Audio) == 0 {
-			return GenerateResult{}, fmt.Errorf("tts returned empty audio for segment %s", seg.SegmentID)
-		}
-
-		ext := strings.TrimSpace(result.Ext)
-		if ext == "" {
-			ext = "mp3"
-		}
-		segmentPath := unitAudioPath(artifacts.segmentsDir, i, seg.SegmentID, ext)
-		if err := os.WriteFile(segmentPath, result.Audio, 0o644); err != nil {
+	blockGapMS := blockGapMS()
+	if blockGapMS > 0 {
+		if err := createSilenceAudio(artifacts.blockGapPath, blockGapMS); err != nil {
 			return GenerateResult{}, err
 		}
-		if len(result.RawResponse) > 0 {
-			responsePath := unitAudioPath(artifacts.ttsResponsesDir, i, seg.SegmentID, "json")
-			if err := os.WriteFile(responsePath, result.RawResponse, 0o644); err != nil {
-				return GenerateResult{}, err
-			}
+	}
+	templateGapMSValue := templateGapMS()
+	if templateGapMSValue > 0 {
+		if err := createSilenceAudio(artifacts.templateGapPath, templateGapMSValue); err != nil {
+			return GenerateResult{}, err
 		}
-		durationSec, err := ffmpegcommon.AudioDurationSec(segmentPath)
+	}
+
+	results := make([]blockSynthesisResult, len(script.Blocks))
+	for i, block := range script.Blocks {
+		result, err := synthesizeOrResumeBlock(context.Background(), client, aligner, language, contentProfile, artifacts, i, block)
 		if err != nil {
 			return GenerateResult{}, err
 		}
-		durationMs := int(durationSec * 1000)
-		seg.StartMS = cursorMs
-		seg.EndMS = cursorMs + durationMs
-		seg = adapter.ApplyAlignment(seg, result.Subtitles)
-		matchedTokens, totalTokens := adapter.AlignmentStats(seg)
-		log.Printf("✅ segment tts done project_id=%s segment_id=%s audio=%s duration_ms=%d subtitle_marks=%d token_timed=%d/%d window_ms=%d-%d",
-			input.ProjectID, seg.SegmentID, segmentPath, durationMs, len(result.Subtitles), matchedTokens, totalTokens, seg.StartMS, seg.EndMS)
-		script.Segments[i] = seg
-		if err := persistAlignedCheckpoint(artifacts.alignedPath, script); err != nil {
-			return GenerateResult{}, err
-		}
-		cursorMs = seg.EndMS
+		results[i] = result
+		script.Blocks[i] = result.AlignedBlock
 
-		nextGapMs, nextGapPath := chineseGapAfterSegment(script.Segments, i, gapMs, sameSpeakerGapMs, artifacts.silencePath, artifacts.shortSilencePath)
-		concatPaths = appendConcatPath(concatPaths, segmentPath, nextGapMs > 0 && nextGapPath != "", nextGapPath)
-		if nextGapMs > 0 {
-			cursorMs += nextGapMs
+		partialScript, _, _, err := assembleDialogue(
+			dto.PodcastScript{
+				Language:              script.Language,
+				AudienceLanguage:      script.AudienceLanguage,
+				DifficultyLevel:       script.DifficultyLevel,
+				TargetDurationMinutes: script.TargetDurationMinutes,
+				Title:                 script.Title,
+				YouTube:               script.YouTube,
+				Blocks:                append([]dto.PodcastBlock(nil), script.Blocks[:i+1]...),
+			},
+			results[:i+1],
+			artifacts.blockGapPath,
+			blockGapMS,
+		)
+		if err == nil {
+			_ = writeJSON(filepath.Join(projectDir, "script_partial.json"), partialScript)
 		}
 	}
 
+	finalScript, concatPaths, _, err := assembleDialogue(script, results, artifacts.blockGapPath, blockGapMS)
+	if err != nil {
+		return GenerateResult{}, err
+	}
 	if err := concatAudioFiles(projectDir, concatPaths, artifacts.dialoguePath); err != nil {
 		return GenerateResult{}, err
 	}
-	log.Printf("🎼 dialogue audio ready project_id=%s path=%s parts=%d total_ms=%d", input.ProjectID, artifacts.dialoguePath, len(concatPaths), cursorMs)
-	alignedScript, err := finalizeAlignedScript(input.ProjectID, artifacts.alignedPath, artifacts.dialoguePath, script, contentProfile)
+
+	alignedScript, err := finalizeAlignedScript(input.ProjectID, artifacts.alignedPath, artifacts.dialoguePath, finalScript, contentProfile)
 	if err != nil {
 		return GenerateResult{}, err
 	}
@@ -255,191 +159,256 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 	}, nil
 }
 
-func generateJapaneseDialogue(projectID string, script dto.PodcastScript, artifacts audioArtifacts, gapMs, sameSpeakerGapMs int, maleProfile, femaleProfile speakerProfile) (GenerateResult, error) {
-	cfg := providerConfigForLanguage(script.Language)
-	provider, err := elevenlabs.New(cfg)
-	if err != nil {
-		return GenerateResult{}, err
+func loadScriptForGeneration(language, scriptFilename string) (dto.PodcastScript, error) {
+	scriptPath := scriptPathFor(scriptFilename)
+	var script dto.PodcastScript
+	if err := readJSON(scriptPath, &script); err != nil {
+		return dto.PodcastScript{}, err
 	}
-	dialogueStability := conf.Get[float64]("worker.elevenlabs_podcast_dialogue_stability", 0.47)
-
-	blockAudioPaths := make([]string, len(script.Blocks))
-	for blockIndex, block := range script.Blocks {
-		if len(block.Segments) == 0 {
-			continue
-		}
-		if existingPath, ok := existingUnitAudioPath(artifacts.segmentsDir, blockIndex, block.TTSBlockID, "mp3"); ok && blockCheckpointComplete(block, existingPath) {
-			log.Printf("♻️ dialogue block resume project_id=%s block=%s audio=%s window_end=%d",
-				projectID, block.TTSBlockID, existingPath, blockEndMS(block))
-			blockAudioPaths[blockIndex] = existingPath
-			continue
-		}
-
-		inputs := make([]elevenlabs.DialogueInput, 0, len(block.Segments))
-		for _, seg := range block.Segments {
-			text := strings.TrimSpace(japaneseTTSText(seg))
-			if text == "" {
-				continue
-			}
-			profile := maleProfile
-			if strings.EqualFold(strings.TrimSpace(seg.Speaker), "female") {
-				profile = femaleProfile
-			}
-			inputs = append(inputs, elevenlabs.DialogueInput{
-				Text:    text,
-				VoiceID: profile.VoiceID,
-			})
-		}
-		if len(inputs) == 0 {
-			continue
-		}
-
-		log.Printf("🎭 dialogue block start project_id=%s block=%s turns=%d",
-			projectID, block.TTSBlockID, len(inputs))
-
-		result, err := provider.SynthesizeDialogue(context.Background(), inputs, normalizeLanguage(script.Language), float64Ptr(dialogueStability))
-		if err != nil {
-			return GenerateResult{}, err
-		}
-		if len(result.Audio) == 0 {
-			return GenerateResult{}, fmt.Errorf("dialogue api returned empty audio for block %s", block.TTSBlockID)
-		}
-
-		ext := strings.TrimSpace(result.Ext)
-		if ext == "" {
-			ext = "mp3"
-		}
-		blockPath := unitAudioPath(artifacts.segmentsDir, blockIndex, block.TTSBlockID, ext)
-		if err := os.WriteFile(blockPath, result.Audio, 0o644); err != nil {
-			return GenerateResult{}, err
-		}
-		durationSec, err := ffmpegcommon.AudioDurationSec(blockPath)
-		if err != nil {
-			return GenerateResult{}, err
-		}
-		durationMs := int(durationSec * 1000)
-		assignDialogueBlockTimes(&block, result, 0, durationMs)
-		script.Blocks[blockIndex] = block
-		blockAudioPaths[blockIndex] = blockPath
-		script.RefreshSegmentsFromBlocks()
-		if err := persistAlignedCheckpoint(artifacts.alignedPath, script); err != nil {
-			return GenerateResult{}, err
-		}
-		log.Printf("✅ dialogue block done project_id=%s block=%s audio=%s duration_ms=%d timed_segments=%d",
-			projectID, block.TTSBlockID, blockPath, durationMs, blockTimedSegments(block))
+	if err := validateScriptLanguage(script.Language, language); err != nil {
+		return dto.PodcastScript{}, err
 	}
-
-	concatPaths, totalMS, err := rebuildJapaneseDialogueWithSegmentGaps(script, blockAudioPaths, artifacts, gapMs, sameSpeakerGapMs)
-	if err != nil {
-		return GenerateResult{}, err
-	}
-	if err := concatAudioFiles(artifacts.projectDir, concatPaths, artifacts.dialoguePath); err != nil {
-		return GenerateResult{}, err
+	script.Language = language
+	if isJapaneseLanguage(language) {
+		if err := validateJapaneseScriptInput(script); err != nil {
+			return dto.PodcastScript{}, err
+		}
+	} else {
+		if err := validateChineseScriptInput(script); err != nil {
+			return dto.PodcastScript{}, err
+		}
 	}
 	script.RefreshSegmentsFromBlocks()
-	log.Printf("🎼 dialogue audio ready project_id=%s path=%s parts=%d total_ms=%d", projectID, artifacts.dialoguePath, len(concatPaths), totalMS)
-	finalScript, err := finalizeAlignedScript(projectID, artifacts.alignedPath, artifacts.dialoguePath, script, "")
-	if err != nil {
-		return GenerateResult{}, err
+	return normalizeScriptForSpeech(script), nil
+}
+
+func normalizeScriptForSpeech(script dto.PodcastScript) dto.PodcastScript {
+	for i := range script.Blocks {
+		for j := range script.Blocks[i].Segments {
+			seg := script.Blocks[i].Segments[j]
+			seg.StartMS = 0
+			seg.EndMS = 0
+			for k := range seg.Tokens {
+				seg.Tokens[k].StartMS = 0
+				seg.Tokens[k].EndMS = 0
+			}
+			seg.TokenSpans = nil
+			script.Blocks[i].Segments[j] = seg
+		}
+	}
+	script.RefreshSegmentsFromBlocks()
+	return script
+}
+
+func synthesizeOrResumeBlock(ctx context.Context, client *googlecloud.Client, aligner *blockAligner, language, contentProfile string, artifacts audioArtifacts, index int, block dto.PodcastBlock) (blockSynthesisResult, error) {
+	audioPath, ok := existingBlockAudioPath(artifacts.blocksDir, index, block.TTSBlockID)
+	if ok {
+		if state, ok, err := loadBlockCheckpoint(artifacts.blockStatesDir, index, block.TTSBlockID); err == nil && ok && blockCheckpointComplete(language, state, audioPath) {
+			log.Printf("♻️ podcast block resume block=%s audio=%s duration_ms=%d", block.TTSBlockID, audioPath, state.DurationMS)
+			return blockSynthesisResult{
+				AudioPath:    audioPath,
+				DurationMS:   state.DurationMS,
+				AlignedBlock: state.Block,
+			}, nil
+		} else if err != nil {
+			return blockSynthesisResult{}, err
+		}
 	}
 
-	return GenerateResult{
-		DialogueAudioPath: artifacts.dialoguePath,
-		AlignedScriptPath: artifacts.alignedPath,
-		Script:            finalScript,
+	// Each block is synthesized independently so a failed run can resume from the
+	// last finished block instead of regenerating the whole episode.
+	request := buildConversationRequest(language, contentProfile, block)
+	log.Printf("🎙️ gemini block synth start block=%s turns=%d", block.TTSBlockID, len(request.Turns))
+	result, err := client.SynthesizeConversation(ctx, request)
+	if err != nil {
+		return blockSynthesisResult{}, err
+	}
+	blockAudioPath := unitAudioPath(artifacts.blocksDir, index, block.TTSBlockID, result.Ext)
+	if err := os.WriteFile(blockAudioPath, result.Audio, 0o644); err != nil {
+		return blockSynthesisResult{}, err
+	}
+
+	durationMS, err := audioDurationMS(blockAudioPath)
+	if err != nil {
+		return blockSynthesisResult{}, err
+	}
+
+	alignedBlock, err := aligner.AlignBlock(ctx, language, block, blockAudioPath, durationMS)
+	if err != nil {
+		return blockSynthesisResult{}, err
+	}
+	if err := persistBlockCheckpoint(artifacts.blockStatesDir, index, alignedBlock, durationMS); err != nil {
+		return blockSynthesisResult{}, err
+	}
+	log.Printf("✅ gemini block synth done block=%s audio=%s duration_ms=%d", block.TTSBlockID, blockAudioPath, durationMS)
+	return blockSynthesisResult{
+		AudioPath:    blockAudioPath,
+		DurationMS:   durationMS,
+		AlignedBlock: alignedBlock,
 	}, nil
 }
 
-type japaneseSegmentRef struct {
-	blockIndex   int
-	segmentIndex int
-	globalIndex  int
-}
+// assembleDialogue is the single place where relative block timings become absolute
+// dialogue timings. This keeps resume logic simple: block checkpoints stay local to
+// each block, and final absolute timing is rebuilt every run.
+func assembleDialogue(base dto.PodcastScript, results []blockSynthesisResult, gapPath string, gapMS int) (dto.PodcastScript, []string, int, error) {
+	script := base
+	script.Blocks = make([]dto.PodcastBlock, len(base.Blocks))
+	concatPaths := make([]string, 0, len(results)*2)
+	cursorMS := 0
 
-func rebuildJapaneseDialogueWithSegmentGaps(script dto.PodcastScript, blockAudioPaths []string, artifacts audioArtifacts, gapMs, sameSpeakerGapMs int) ([]string, int, error) {
-	refs := make([]japaneseSegmentRef, 0, len(script.Segments))
-	globalIndex := 0
-	for blockIndex := range script.Blocks {
-		for segmentIndex := range script.Blocks[blockIndex].Segments {
-			refs = append(refs, japaneseSegmentRef{
-				blockIndex:   blockIndex,
-				segmentIndex: segmentIndex,
-				globalIndex:  globalIndex,
-			})
-			globalIndex++
+	for i, result := range results {
+		if strings.TrimSpace(result.AudioPath) == "" {
+			return dto.PodcastScript{}, nil, 0, fmt.Errorf("block audio missing at index %d", i)
+		}
+		block := result.AlignedBlock
+		shiftBlockTiming(&block, cursorMS)
+		script.Blocks[i] = block
+		concatPaths = append(concatPaths, result.AudioPath)
+		cursorMS += result.DurationMS
+		if i < len(results)-1 && gapMS > 0 && strings.TrimSpace(gapPath) != "" {
+			concatPaths = append(concatPaths, gapPath)
+			cursorMS += gapMS
 		}
 	}
+	script.RefreshSegmentsFromBlocks()
+	return script, concatPaths, cursorMS, nil
+}
 
-	concatPaths := make([]string, 0, len(refs)*2)
-	cursorMS := 0
-	for idx, ref := range refs {
-		blockAudioPath := ""
-		if ref.blockIndex >= 0 && ref.blockIndex < len(blockAudioPaths) {
-			blockAudioPath = blockAudioPaths[ref.blockIndex]
-		}
-		if strings.TrimSpace(blockAudioPath) == "" || !fileExists(blockAudioPath) {
-			return nil, 0, fmt.Errorf("dialogue block audio missing for block index %d", ref.blockIndex)
-		}
+func shiftBlockTiming(block *dto.PodcastBlock, offsetMS int) {
+	if block == nil || offsetMS == 0 {
+		return
+	}
+	for i := range block.Segments {
+		shiftSegmentTiming(&block.Segments[i], offsetMS)
+	}
+}
 
-		seg := script.Blocks[ref.blockIndex].Segments[ref.segmentIndex]
-		if seg.EndMS <= seg.StartMS {
-			return nil, 0, fmt.Errorf("japanese segment timing missing for %s", seg.SegmentID)
-		}
-		clipPath := unitAudioPath(artifacts.dialogueClipsDir, ref.globalIndex, seg.SegmentID, "mp3")
-		if err := extractAudioClip(blockAudioPath, clipPath, seg.StartMS, seg.EndMS); err != nil {
-			return nil, 0, err
-		}
+func shiftSegmentTiming(seg *dto.PodcastSegment, offsetMS int) {
+	if seg == nil || offsetMS == 0 {
+		return
+	}
+	seg.StartMS += offsetMS
+	seg.EndMS += offsetMS
+	for i := range seg.Tokens {
+		seg.Tokens[i].StartMS += offsetMS
+		seg.Tokens[i].EndMS += offsetMS
+	}
+}
 
-		shiftSegmentTiming(&seg, cursorMS-seg.StartMS)
-		script.Blocks[ref.blockIndex].Segments[ref.segmentIndex] = seg
-		concatPaths = append(concatPaths, clipPath)
-		cursorMS = seg.EndMS
-
-		if idx == len(refs)-1 {
+func buildConversationRequest(language, contentProfile string, block dto.PodcastBlock) googlecloud.SynthesizeConversationRequest {
+	turns := make([]googlecloud.ConversationTurn, 0, len(block.Segments))
+	for _, seg := range block.Segments {
+		text := spokenTextForSynthesis(language, seg)
+		if strings.TrimSpace(text) == "" {
 			continue
 		}
-		next := script.Blocks[refs[idx+1].blockIndex].Segments[refs[idx+1].segmentIndex]
-		nextGapMS, nextGapPath := japaneseGapAfterSegment(seg, next, gapMs, sameSpeakerGapMs, artifacts.silencePath, artifacts.shortSilencePath)
-		if nextGapMS > 0 && strings.TrimSpace(nextGapPath) != "" {
-			concatPaths = append(concatPaths, nextGapPath)
-			cursorMS += nextGapMS
-		}
+		turns = append(turns, googlecloud.ConversationTurn{
+			Speaker: defaultSpeaker(seg.Speaker),
+			Text:    text,
+		})
 	}
-
-	script.RefreshSegmentsFromBlocks()
-	return concatPaths, cursorMS, nil
+	return googlecloud.SynthesizeConversationRequest{
+		LanguageCode:  language,
+		Prompt:        buildGeminiBlockPrompt(language, contentProfile, block),
+		Turns:         turns,
+		MaleVoiceID:   conf.Get[string]("worker.google_tts_male_voice_id"),
+		FemaleVoiceID: conf.Get[string]("worker.google_tts_female_voice_id"),
+	}
 }
 
-func japaneseGapAfterSegment(current, next dto.PodcastSegment, defaultGapMs, sameSpeakerGapMs int, defaultGapPath, sameSpeakerGapPath string) (int, string) {
-	if strings.EqualFold(strings.TrimSpace(current.Speaker), strings.TrimSpace(next.Speaker)) {
-		if sameSpeakerGapMs > 0 && strings.TrimSpace(sameSpeakerGapPath) != "" {
-			return sameSpeakerGapMs, sameSpeakerGapPath
+func buildGeminiBlockPrompt(language, contentProfile string, block dto.PodcastBlock) string {
+	// Gemini responds best when we keep the direction focused on relationship,
+	// delivery, and emotional color instead of repeating structural rules.
+	var base string
+	if isJapaneseLanguage(language) {
+		base = strings.TrimSpace(fmt.Sprintf(
+			"Create a natural Japanese two-friend podcast block. They are longtime close friends, relaxed and unguarded, never stiff or broadcaster-like. Male speaker is steady, explanatory, and easy to follow. Female speaker reacts quickly, asks natural follow-up questions, and sounds emotionally present. Use warm everyday spoken Japanese that feels like real close-friend conversation, not textbook dialogue. When the text implies it, allow small natural laughs, sighs, surprise, hesitation, soft overlap, and playful reactions. Keep the pacing comfortable, human, and nuanced. Block purpose: %s. Content profile: %s.",
+			strings.TrimSpace(block.Purpose),
+			strings.TrimSpace(contentProfile),
+		))
+	} else {
+		base = strings.TrimSpace(fmt.Sprintf(
+			"Create a natural Mandarin Chinese two-friend podcast block. They are longtime close friends, relaxed and unguarded, never stiff or presenter-like. Male speaker leads with clear, easy explanations. Female speaker asks stronger follow-up questions and reacts from an everyday-life perspective. Use warm daily spoken Mandarin, not news-anchor or textbook language. Speak a little slower than casual native speed so Chinese learners can follow comfortably, while still sounding natural and human. When the text implies it, allow small natural laughs, sighs, surprise, hesitation, and playful reactions. Keep the pacing comfortable, warm, and nuanced. Block purpose: %s. Content profile: %s.",
+			strings.TrimSpace(block.Purpose),
+			strings.TrimSpace(contentProfile),
+		))
+	}
+	appendParts := []string{strings.TrimSpace(conf.Get[string]("worker.google_tts_prompt_append"))}
+	if isJapaneseLanguage(language) {
+		appendParts = append(appendParts, strings.TrimSpace(conf.Get[string]("worker.google_tts_ja_prompt_append")))
+	} else {
+		appendParts = append(appendParts, strings.TrimSpace(conf.Get[string]("worker.google_tts_zh_prompt_append")))
+	}
+
+	var extras []string
+	for _, part := range appendParts {
+		if part == "" {
+			continue
 		}
+		extras = append(extras, part)
 	}
-	if defaultGapMs > 0 && strings.TrimSpace(defaultGapPath) != "" {
-		return defaultGapMs, defaultGapPath
+	if len(extras) == 0 {
+		return base
 	}
-	return 0, ""
+	// Env-configured prompt additions are appended verbatim so we can tune
+	// delivery without touching code or disturbing the default base direction.
+	return strings.TrimSpace(base + " " + strings.Join(extras, " "))
 }
 
-func extractAudioClip(inputPath, outputPath string, startMS, endMS int) error {
-	if strings.TrimSpace(inputPath) == "" || strings.TrimSpace(outputPath) == "" {
-		return fmt.Errorf("audio clip path is required")
+func spokenTextForSynthesis(language string, seg dto.PodcastSegment) string {
+	if isJapaneseLanguage(language) {
+		return stripLegacySpeechTags(japaneseTTSText(seg))
 	}
-	if endMS <= startMS {
-		return fmt.Errorf("invalid audio clip window start=%d end=%d", startMS, endMS)
+	return strings.TrimSpace(seg.Text)
+}
+
+var legacySpeechTagPattern = regexp.MustCompile(`\[[^\]]+\]`)
+
+func stripLegacySpeechTags(text string) string {
+	text = legacySpeechTagPattern.ReplaceAllString(text, "")
+	return strings.Join(strings.Fields(strings.TrimSpace(text)), " ")
+}
+
+func newGoogleSpeechClient() (*googlecloud.Client, error) {
+	return googlecloud.New(googlecloud.Config{
+		ProjectID:          conf.Get[string]("worker.google_cloud_project_id"),
+		UserProject:        conf.Get[string]("worker.google_user_project"),
+		AccessToken:        conf.Get[string]("worker.google_access_token"),
+		ServiceAccountPath: conf.Get[string]("worker.google_service_account_json_path"),
+		ServiceAccountJSON: conf.Get[string]("worker.google_service_account_json"),
+		TokenURL:           conf.Get[string]("worker.google_oauth_token_url"),
+		TTSURL:             conf.Get[string]("worker.google_tts_url"),
+		TTSModel:           conf.Get[string]("worker.google_tts_model"),
+		TTSAudioEncoding:   conf.Get[string]("worker.google_tts_audio_encoding"),
+		TTSSampleRateHz:    conf.Get[int]("worker.google_tts_sample_rate_hz"),
+		MaleVoiceID:        conf.Get[string]("worker.google_tts_male_voice_id"),
+		FemaleVoiceID:      conf.Get[string]("worker.google_tts_female_voice_id"),
+		HTTPTimeoutSeconds: firstPositive(conf.Get[int]("worker.ffmpeg_timeout_sec"), 300),
+	})
+}
+
+func newMFAClient() *mfa.Client {
+	return mfa.New(mfa.Config{
+		Enabled:               conf.Get[bool]("worker.mfa_enabled"),
+		Command:               conf.Get[string]("worker.mfa_command"),
+		TemporaryDirectory:    conf.Get[string]("worker.mfa_temporary_directory"),
+		MandarinDictionary:    conf.Get[string]("worker.mfa_zh_dictionary"),
+		MandarinAcousticModel: conf.Get[string]("worker.mfa_zh_acoustic_model"),
+		MandarinG2PModel:      conf.Get[string]("worker.mfa_zh_g2p_model"),
+		JapaneseDictionary:    conf.Get[string]("worker.mfa_ja_dictionary"),
+		JapaneseAcousticModel: conf.Get[string]("worker.mfa_ja_acoustic_model"),
+		JapaneseG2PModel:      conf.Get[string]("worker.mfa_ja_g2p_model"),
+	})
+}
+
+func existingBlockAudioPath(dir string, index int, blockID string) (string, bool) {
+	pattern := filepath.Join(dir, fmt.Sprintf("%03d_%s.*", index+1, sanitizeSegmentID(blockID)))
+	matches, err := filepath.Glob(pattern)
+	if err != nil || len(matches) == 0 {
+		return "", false
 	}
-	startSec := float64(startMS) / 1000.0
-	durationSec := float64(endMS-startMS) / 1000.0
-	return ffmpegcommon.RunFFmpeg(
-		"-y",
-		"-i", inputPath,
-		"-ss", fmt.Sprintf("%.3f", startSec),
-		"-t", fmt.Sprintf("%.3f", durationSec),
-		"-c:a", "libmp3lame",
-		"-q:a", "2",
-		outputPath,
-	)
+	return matches[0], true
 }
 
 func loadDirectProjectArtifacts(sourceProjectName, targetDialoguePath, targetAlignedPath string) (*GenerateResult, error) {
@@ -475,389 +444,6 @@ func loadDirectProjectArtifacts(sourceProjectName, targetDialoguePath, targetAli
 		AlignedScriptPath: targetAlignedPath,
 		Script:            script,
 	}, nil
-}
-
-func newProvider(language string) (tts.Provider, error) {
-	return tts.NewProvider(providerConfigForLanguage(language))
-}
-
-func assignDialogueBlockTimes(block *dto.PodcastBlock, result elevenlabs.DialogueResult, blockStartMS, blockDurationMS int) {
-	if block == nil || len(block.Segments) == 0 {
-		return
-	}
-	voiceSegments := result.VoiceSegments
-	if dialogueVoiceSegmentsUsable(voiceSegments, len(block.Segments)) {
-		for i := range block.Segments {
-			start := clampMS(blockStartMS+voiceSegments[i].StartTime, blockStartMS, blockStartMS+blockDurationMS)
-			end := clampMS(blockStartMS+voiceSegments[i].EndTime, start+1, blockStartMS+blockDurationMS)
-			block.Segments[i].StartMS = start
-			block.Segments[i].EndMS = end
-			block.Segments[i] = assignJapaneseDialogueChars(block.Segments[i], result.NormalizedAlignment, voiceSegments[i], blockStartMS)
-			if len(block.Segments[i].Chars) == 0 {
-				block.Segments[i] = normalizeJapaneseSegment(block.Segments[i])
-			}
-		}
-		return
-	}
-
-	totalWeight := 0
-	weights := make([]int, len(block.Segments))
-	for i, seg := range block.Segments {
-		weight := maxInt(1, len([]rune(japaneseTTSText(seg))))
-		weights[i] = weight
-		totalWeight += weight
-	}
-	cursor := blockStartMS
-	for i := range block.Segments {
-		span := int(float64(blockDurationMS) * float64(weights[i]) / float64(maxInt(totalWeight, 1)))
-		if i == len(block.Segments)-1 {
-			span = blockStartMS + blockDurationMS - cursor
-		}
-		if span <= 0 {
-			span = 1
-		}
-		block.Segments[i].StartMS = cursor
-		block.Segments[i].EndMS = cursor + span
-		block.Segments[i] = normalizeJapaneseSegment(block.Segments[i])
-		cursor += span
-	}
-}
-
-func dialogueVoiceSegmentsUsable(segments []elevenlabs.DialogueVoiceSegment, expected int) bool {
-	if len(segments) != expected || expected == 0 {
-		return false
-	}
-	valid := 0
-	for idx, seg := range segments {
-		if seg.EndTime > seg.StartTime && seg.DialogueInputIndex == idx {
-			valid++
-		}
-	}
-	return valid == expected
-}
-
-func assignJapaneseDialogueChars(seg dto.PodcastSegment, alignment []tts.Subtitle, voiceSegment elevenlabs.DialogueVoiceSegment, blockStartMS int) dto.PodcastSegment {
-	seg.RubySpans = buildRubySpansFromTokens(japaneseDisplayText(seg), seg.RubyTokens)
-	seg.RubyTokens = nil
-
-	displayRunes := []rune(japaneseDisplayText(seg))
-	if len(displayRunes) == 0 {
-		seg.Chars = nil
-		return seg
-	}
-	start := maxInt(0, voiceSegment.CharacterStartIndex)
-	end := voiceSegment.CharacterEndIndex
-	if end < start {
-		end = start
-	}
-	if end > len(alignment) {
-		end = len(alignment)
-	}
-	charSubs := make([]tts.Subtitle, 0, end-start)
-	for i := start; i < end; i++ {
-		if i >= 0 && i < len(alignment) {
-			charSubs = append(charSubs, alignment[i])
-		}
-	}
-	if len(charSubs) == 0 {
-		return seg
-	}
-
-	if chars, ok := mapJapaneseDialogueChars(displayRunes, charSubs, seg.StartMS, seg.EndMS, blockStartMS); ok {
-		seg.Chars = chars
-		return seg
-	}
-
-	return normalizeJapaneseSegment(seg)
-}
-
-func mapJapaneseDialogueChars(displayRunes []rune, charSubs []tts.Subtitle, segmentStartMS, segmentEndMS, blockStartMS int) ([]dto.PodcastCharToken, bool) {
-	if len(displayRunes) == 0 || len(charSubs) == 0 {
-		return nil, false
-	}
-	subRunes := make([]rune, 0, len(charSubs))
-	for _, sub := range charSubs {
-		runes := []rune(sub.Text)
-		if len(runes) != 1 {
-			return nil, false
-		}
-		subRunes = append(subRunes, runes[0])
-	}
-
-	mapping := longestCommonSubsequenceMap(displayRunes, subRunes)
-	matched := 0
-	chars := make([]dto.PodcastCharToken, len(displayRunes))
-	for i, r := range displayRunes {
-		chars[i] = dto.PodcastCharToken{Index: i, Char: string(r)}
-		if mapping[i] < 0 {
-			continue
-		}
-		sub := charSubs[mapping[i]]
-		chars[i].StartMS = blockStartMS + sub.BeginTime
-		chars[i].EndMS = blockStartMS + maxInt(sub.EndTime, sub.BeginTime+1)
-		matched++
-	}
-	if matched == 0 {
-		return nil, false
-	}
-
-	fillJapaneseCharTimingGaps(chars, segmentStartMS, segmentEndMS)
-	return chars, true
-}
-
-func longestCommonSubsequenceMap(displayRunes, subRunes []rune) []int {
-	dp := make([][]int, len(displayRunes)+1)
-	for i := range dp {
-		dp[i] = make([]int, len(subRunes)+1)
-	}
-	for i := len(displayRunes) - 1; i >= 0; i-- {
-		for j := len(subRunes) - 1; j >= 0; j-- {
-			if japaneseDialogueRuneEqual(displayRunes[i], subRunes[j]) {
-				dp[i][j] = dp[i+1][j+1] + 1
-				continue
-			}
-			if dp[i+1][j] >= dp[i][j+1] {
-				dp[i][j] = dp[i+1][j]
-			} else {
-				dp[i][j] = dp[i][j+1]
-			}
-		}
-	}
-
-	out := make([]int, len(displayRunes))
-	for i := range out {
-		out[i] = -1
-	}
-	i, j := 0, 0
-	for i < len(displayRunes) && j < len(subRunes) {
-		if japaneseDialogueRuneEqual(displayRunes[i], subRunes[j]) {
-			out[i] = j
-			i++
-			j++
-			continue
-		}
-		if dp[i+1][j] >= dp[i][j+1] {
-			i++
-		} else {
-			j++
-		}
-	}
-	return out
-}
-
-func japaneseDialogueRuneEqual(a, b rune) bool {
-	if a == b {
-		return true
-	}
-	if unicode.IsSpace(a) && unicode.IsSpace(b) {
-		return true
-	}
-	return japaneseDialogueRuneClass(a) != "" && japaneseDialogueRuneClass(a) == japaneseDialogueRuneClass(b)
-}
-
-func japaneseDialogueRuneClass(r rune) string {
-	switch r {
-	case '、', '，', ',', '､':
-		return "comma"
-	case '。', '．', '.', '｡':
-		return "period"
-	case '？', '?':
-		return "question"
-	case '！', '!':
-		return "exclaim"
-	case 'ー', '−', '-':
-		return "dash"
-	default:
-		return ""
-	}
-}
-
-func fillJapaneseCharTimingGaps(chars []dto.PodcastCharToken, segmentStartMS, segmentEndMS int) {
-	if len(chars) == 0 {
-		return
-	}
-	start := maxInt(0, segmentStartMS)
-	end := maxInt(start+1, segmentEndMS)
-
-	for i := 0; i < len(chars); {
-		if chars[i].EndMS > chars[i].StartMS {
-			i++
-			continue
-		}
-		j := i
-		for j < len(chars) && chars[j].EndMS <= chars[j].StartMS {
-			j++
-		}
-
-		windowStart := start
-		if i > 0 && chars[i-1].EndMS > chars[i-1].StartMS {
-			windowStart = chars[i-1].EndMS
-		}
-		windowEnd := end
-		if j < len(chars) && chars[j].EndMS > chars[j].StartMS {
-			windowEnd = chars[j].StartMS
-		}
-		if windowEnd <= windowStart {
-			windowEnd = windowStart + (j - i)
-		}
-		step := maxInt(1, (windowEnd-windowStart)/maxInt(1, j-i))
-		cursor := windowStart
-		for k := i; k < j; k++ {
-			chars[k].StartMS = cursor
-			if k == j-1 {
-				chars[k].EndMS = maxInt(cursor+1, windowEnd)
-			} else {
-				chars[k].EndMS = maxInt(cursor+1, cursor+step)
-			}
-			cursor = chars[k].EndMS
-		}
-		i = j
-	}
-}
-
-func clampMS(value, minValue, maxValue int) int {
-	if value < minValue {
-		return minValue
-	}
-	if value > maxValue {
-		return maxValue
-	}
-	return value
-}
-
-func resolveSpeakerProfile(language, contentProfile, speaker string, overrideVoice *int64) speakerProfile {
-	key := "male"
-	if strings.EqualFold(strings.TrimSpace(speaker), "female") {
-		key = "female"
-	}
-
-	if isJapaneseLanguage(language) {
-		return speakerProfile{
-			VoiceID: conf.Get[string]("worker.elevenlabs_podcast_" + key + "_voice_id"),
-		}
-	}
-
-	voiceProfilePrefix := chineseVoiceProfilePrefix(contentProfile)
-	profile := speakerProfile{
-		VoiceType:        conf.Get[int64]("worker.tencent_podcast_" + voiceProfilePrefix + "_" + key + "_voice_type"),
-		Speed:            conf.Get[float64]("worker.tencent_podcast_" + voiceProfilePrefix + "_" + key + "_speed"),
-		SampleRate:       conf.Get[int64]("worker.tencent_podcast_tts_sample_rate"),
-		EmotionCategory:  conf.Get[string]("worker.tencent_podcast_" + key + "_emotion"),
-		EmotionIntensity: conf.Get[int64]("worker.tencent_podcast_" + key + "_emotion_intensity"),
-	}
-	if overrideVoice != nil && *overrideVoice != 0 {
-		profile.VoiceType = *overrideVoice
-	}
-	if profile.VoiceType == 0 {
-		profile.VoiceType = conf.Get[int64]("worker.tencent_tts_voice_type")
-	}
-	if profile.SampleRate == 0 {
-		profile.SampleRate = 24000
-	}
-	if profile.EmotionIntensity == 0 {
-		profile.EmotionIntensity = 100
-	}
-	return profile
-}
-
-func normalizeContentProfile(value string) string {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "daily":
-		return "daily"
-	case "social_issue", "international":
-		return strings.ToLower(strings.TrimSpace(value))
-	default:
-		return ""
-	}
-}
-
-func chineseVoiceProfilePrefix(contentProfile string) string {
-	switch normalizeContentProfile(contentProfile) {
-	case "social_issue", "international":
-		return "public"
-	default:
-		return "daily"
-	}
-}
-
-func providerConfigForLanguage(language string) tts.Config {
-	if isJapaneseLanguage(language) {
-		return tts.Config{
-			Provider:               "elevenlabs",
-			ElevenLabsBaseURL:      conf.Get[string]("worker.elevenlabs_tts_base_url"),
-			ElevenLabsAPIKey:       conf.Get[string]("worker.elevenlabs_tts_api_key"),
-			ElevenLabsVoiceID:      conf.Get[string]("worker.elevenlabs_tts_voice_id"),
-			ElevenLabsModelID:      conf.Get[string]("worker.elevenlabs_tts_model_id"),
-			ElevenLabsOutputFormat: conf.Get[string]("worker.elevenlabs_tts_output_format"),
-			ElevenLabsEnableLog:    conf.Get[bool]("worker.elevenlabs_tts_enable_logging"),
-		}
-	}
-
-	return tts.Config{
-		Provider:               "tencent",
-		TencentRegion:          conf.Get[string]("worker.tencent_tts_region"),
-		TencentSecretID:        conf.Get[string]("worker.tencent_tts_secret_id"),
-		TencentSecretKey:       conf.Get[string]("worker.tencent_tts_secret_key"),
-		TencentVoiceType:       conf.Get[int64]("worker.tencent_tts_voice_type"),
-		TencentPrimaryLanguage: conf.Get[int64]("worker.tencent_tts_primary_language"),
-		TencentModelType:       conf.Get[int64]("worker.tencent_tts_model_type"),
-		TencentCodec:           conf.Get[string]("worker.tencent_tts_codec"),
-	}
-}
-
-func segmentGapMSForLanguage(language string) int {
-	if isJapaneseLanguage(language) {
-		return conf.Get[int]("worker.elevenlabs_podcast_segment_gap_ms")
-	}
-	return conf.Get[int]("worker.tencent_podcast_segment_gap_ms")
-}
-
-func sameSpeakerGapMSForLanguage(language string) int {
-	if isJapaneseLanguage(language) {
-		return conf.Get[int]("worker.elevenlabs_podcast_same_speaker_gap_ms")
-	}
-	return conf.Get[int]("worker.tencent_podcast_same_speaker_gap_ms")
-}
-
-func chineseGapAfterSegment(segments []dto.PodcastSegment, index, defaultGapMs, sameSpeakerGapMs int, defaultGapPath, sameSpeakerGapPath string) (int, string) {
-	if index < 0 || index >= len(segments)-1 {
-		return 0, ""
-	}
-	current := strings.TrimSpace(defaultSpeaker(segments[index].Speaker))
-	for next := index + 1; next < len(segments); next++ {
-		if strings.TrimSpace(segments[next].ZH) == "" {
-			continue
-		}
-		if current != "" && strings.EqualFold(current, strings.TrimSpace(defaultSpeaker(segments[next].Speaker))) {
-			if sameSpeakerGapMs > 0 && strings.TrimSpace(sameSpeakerGapPath) != "" {
-				return sameSpeakerGapMs, sameSpeakerGapPath
-			}
-			return 0, ""
-		}
-		if defaultGapMs > 0 && strings.TrimSpace(defaultGapPath) != "" {
-			return defaultGapMs, defaultGapPath
-		}
-		return 0, ""
-	}
-	return 0, ""
-}
-
-func isJapaneseLanguage(language string) bool {
-	switch strings.ToLower(strings.TrimSpace(language)) {
-	case "ja", "ja-jp":
-		return true
-	default:
-		return false
-	}
-}
-
-func normalizeLanguage(language string) string {
-	switch strings.TrimSpace(strings.ToLower(language)) {
-	case "zh":
-		return "zh-CN"
-	default:
-		return language
-	}
 }
 
 func requirePodcastLanguage(value string) (string, error) {
@@ -922,176 +508,43 @@ func concatAudioFiles(projectDir string, files []string, outputPath string) erro
 	)
 }
 
-func projectDirFor(projectID string) string {
-	return filepath.Join(conf.Get[string]("worker.ffmpeg_work_dir"), "projects", projectID)
-}
-
-func podcastEnabledForLanguage(language string) bool {
-	if isJapaneseLanguage(language) {
-		return conf.Get[bool]("worker.elevenlabs_tts_enabled")
+func normalizeContentProfile(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "daily":
+		return "daily"
+	case "social_issue", "international":
+		return strings.ToLower(strings.TrimSpace(value))
+	default:
+		return ""
 	}
-	return conf.Get[bool]("worker.tencent_tts_enabled")
 }
 
-func directProjectSourceDir(name string) string {
-	return filepath.Join(conf.Get[string]("worker.ffmpeg_work_dir"), "projects", filepath.Base(strings.TrimSpace(name)))
-}
-
-func chineseTokenAlignmentLooksUniform(seg dto.PodcastSegment) bool {
-	if len(seg.Tokens) == 0 || seg.EndMS <= seg.StartMS {
-		return false
-	}
-	durations := make(map[int]struct{})
-	timed := 0
-	firstStart := -1
-	for _, token := range seg.Tokens {
-		if token.EndMS <= token.StartMS {
-			continue
-		}
-		timed++
-		if firstStart == -1 {
-			firstStart = token.StartMS
-		}
-		durations[token.EndMS-token.StartMS] = struct{}{}
-	}
-	if timed == 0 || firstStart != seg.StartMS {
-		return false
-	}
-	return len(durations) <= 2
-}
-
-func scriptPathFor(filename string) string {
-	return filepath.Join(conf.Get[string]("worker.worker_assets_dir"), "podcast", "scripts", filepath.Base(strings.TrimSpace(filename)))
-}
-
-func sanitizeSegmentID(segmentID string) string {
-	raw := strings.TrimSpace(segmentID)
-	if raw == "" {
-		return "segment"
-	}
-	raw = strings.ReplaceAll(raw, "/", "-")
-	raw = strings.ReplaceAll(raw, "\\", "-")
-	return raw
-}
-
-func int64Ptr(value int64) *int64 {
-	return &value
-}
-
-func float64Ptr(value float64) *float64 {
-	return &value
-}
-
-func boolPtr(value bool) *bool {
-	return &value
-}
-
-func stringPtr(value string) *string {
-	if strings.TrimSpace(value) == "" {
-		return nil
-	}
-	return &value
-}
-
-func subtitleMatchesToken(subtitleText, tokenChar string) bool {
-	subtitleText = strings.TrimSpace(subtitleText)
-	tokenChar = strings.TrimSpace(tokenChar)
-	if subtitleText == "" || tokenChar == "" {
-		return false
-	}
-	if subtitleText == tokenChar {
+func isJapaneseLanguage(language string) bool {
+	switch strings.ToLower(strings.TrimSpace(language)) {
+	case "ja", "ja-jp":
 		return true
-	}
-	if len([]rune(subtitleText)) == 1 && len([]rune(tokenChar)) == 1 {
-		return subtitleText == tokenChar
-	}
-	return false
-}
-
-func isSilentToken(charText string) bool {
-	rs := []rune(strings.TrimSpace(charText))
-	if len(rs) != 1 {
+	default:
 		return false
 	}
-	return isPunctuationRune(rs[0])
 }
 
-func isPunctuationRune(r rune) bool {
-	return strings.ContainsRune("，。！？；：“”‘’（）《》、…,.!?;:()[]{}\"'", r)
-}
-
-func firstPositive(values ...int) int {
-	for _, value := range values {
-		if value > 0 {
-			return value
-		}
+func normalizeLanguage(language string) string {
+	switch strings.TrimSpace(strings.ToLower(language)) {
+	case "zh":
+		return "zh-CN"
+	default:
+		return language
 	}
-	return 0
 }
 
-func maxInt(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
+func podcastEnabled() bool {
+	return conf.Get[bool]("worker.google_tts_enabled")
 }
 
-func alignedStats(script dto.PodcastScript) (int, int, int, int) {
-	timedSegments := 0
-	totalSegments := len(script.Segments)
-	timedTokens := 0
-	totalTokens := 0
-	for _, seg := range script.Segments {
-		if seg.EndMS > seg.StartMS {
-			timedSegments++
-		}
-		if strings.EqualFold(strings.TrimSpace(script.Language), "ja") || strings.EqualFold(strings.TrimSpace(script.Language), "ja-jp") {
-			for _, ch := range seg.Chars {
-				totalTokens++
-				if ch.EndMS > ch.StartMS {
-					timedTokens++
-				}
-			}
-			continue
-		}
-		for _, token := range seg.Tokens {
-			totalTokens++
-			if token.EndMS > token.StartMS {
-				timedTokens++
-			}
-		}
-	}
-	return timedSegments, totalSegments, timedTokens, totalTokens
+func blockGapMS() int {
+	return conf.Get[int]("worker.podcast_block_gap_ms")
 }
 
-func defaultSpeaker(value string) string {
-	value = strings.TrimSpace(strings.ToLower(value))
-	if value == "" {
-		return "male"
-	}
-	return value
-}
-
-func writeJSON(path string, data interface{}) error {
-	raw, err := json.MarshalIndent(data, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(path, raw, 0o644)
-}
-
-func readJSON(path string, out interface{}) error {
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(raw, out)
-}
-
-func copyFile(src, dst string) error {
-	raw, err := os.ReadFile(src)
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(dst, raw, 0o644)
+func templateGapMS() int {
+	return conf.Get[int]("worker.podcast_template_gap_ms")
 }

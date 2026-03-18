@@ -9,7 +9,6 @@ import (
 
 	"worker/internal/dto"
 	conf "worker/pkg/config"
-	ffmpegcommon "worker/services/ffmpeg_service/common"
 )
 
 type templateProject struct {
@@ -23,6 +22,8 @@ func applyStartEndTemplates(projectID, dialoguePath string, script dto.PodcastSc
 	if !ok {
 		return script, nil
 	}
+	bodyAlreadyHasOpen := hasTemplatePrefix(script)
+	bodyAlreadyHasClose := hasTemplateSuffix(script)
 
 	openTpl, openOK, err := loadTemplateProject(language, "open")
 	if err != nil {
@@ -31,6 +32,12 @@ func applyStartEndTemplates(projectID, dialoguePath string, script dto.PodcastSc
 	closeTpl, closeOK, err := loadTemplateProject(language, "close")
 	if err != nil {
 		return dto.PodcastScript{}, err
+	}
+	if bodyAlreadyHasOpen {
+		openOK = false
+	}
+	if bodyAlreadyHasClose {
+		closeOK = false
 	}
 	if !openOK && !closeOK {
 		return script, nil
@@ -45,7 +52,7 @@ func applyStartEndTemplates(projectID, dialoguePath string, script dto.PodcastSc
 	if err != nil {
 		return dto.PodcastScript{}, err
 	}
-	gapMS := segmentGapMSForLanguage(language)
+	gapMS := templateGapMS()
 	gapPath, err := ensureTemplateBoundaryGap(filepath.Dir(dialoguePath), gapMS)
 	if err != nil {
 		return dto.PodcastScript{}, err
@@ -100,6 +107,20 @@ func applyStartEndTemplates(projectID, dialoguePath string, script dto.PodcastSc
 	log.Printf("🧩 start/end template merged project_id=%s language=%s open=%t close=%t output=%s",
 		projectID, language, openOK, closeOK, dialoguePath)
 	return combined, nil
+}
+
+func hasTemplatePrefix(script dto.PodcastScript) bool {
+	if len(script.Blocks) == 0 {
+		return false
+	}
+	return strings.EqualFold(strings.TrimSpace(script.Blocks[0].MacroBlock), "intro")
+}
+
+func hasTemplateSuffix(script dto.PodcastScript) bool {
+	if len(script.Blocks) == 0 {
+		return false
+	}
+	return strings.EqualFold(strings.TrimSpace(script.Blocks[len(script.Blocks)-1].MacroBlock), "channel_cta")
 }
 
 func templateLanguageKey(language string) (string, bool) {
@@ -235,34 +256,4 @@ func shiftScriptTiming(script *dto.PodcastScript, offsetMS int) {
 		}
 	}
 	script.RefreshSegmentsFromBlocks()
-}
-
-func shiftSegmentTiming(seg *dto.PodcastSegment, offsetMS int) {
-	if seg == nil || offsetMS == 0 {
-		return
-	}
-	if seg.StartMS > 0 || seg.EndMS > 0 {
-		seg.StartMS += offsetMS
-		seg.EndMS += offsetMS
-	}
-	for i := range seg.Tokens {
-		if seg.Tokens[i].StartMS > 0 || seg.Tokens[i].EndMS > 0 {
-			seg.Tokens[i].StartMS += offsetMS
-			seg.Tokens[i].EndMS += offsetMS
-		}
-	}
-	for i := range seg.Chars {
-		if seg.Chars[i].StartMS > 0 || seg.Chars[i].EndMS > 0 {
-			seg.Chars[i].StartMS += offsetMS
-			seg.Chars[i].EndMS += offsetMS
-		}
-	}
-}
-
-func audioDurationMS(path string) (int, error) {
-	sec, err := ffmpegcommon.AudioDurationSec(path)
-	if err != nil {
-		return 0, err
-	}
-	return int(sec * 1000), nil
 }
