@@ -39,7 +39,7 @@ func persistBlockCheckpoint(dir string, index int, block dto.PodcastBlock, durat
 		Block:      block,
 		DurationMS: durationMS,
 	}
-	return writeJSON(blockStatePath(dir, index, block.TTSBlockID), state)
+	return writeJSON(blockStatePath(dir, index, block.BlockID), state)
 }
 
 func blockCheckpointComplete(language string, state blockCheckpoint, audioPath string) bool {

@@ -68,7 +68,7 @@ func buildYouTubeChapterLines(script dto.PodcastScript) []string {
 		if !ok {
 			continue
 		}
-		if blockID := strings.TrimSpace(block.TTSBlockID); blockID != "" {
+		if blockID := strings.TrimSpace(block.BlockID); blockID != "" {
 			blockStartMS[blockID] = startMS
 		}
 		if chapterID := strings.TrimSpace(block.ChapterID); chapterID != "" {
@@ -90,10 +90,7 @@ func buildYouTubeChapterLines(script dto.PodcastScript) []string {
 		}
 		title := strings.TrimSpace(chapter.TitleEN)
 		if title == "" {
-			title = strings.TrimSpace(chapter.TitleJA)
-		}
-		if title == "" {
-			title = strings.TrimSpace(chapter.TitleZH)
+			title = strings.TrimSpace(chapter.Title)
 		}
 		if title == "" {
 			continue
@@ -191,15 +188,6 @@ func mergeScriptPublishingMetadata(base, timed dto.PodcastScript) dto.PodcastScr
 	if strings.TrimSpace(timed.Language) == "" {
 		timed.Language = base.Language
 	}
-	if strings.TrimSpace(timed.AudienceLanguage) == "" {
-		timed.AudienceLanguage = base.AudienceLanguage
-	}
-	if strings.TrimSpace(timed.DifficultyLevel) == "" {
-		timed.DifficultyLevel = base.DifficultyLevel
-	}
-	if timed.TargetDurationMinutes == 0 {
-		timed.TargetDurationMinutes = base.TargetDurationMinutes
-	}
 	if strings.TrimSpace(timed.Title) == "" {
 		timed.Title = base.Title
 	}
@@ -212,18 +200,15 @@ func mergeScriptPublishingMetadata(base, timed dto.PodcastScript) dto.PodcastScr
 
 	baseByID := make(map[string]dto.PodcastBlock, len(base.Blocks))
 	for _, block := range base.Blocks {
-		if blockID := strings.TrimSpace(block.TTSBlockID); blockID != "" {
+		if blockID := strings.TrimSpace(block.BlockID); blockID != "" {
 			baseByID[blockID] = block
 		}
 	}
 	for i := range timed.Blocks {
-		blockID := strings.TrimSpace(timed.Blocks[i].TTSBlockID)
+		blockID := strings.TrimSpace(timed.Blocks[i].BlockID)
 		source, ok := baseByID[blockID]
 		if !ok {
 			continue
-		}
-		if strings.TrimSpace(timed.Blocks[i].MacroBlock) == "" {
-			timed.Blocks[i].MacroBlock = source.MacroBlock
 		}
 		if strings.TrimSpace(timed.Blocks[i].ChapterID) == "" {
 			timed.Blocks[i].ChapterID = source.ChapterID

@@ -27,9 +27,6 @@ func HandleGenerate(ch *amqp.Channel, task dto.VideoTaskMessage) error {
 	if !validPodcastLanguage(payload.Lang) {
 		return fmt.Errorf("lang must be zh or ja")
 	}
-	if !validContentProfile(payload.ContentProfile) {
-		return fmt.Errorf("content_profile must be daily, social_issue, or international")
-	}
 	if strings.TrimSpace(payload.ScriptFilename) == "" {
 		return fmt.Errorf("script_filename is required")
 	}
@@ -43,7 +40,6 @@ func HandleGenerate(ch *amqp.Channel, task dto.VideoTaskMessage) error {
 	result, err := podcastaudioservice.Generate(podcastaudioservice.GenerateInput{
 		ProjectID:      payload.ProjectID,
 		Language:       payload.Lang,
-		ContentProfile: payload.ContentProfile,
 		IsDirect:       payload.IsDirect == 1,
 		ScriptFilename: payload.ScriptFilename,
 	})
@@ -67,15 +63,6 @@ func HandleGenerate(ch *amqp.Channel, task dto.VideoTaskMessage) error {
 func validPodcastLanguage(value string) bool {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "zh", "ja":
-		return true
-	default:
-		return false
-	}
-}
-
-func validContentProfile(value string) bool {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "daily", "social_issue", "international":
 		return true
 	default:
 		return false

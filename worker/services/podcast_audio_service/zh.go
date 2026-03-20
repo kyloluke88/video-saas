@@ -12,11 +12,11 @@ func validateChineseScriptInput(script dto.PodcastScript) error {
 		return fmt.Errorf("chinese podcast script requires non-empty blocks")
 	}
 	for _, block := range script.Blocks {
-		if strings.TrimSpace(block.TTSBlockID) == "" {
-			return fmt.Errorf("chinese podcast block requires tts_block_id")
+		if strings.TrimSpace(block.BlockID) == "" {
+			return fmt.Errorf("chinese podcast block requires block_id")
 		}
 		if len(block.Segments) == 0 {
-			return fmt.Errorf("chinese podcast block %s has no segments", block.TTSBlockID)
+			return fmt.Errorf("chinese podcast block %s has no segments", block.BlockID)
 		}
 		for _, seg := range block.Segments {
 			if strings.TrimSpace(seg.SegmentID) == "" {
@@ -29,8 +29,8 @@ func validateChineseScriptInput(script dto.PodcastScript) error {
 				return fmt.Errorf("segment %s tokens are required", seg.SegmentID)
 			}
 			for _, token := range seg.Tokens {
-				if strings.TrimSpace(token.Text) == "" {
-					return fmt.Errorf("segment %s token text is required", seg.SegmentID)
+				if strings.TrimSpace(token.Char) == "" {
+					return fmt.Errorf("segment %s token char is required", seg.SegmentID)
 				}
 			}
 		}

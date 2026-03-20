@@ -393,19 +393,34 @@ func chineseTokenIndexByRune(seg dto.PodcastSegment, tokens []dto.PodcastToken) 
 func alignJapaneseSegmentWithWords(seg dto.PodcastSegment, spec segmentSpec, matches []timedWordMatch, window segmentWindow) dto.PodcastSegment {
 	seg.StartMS = window.StartMS
 	seg.EndMS = maxInt(window.EndMS, window.StartMS+1)
-	annotationTokens := seg.Tokens
-	seg.TokenSpans = buildTokenSpansFromTokens(japaneseDisplayText(seg), annotationTokens)
+	spans := buildJapaneseAnnotationSpans(seg)
+	if len(spans) == 0 {
+		return normalizeJapaneseSegment(seg)
+	}
 
-	tokens := buildJapaneseTokens(seg)
-	for _, match := range matches {
-		for idx := match.StartNorm; idx < match.EndNorm && idx < len(tokens); idx++ {
-			tokens[idx].StartMS = match.StartMS
-			tokens[idx].EndMS = match.EndMS
+	tokens := make([]dto.PodcastToken, len(seg.Tokens))
+	copy(tokens, seg.Tokens)
+	for _, item := range spans {
+		startMS := 0
+		endMS := 0
+		for _, match := range matches {
+			if match.EndNorm <= item.Span.StartIndex || match.StartNorm >= item.Span.EndIndex+1 {
+				continue
+			}
+			if startMS == 0 || match.StartMS < startMS {
+				startMS = match.StartMS
+			}
+			if match.EndMS > endMS {
+				endMS = match.EndMS
+			}
+		}
+		if startMS > 0 && endMS > startMS {
+			tokens[item.TokenIndex].StartMS = startMS
+			tokens[item.TokenIndex].EndMS = endMS
 		}
 	}
-	fillJapaneseTokenTimingGaps(tokens, seg.StartMS, seg.EndMS)
 	seg.Tokens = tokens
-	return seg
+	return normalizeJapaneseSegment(seg)
 }
 
 func (a *blockAligner) alignBlockHeuristically(language string, block dto.PodcastBlock, blockDurationMS int) dto.PodcastBlock {
@@ -433,9 +448,7 @@ func (a *blockAligner) alignBlockHeuristically(language string, block dto.Podcas
 		seg.StartMS = cursor
 		seg.EndMS = cursor + span
 		if isJapaneseLanguage(language) {
-			annotationTokens := seg.Tokens
-			seg.TokenSpans = buildTokenSpansFromTokens(japaneseDisplayText(seg), annotationTokens)
-			seg = assignJapaneseTokenTimes(seg)
+			seg = normalizeJapaneseSegment(seg)
 		} else {
 			tokens := chineseSegmentTokens(seg)
 			fillUnalignedChineseTokens(tokens, seg.StartMS, seg.EndMS)

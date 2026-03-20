@@ -21,7 +21,6 @@ import (
 type GenerateInput struct {
 	ProjectID      string
 	Language       string
-	ContentProfile string
 	IsDirect       bool
 	ScriptFilename string
 }
@@ -45,10 +44,6 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 	language, err := requirePodcastLanguage(input.Language)
 	if err != nil {
 		return GenerateResult{}, err
-	}
-	contentProfile := normalizeContentProfile(input.ContentProfile)
-	if !isJapaneseLanguage(language) && contentProfile == "" {
-		return GenerateResult{}, fmt.Errorf("content_profile must be daily, social_issue, or international")
 	}
 	if strings.TrimSpace(input.ScriptFilename) == "" {
 		return GenerateResult{}, fmt.Errorf("script_filename is required")
@@ -75,7 +70,7 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 			return GenerateResult{}, err
 		}
 		reusable.Script.Language = language
-		finalScript, err := finalizeAlignedScript(input.ProjectID, artifacts.alignedPath, artifacts.dialoguePath, reusable.Script, contentProfile)
+		finalScript, err := finalizeAlignedScript(input.ProjectID, artifacts.alignedPath, artifacts.dialoguePath, reusable.Script)
 		if err != nil {
 			return GenerateResult{}, err
 		}
@@ -104,16 +99,9 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 			return GenerateResult{}, err
 		}
 	}
-	templateGapMSValue := templateGapMS()
-	if templateGapMSValue > 0 {
-		if err := createSilenceAudio(artifacts.templateGapPath, templateGapMSValue); err != nil {
-			return GenerateResult{}, err
-		}
-	}
-
 	results := make([]blockSynthesisResult, len(script.Blocks))
 	for i, block := range script.Blocks {
-		result, err := synthesizeOrResumeBlock(context.Background(), client, aligner, language, contentProfile, artifacts, i, block)
+		result, err := synthesizeOrResumeBlock(context.Background(), client, aligner, language, artifacts, i, block)
 		if err != nil {
 			return GenerateResult{}, err
 		}
@@ -122,13 +110,10 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 
 		partialScript, _, _, err := assembleDialogue(
 			dto.PodcastScript{
-				Language:              script.Language,
-				AudienceLanguage:      script.AudienceLanguage,
-				DifficultyLevel:       script.DifficultyLevel,
-				TargetDurationMinutes: script.TargetDurationMinutes,
-				Title:                 script.Title,
-				YouTube:               script.YouTube,
-				Blocks:                append([]dto.PodcastBlock(nil), script.Blocks[:i+1]...),
+				Language: script.Language,
+				Title:    script.Title,
+				YouTube:  script.YouTube,
+				Blocks:   append([]dto.PodcastBlock(nil), script.Blocks[:i+1]...),
 			},
 			results[:i+1],
 			artifacts.blockGapPath,
@@ -147,7 +132,7 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 		return GenerateResult{}, err
 	}
 
-	alignedScript, err := finalizeAlignedScript(input.ProjectID, artifacts.alignedPath, artifacts.dialoguePath, finalScript, contentProfile)
+	alignedScript, err := finalizeAlignedScript(input.ProjectID, artifacts.alignedPath, artifacts.dialoguePath, finalScript)
 	if err != nil {
 		return GenerateResult{}, err
 	}
@@ -200,11 +185,12 @@ func normalizeScriptForSpeech(script dto.PodcastScript) dto.PodcastScript {
 	return script
 }
 
-func synthesizeOrResumeBlock(ctx context.Context, client *googlecloud.Client, aligner *blockAligner, language, contentProfile string, artifacts audioArtifacts, index int, block dto.PodcastBlock) (blockSynthesisResult, error) {
-	audioPath, ok := existingBlockAudioPath(artifacts.blocksDir, index, block.TTSBlockID)
+func synthesizeOrResumeBlock(ctx context.Context, client *googlecloud.Client, aligner *blockAligner, language string, artifacts audioArtifacts, index int, block dto.PodcastBlock) (blockSynthesisResult, error) {
+	blockID := strings.TrimSpace(block.BlockID)
+	audioPath, ok := existingBlockAudioPath(artifacts.blocksDir, index, blockID)
 	if ok {
-		if state, ok, err := loadBlockCheckpoint(artifacts.blockStatesDir, index, block.TTSBlockID); err == nil && ok && blockCheckpointComplete(language, state, audioPath) {
-			log.Printf("♻️ podcast block resume block=%s audio=%s duration_ms=%d", block.TTSBlockID, audioPath, state.DurationMS)
+		if state, ok, err := loadBlockCheckpoint(artifacts.blockStatesDir, index, blockID); err == nil && ok && blockCheckpointComplete(language, state, audioPath) {
+			log.Printf("♻️ podcast block resume block=%s audio=%s duration_ms=%d", blockID, audioPath, state.DurationMS)
 			return blockSynthesisResult{
 				AudioPath:    audioPath,
 				DurationMS:   state.DurationMS,
@@ -217,13 +203,13 @@ func synthesizeOrResumeBlock(ctx context.Context, client *googlecloud.Client, al
 
 	// Each block is synthesized independently so a failed run can resume from the
 	// last finished block instead of regenerating the whole episode.
-	request := buildConversationRequest(language, contentProfile, block)
-	log.Printf("🎙️ gemini block synth start block=%s turns=%d", block.TTSBlockID, len(request.Turns))
+	request := buildConversationRequest(language, block)
+	log.Printf("🎙️ gemini block synth start block=%s turns=%d", blockID, len(request.Turns))
 	result, err := client.SynthesizeConversation(ctx, request)
 	if err != nil {
 		return blockSynthesisResult{}, err
 	}
-	blockAudioPath := unitAudioPath(artifacts.blocksDir, index, block.TTSBlockID, result.Ext)
+	blockAudioPath := unitAudioPath(artifacts.blocksDir, index, blockID, result.Ext)
 	if err := os.WriteFile(blockAudioPath, result.Audio, 0o644); err != nil {
 		return blockSynthesisResult{}, err
 	}
@@ -240,7 +226,7 @@ func synthesizeOrResumeBlock(ctx context.Context, client *googlecloud.Client, al
 	if err := persistBlockCheckpoint(artifacts.blockStatesDir, index, alignedBlock, durationMS); err != nil {
 		return blockSynthesisResult{}, err
 	}
-	log.Printf("✅ gemini block synth done block=%s audio=%s duration_ms=%d", block.TTSBlockID, blockAudioPath, durationMS)
+	log.Printf("✅ gemini block synth done block=%s audio=%s duration_ms=%d", blockID, blockAudioPath, durationMS)
 	return blockSynthesisResult{
 		AudioPath:    blockAudioPath,
 		DurationMS:   durationMS,
@@ -261,7 +247,7 @@ func assembleDialogue(base dto.PodcastScript, results []blockSynthesisResult, ga
 		if strings.TrimSpace(result.AudioPath) == "" {
 			return dto.PodcastScript{}, nil, 0, fmt.Errorf("block audio missing at index %d", i)
 		}
-		block := result.AlignedBlock
+		block := clonePodcastBlock(result.AlignedBlock)
 		shiftBlockTiming(&block, cursorMS)
 		script.Blocks[i] = block
 		concatPaths = append(concatPaths, result.AudioPath)
@@ -273,6 +259,31 @@ func assembleDialogue(base dto.PodcastScript, results []blockSynthesisResult, ga
 	}
 	script.RefreshSegmentsFromBlocks()
 	return script, concatPaths, cursorMS, nil
+}
+
+func clonePodcastBlock(block dto.PodcastBlock) dto.PodcastBlock {
+	out := block
+	if len(block.Segments) == 0 {
+		return out
+	}
+	out.Segments = make([]dto.PodcastSegment, len(block.Segments))
+	for i, seg := range block.Segments {
+		out.Segments[i] = clonePodcastSegment(seg)
+	}
+	return out
+}
+
+func clonePodcastSegment(seg dto.PodcastSegment) dto.PodcastSegment {
+	out := seg
+	if len(seg.Tokens) > 0 {
+		out.Tokens = make([]dto.PodcastToken, len(seg.Tokens))
+		copy(out.Tokens, seg.Tokens)
+	}
+	if len(seg.TokenSpans) > 0 {
+		out.TokenSpans = make([]dto.PodcastTokenSpan, len(seg.TokenSpans))
+		copy(out.TokenSpans, seg.TokenSpans)
+	}
+	return out
 }
 
 func shiftBlockTiming(block *dto.PodcastBlock, offsetMS int) {
@@ -296,7 +307,7 @@ func shiftSegmentTiming(seg *dto.PodcastSegment, offsetMS int) {
 	}
 }
 
-func buildConversationRequest(language, contentProfile string, block dto.PodcastBlock) googlecloud.SynthesizeConversationRequest {
+func buildConversationRequest(language string, block dto.PodcastBlock) googlecloud.SynthesizeConversationRequest {
 	turns := make([]googlecloud.ConversationTurn, 0, len(block.Segments))
 	for _, seg := range block.Segments {
 		text := spokenTextForSynthesis(language, seg)
@@ -310,28 +321,26 @@ func buildConversationRequest(language, contentProfile string, block dto.Podcast
 	}
 	return googlecloud.SynthesizeConversationRequest{
 		LanguageCode:  language,
-		Prompt:        buildGeminiBlockPrompt(language, contentProfile, block),
+		Prompt:        buildGeminiBlockPrompt(language, block),
 		Turns:         turns,
 		MaleVoiceID:   conf.Get[string]("worker.google_tts_male_voice_id"),
 		FemaleVoiceID: conf.Get[string]("worker.google_tts_female_voice_id"),
 	}
 }
 
-func buildGeminiBlockPrompt(language, contentProfile string, block dto.PodcastBlock) string {
+func buildGeminiBlockPrompt(language string, block dto.PodcastBlock) string {
 	// Gemini responds best when we keep the direction focused on relationship,
 	// delivery, and emotional color instead of repeating structural rules.
 	var base string
 	if isJapaneseLanguage(language) {
 		base = strings.TrimSpace(fmt.Sprintf(
-			"Create a natural Japanese two-friend podcast block. They are longtime close friends, relaxed and unguarded, never stiff or broadcaster-like. Male speaker is steady, explanatory, and easy to follow. Female speaker reacts quickly, asks natural follow-up questions, and sounds emotionally present. Use warm everyday spoken Japanese that feels like real close-friend conversation, not textbook dialogue. When the text implies it, allow small natural laughs, sighs, surprise, hesitation, soft overlap, and playful reactions. Keep the pacing comfortable, human, and nuanced. Block purpose: %s. Content profile: %s.",
+			"Create a natural Japanese two-friend podcast block. They are longtime close friends, relaxed and unguarded, never stiff or broadcaster-like. Male speaker is steady, explanatory, and easy to follow. Female speaker reacts quickly, asks natural follow-up questions, and sounds emotionally present. Use warm everyday spoken Japanese that feels like real close-friend conversation, not textbook dialogue. When the text implies it, allow small natural laughs, sighs, surprise, hesitation, soft overlap, and playful reactions. Keep the pacing comfortable, human, and nuanced. Block purpose: %s.",
 			strings.TrimSpace(block.Purpose),
-			strings.TrimSpace(contentProfile),
 		))
 	} else {
 		base = strings.TrimSpace(fmt.Sprintf(
-			"Create a natural Mandarin Chinese two-friend podcast block. They are longtime close friends, relaxed and unguarded, never stiff or presenter-like. Male speaker leads with clear, easy explanations. Female speaker asks stronger follow-up questions and reacts from an everyday-life perspective. Use warm daily spoken Mandarin, not news-anchor or textbook language. Speak a little slower than casual native speed so Chinese learners can follow comfortably, while still sounding natural and human. When the text implies it, allow small natural laughs, sighs, surprise, hesitation, and playful reactions. Keep the pacing comfortable, warm, and nuanced. Block purpose: %s. Content profile: %s.",
+			"Create a natural Mandarin Chinese two-friend podcast block. They are longtime close friends, relaxed and unguarded, never stiff or presenter-like. Male speaker leads with clear, easy explanations. Female speaker asks stronger follow-up questions and reacts from an everyday-life perspective. Use warm daily spoken Mandarin, not news-anchor or textbook language. Speak a little slower than casual native speed so Chinese learners can follow comfortably, while still sounding natural and human. When the text implies it, allow small natural laughs, sighs, surprise, hesitation, and playful reactions. Keep the pacing comfortable, warm, and nuanced. Block purpose: %s.",
 			strings.TrimSpace(block.Purpose),
-			strings.TrimSpace(contentProfile),
 		))
 	}
 	appendParts := []string{strings.TrimSpace(conf.Get[string]("worker.google_tts_prompt_append"))}
@@ -508,17 +517,6 @@ func concatAudioFiles(projectDir string, files []string, outputPath string) erro
 	)
 }
 
-func normalizeContentProfile(value string) string {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "daily":
-		return "daily"
-	case "social_issue", "international":
-		return strings.ToLower(strings.TrimSpace(value))
-	default:
-		return ""
-	}
-}
-
 func isJapaneseLanguage(language string) bool {
 	switch strings.ToLower(strings.TrimSpace(language)) {
 	case "ja", "ja-jp":
@@ -543,8 +541,4 @@ func podcastEnabled() bool {
 
 func blockGapMS() int {
 	return conf.Get[int]("worker.podcast_block_gap_ms")
-}
-
-func templateGapMS() int {
-	return conf.Get[int]("worker.podcast_template_gap_ms")
 }

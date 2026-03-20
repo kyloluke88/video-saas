@@ -26,17 +26,30 @@ RUN arch="$(uname -m)" && \
     rm -f /tmp/miniforge.sh && \
     /opt/conda/bin/conda config --system --set auto_update_conda false && \
     /opt/conda/bin/conda install -y -n base -c conda-forge mamba && \
-    /opt/conda/bin/mamba create -y -p /opt/mfa-env -c conda-forge python=3.10 montreal-forced-aligner && \
+    /opt/conda/bin/mamba create -y -p /opt/mfa-env -c conda-forge python=3.10 montreal-forced-aligner spacy sudachipy sudachidict-core && \
     mkdir -p /opt/mfa && \
     useradd -ms /bin/bash mfauser && \
     chown -R mfauser /opt/mfa /opt/mfa-env && \
+    retry() { \
+      attempts=0; \
+      until "$@"; do \
+        attempts=$((attempts + 1)); \
+        if [ "$attempts" -ge 5 ]; then \
+          echo "command failed after ${attempts} attempts: $*"; \
+          return 1; \
+        fi; \
+        echo "retrying (${attempts}/5): $*"; \
+        sleep $((attempts * 5)); \
+      done; \
+    } && \
+    su - mfauser -c 'export PATH=/opt/mfa-env/bin:$PATH; /opt/mfa-env/bin/python -c "import spacy, sudachipy, sudachidict_core"' && \
     su - mfauser -c 'export PATH=/opt/mfa-env/bin:$PATH; MFA_ROOT_DIR=/opt/mfa mfa server init' && \
-    su - mfauser -c 'export PATH=/opt/mfa-env/bin:$PATH; MFA_ROOT_DIR=/opt/mfa mfa model download dictionary japanese_mfa' && \
-    su - mfauser -c 'export PATH=/opt/mfa-env/bin:$PATH; MFA_ROOT_DIR=/opt/mfa mfa model download acoustic japanese_mfa' && \
-    su - mfauser -c 'export PATH=/opt/mfa-env/bin:$PATH; MFA_ROOT_DIR=/opt/mfa mfa model download g2p japanese_mfa' && \
-    su - mfauser -c 'export PATH=/opt/mfa-env/bin:$PATH; MFA_ROOT_DIR=/opt/mfa mfa model download dictionary mandarin_china_mfa' && \
-    su - mfauser -c 'export PATH=/opt/mfa-env/bin:$PATH; MFA_ROOT_DIR=/opt/mfa mfa model download acoustic mandarin_mfa' && \
-    su - mfauser -c 'export PATH=/opt/mfa-env/bin:$PATH; MFA_ROOT_DIR=/opt/mfa mfa model download g2p mandarin_china_mfa' && \
+    retry su - mfauser -c 'export PATH=/opt/mfa-env/bin:$PATH; MFA_ROOT_DIR=/opt/mfa mfa model download dictionary japanese_mfa' && \
+    retry su - mfauser -c 'export PATH=/opt/mfa-env/bin:$PATH; MFA_ROOT_DIR=/opt/mfa mfa model download acoustic japanese_mfa' && \
+    retry su - mfauser -c 'export PATH=/opt/mfa-env/bin:$PATH; MFA_ROOT_DIR=/opt/mfa mfa model download g2p japanese_mfa' && \
+    retry su - mfauser -c 'export PATH=/opt/mfa-env/bin:$PATH; MFA_ROOT_DIR=/opt/mfa mfa model download dictionary mandarin_china_mfa' && \
+    retry su - mfauser -c 'export PATH=/opt/mfa-env/bin:$PATH; MFA_ROOT_DIR=/opt/mfa mfa model download acoustic mandarin_mfa' && \
+    retry su - mfauser -c 'export PATH=/opt/mfa-env/bin:$PATH; MFA_ROOT_DIR=/opt/mfa mfa model download g2p mandarin_china_mfa' && \
     /opt/conda/bin/conda clean -afy
 
 ENV MFA_ROOT_DIR="/opt/mfa"

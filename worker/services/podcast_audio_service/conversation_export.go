@@ -36,18 +36,18 @@ type conversationExportRuby struct {
 	Reading string `json:"reading"`
 }
 
-func exportConversationMinimalFile(projectDir, projectID, contentProfile string, script dto.PodcastScript) error {
+func exportConversationMinimalFile(projectDir, projectID string, script dto.PodcastScript) error {
 	export := conversationExport{
 		ConversationID:   strings.TrimSpace(projectID),
 		Language:         strings.TrimSpace(script.Language),
-		AudienceLanguage: defaultAudienceLanguage(script.AudienceLanguage),
+		AudienceLanguage: defaultAudienceLanguage(""),
 		Title:            strings.TrimSpace(script.Title),
-		Turns:            buildConversationTurns(script, contentProfile),
+		Turns:            buildConversationTurns(script),
 	}
 	return writeJSON(filepath.Join(projectDir, "conversation_minimal.json"), export)
 }
 
-func buildConversationTurns(script dto.PodcastScript, contentProfile string) []conversationExportTurn {
+func buildConversationTurns(script dto.PodcastScript) []conversationExportTurn {
 	segments := script.Segments
 	if len(segments) == 0 && len(script.Blocks) > 0 {
 		script.RefreshSegmentsFromBlocks()
@@ -74,7 +74,7 @@ func buildConversationTurns(script dto.PodcastScript, contentProfile string) []c
 				TurnID:      fmt.Sprintf("turn_%03d", len(turns)+1),
 				Role:        "assistant",
 				Speaker:     speaker,
-				SpeakerName: speakerDisplayName(script.Language, contentProfile, speaker),
+				SpeakerName: speakerDisplayName(script.Language, speaker),
 				Segments:    []conversationExportSegment{exportSeg},
 			})
 			continue
@@ -102,7 +102,7 @@ func exportRuby(language string, seg dto.PodcastSegment, displayText string) []c
 func exportChineseRuby(seg dto.PodcastSegment) []conversationExportRuby {
 	out := make([]conversationExportRuby, 0, len(seg.Tokens))
 	for _, token := range seg.Tokens {
-		surface := strings.TrimSpace(token.Text)
+		surface := strings.TrimSpace(token.Char)
 		reading := strings.TrimSpace(token.Reading)
 		if surface == "" || reading == "" || isSilentToken(surface) {
 			continue
@@ -119,12 +119,16 @@ func exportChineseRuby(seg dto.PodcastSegment) []conversationExportRuby {
 }
 
 func exportJapaneseRuby(seg dto.PodcastSegment, displayText string) []conversationExportRuby {
-	if len(seg.TokenSpans) == 0 {
+	tokenSpans := seg.TokenSpans
+	if len(tokenSpans) == 0 {
+		tokenSpans = dto.BuildJapaneseTokenSpans(displayText, seg.Tokens)
+	}
+	if len(tokenSpans) == 0 {
 		return nil
 	}
 	runes := []rune(displayText)
-	out := make([]conversationExportRuby, 0, len(seg.TokenSpans))
-	for _, span := range seg.TokenSpans {
+	out := make([]conversationExportRuby, 0, len(tokenSpans))
+	for _, span := range tokenSpans {
 		if span.StartIndex < 0 || span.EndIndex < span.StartIndex || span.EndIndex >= len(runes) {
 			continue
 		}
@@ -144,7 +148,7 @@ func exportJapaneseRuby(seg dto.PodcastSegment, displayText string) []conversati
 	return out
 }
 
-func speakerDisplayName(language, contentProfile, speaker string) string {
+func speakerDisplayName(language, speaker string) string {
 	speaker = defaultSpeaker(speaker)
 	if isJapaneseLanguage(language) {
 		if speaker == "female" {
@@ -153,10 +157,7 @@ func speakerDisplayName(language, contentProfile, speaker string) string {
 		return "Akira"
 	}
 	if speaker == "female" {
-		if normalizeContentProfile(contentProfile) == "daily" || strings.TrimSpace(contentProfile) == "" {
-			return "小静"
-		}
-		return "小赵"
+		return "小静"
 	}
 	return "小路"
 }

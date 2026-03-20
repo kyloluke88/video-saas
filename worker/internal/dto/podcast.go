@@ -1,8 +1,10 @@
 package dto
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
+	"unicode"
 )
 
 type PodcastAudioGeneratePayload struct {
@@ -68,7 +70,8 @@ type PodcastSegment struct {
 	StartMS   int    `json:"start_ms,omitempty"`
 	EndMS     int    `json:"end_ms,omitempty"`
 
-	Tokens []PodcastToken `json:"tokens,omitempty"`
+	Tokens     []PodcastToken     `json:"tokens,omitempty"`
+	TokenSpans []PodcastTokenSpan `json:"-"`
 }
 
 type PodcastToken struct {
@@ -76,6 +79,125 @@ type PodcastToken struct {
 	Reading string `json:"reading,omitempty"`
 	StartMS int    `json:"start_ms,omitempty"`
 	EndMS   int    `json:"end_ms,omitempty"`
+}
+
+type PodcastTokenSpan struct {
+	StartIndex int
+	EndIndex   int
+	Reading    string
+}
+
+func (s *PodcastScript) UnmarshalJSON(data []byte) error {
+	type rawScript struct {
+		Language string           `json:"language"`
+		Title    string           `json:"title"`
+		YouTube  PodcastYouTube   `json:"youtube"`
+		Blocks   []PodcastBlock   `json:"blocks"`
+		Segments []PodcastSegment `json:"segments"`
+	}
+	var raw rawScript
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	s.Language = strings.TrimSpace(raw.Language)
+	s.Title = strings.TrimSpace(raw.Title)
+	s.YouTube = raw.YouTube
+	s.Blocks = raw.Blocks
+	s.Segments = raw.Segments
+	if len(s.Segments) == 0 && len(s.Blocks) > 0 {
+		s.RefreshSegmentsFromBlocks()
+	}
+	return nil
+}
+
+func (b *PodcastBlock) UnmarshalJSON(data []byte) error {
+	type rawBlock struct {
+		ChapterID string           `json:"chapter_id"`
+		BlockID   string           `json:"block_id"`
+		TTSBlock  string           `json:"tts_block_id"`
+		Purpose   string           `json:"purpose"`
+		Segments  []PodcastSegment `json:"segments"`
+	}
+	var raw rawBlock
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	b.ChapterID = strings.TrimSpace(raw.ChapterID)
+	b.BlockID = firstNonEmpty(raw.BlockID, raw.TTSBlock)
+	b.Purpose = strings.TrimSpace(raw.Purpose)
+	b.Segments = raw.Segments
+	return nil
+}
+
+func (c *PodcastYouTubeChapter) UnmarshalJSON(data []byte) error {
+	type rawChapter struct {
+		ChapterID string   `json:"chapter_id"`
+		TitleEN   string   `json:"title_en"`
+		Title     string   `json:"title"`
+		TitleJA   string   `json:"title_ja"`
+		TitleZH   string   `json:"title_zh"`
+		BlockIDs  []string `json:"block_ids"`
+	}
+	var raw rawChapter
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	c.ChapterID = strings.TrimSpace(raw.ChapterID)
+	c.TitleEN = strings.TrimSpace(raw.TitleEN)
+	c.Title = firstNonEmpty(raw.Title, raw.TitleJA, raw.TitleZH)
+	c.BlockIDs = raw.BlockIDs
+	return nil
+}
+
+func (s *PodcastSegment) UnmarshalJSON(data []byte) error {
+	type rawSegment struct {
+		SegmentID  string         `json:"segment_id"`
+		Speaker    string         `json:"speaker"`
+		Text       string         `json:"text"`
+		DisplayJA  string         `json:"display_ja"`
+		EN         string         `json:"en"`
+		Summary    bool           `json:"summary"`
+		StartMS    int            `json:"start_ms"`
+		EndMS      int            `json:"end_ms"`
+		Tokens     []PodcastToken `json:"tokens"`
+		RubyTokens []PodcastToken `json:"ruby_tokens"`
+	}
+	var raw rawSegment
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	s.SegmentID = strings.TrimSpace(raw.SegmentID)
+	s.Speaker = strings.TrimSpace(raw.Speaker)
+	s.Text = firstNonEmpty(raw.Text, raw.DisplayJA)
+	s.EN = strings.TrimSpace(raw.EN)
+	s.Summary = raw.Summary
+	s.StartMS = raw.StartMS
+	s.EndMS = raw.EndMS
+	s.Tokens = raw.Tokens
+	if len(s.Tokens) == 0 {
+		s.Tokens = raw.RubyTokens
+	}
+	return nil
+}
+
+func (t *PodcastToken) UnmarshalJSON(data []byte) error {
+	type rawToken struct {
+		Char    string `json:"char"`
+		Surface string `json:"surface"`
+		Text    string `json:"text"`
+		Reading string `json:"reading"`
+		StartMS int    `json:"start_ms"`
+		EndMS   int    `json:"end_ms"`
+	}
+	var raw rawToken
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	t.Char = firstNonEmpty(raw.Char, raw.Surface, raw.Text)
+	t.Reading = strings.TrimSpace(raw.Reading)
+	t.StartMS = raw.StartMS
+	t.EndMS = raw.EndMS
+	return nil
 }
 
 func (s *PodcastScript) RefreshSegmentsFromBlocks() {
@@ -207,4 +329,123 @@ func formatBlockID(prefix string, index int) string {
 
 func formatSegmentID(index int) string {
 	return fmt.Sprintf("seg_%03d", index)
+}
+
+func BuildJapaneseTokenSpans(text string, tokens []PodcastToken) []PodcastTokenSpan {
+	runes := []rune(strings.TrimSpace(text))
+	if len(runes) == 0 || len(tokens) == 0 {
+		return nil
+	}
+	out := make([]PodcastTokenSpan, 0, len(tokens))
+	searchFrom := 0
+	for _, token := range tokens {
+		surface := strings.TrimSpace(token.Char)
+		reading := strings.TrimSpace(token.Reading)
+		if surface == "" || reading == "" {
+			continue
+		}
+		start, end, ok := findJapaneseSurfaceRange(runes, []rune(surface), searchFrom)
+		if !ok {
+			continue
+		}
+		span, ok := normalizeJapaneseSpanRange(runes, PodcastTokenSpan{
+			StartIndex: start,
+			EndIndex:   end,
+			Reading:    reading,
+		})
+		if !ok {
+			searchFrom = end + 1
+			continue
+		}
+		out = append(out, span)
+		searchFrom = end + 1
+	}
+	return dedupeJapaneseTokenSpans(out)
+}
+
+func ContainsJapaneseKanji(text string) bool {
+	for _, r := range text {
+		if unicode.In(r, unicode.Han) {
+			return true
+		}
+	}
+	return false
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func findJapaneseSurfaceRange(textRunes, surfaceRunes []rune, searchFrom int) (int, int, bool) {
+	if len(surfaceRunes) == 0 || len(textRunes) == 0 || searchFrom >= len(textRunes) {
+		return 0, 0, false
+	}
+	maxStart := len(textRunes) - len(surfaceRunes)
+	for start := maxInt(searchFrom, 0); start <= maxStart; start++ {
+		match := true
+		for i := range surfaceRunes {
+			if textRunes[start+i] != surfaceRunes[i] {
+				match = false
+				break
+			}
+		}
+		if match {
+			return start, start + len(surfaceRunes) - 1, true
+		}
+	}
+	return 0, 0, false
+}
+
+func normalizeJapaneseSpanRange(runes []rune, span PodcastTokenSpan) (PodcastTokenSpan, bool) {
+	firstHan := -1
+	lastHan := -1
+	for i := span.StartIndex; i <= span.EndIndex; i++ {
+		if unicode.In(runes[i], unicode.Han) {
+			if firstHan == -1 {
+				firstHan = i
+			}
+			lastHan = i
+		}
+	}
+	if firstHan == -1 {
+		return PodcastTokenSpan{}, false
+	}
+	for firstHan > 0 && unicode.In(runes[firstHan-1], unicode.Han) {
+		firstHan--
+	}
+	for lastHan+1 < len(runes) && unicode.In(runes[lastHan+1], unicode.Han) {
+		lastHan++
+	}
+	span.StartIndex = firstHan
+	span.EndIndex = lastHan
+	return span, true
+}
+
+func dedupeJapaneseTokenSpans(spans []PodcastTokenSpan) []PodcastTokenSpan {
+	if len(spans) == 0 {
+		return nil
+	}
+	out := make([]PodcastTokenSpan, 0, len(spans))
+	lastEnd := -1
+	for _, span := range spans {
+		if span.StartIndex <= lastEnd {
+			continue
+		}
+		out = append(out, span)
+		lastEnd = span.EndIndex
+	}
+	return out
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }

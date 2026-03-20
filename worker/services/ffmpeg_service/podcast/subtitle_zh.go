@@ -18,6 +18,7 @@ func writeChineseASS(script dto.PodcastScript, projectDir, resolution string, st
 
 	playW, playH := resolutionSize(resolution)
 	layout := chineseSubtitleLayout(playW, playH, style)
+	highlightEnabled := podcastHighlightEnabled()
 
 	var b strings.Builder
 	writeASSHeader(&b, layout)
@@ -36,10 +37,14 @@ func writeChineseASS(script dto.PodcastScript, projectDir, resolution string, st
 		hasEnglish := strings.TrimSpace(seg.EN) != ""
 
 		tokenPages := paginateTokenCells(buildTokenCells(tokens, layout), layout)
+		pageStartTimes := chinesePageStartTimes(tokenPages)
+		if !highlightEnabled {
+			pageStartTimes = nil
+		}
 
 		b.WriteString(dialogueLine("Box", start, end, boxText(layout)))
 
-		pageWindows := buildSubtitlePageWindows(seg.StartMS, seg.EndMS, chinesePageStartTimes(tokenPages))
+		pageWindows := buildSubtitlePageWindows(seg.StartMS, seg.EndMS, pageStartTimes, chinesePageWeights(tokenPages))
 		for pageIndex, page := range tokenPages {
 			if pageIndex >= len(pageWindows) || len(page) == 0 {
 				break
@@ -57,8 +62,11 @@ func writeChineseASS(script dto.PodcastScript, projectDir, resolution string, st
 				x := positions[i]
 				if strings.TrimSpace(cell.Hanzi) != "" {
 					b.WriteString(dialogueLine("Hanzi", pageStart, pageEnd, posText(x, row.HanziY, cell.Hanzi)))
-					if cell.EndMS > cell.StartMS {
-						b.WriteString(dialogueLine("HanziActive", formatASSTimestampMS(cell.StartMS), formatASSTimestampMS(cell.EndMS), posText(x, row.HanziY, cell.Hanzi)))
+					if highlightEnabled && cell.EndMS > cell.StartMS {
+						activeStart, activeEnd, ok := clampWindow(cell.StartMS, cell.EndMS, window.StartMS, window.EndMS)
+						if ok {
+							b.WriteString(dialogueLine("HanziActive", formatASSTimestampMS(activeStart), formatASSTimestampMS(activeEnd), posText(x, row.HanziY, cell.Hanzi)))
+						}
 					}
 				}
 				if strings.TrimSpace(cell.Ruby) != "" {
@@ -150,10 +158,10 @@ func newSubtitleLayout(playW, playH int, preset subtitlePreset) subtitleLayout {
 		BoxWidth:            boxWidth,
 		BoxHeight:           boxHeight,
 		MaxTextWidth:        int(float64(boxWidth) * preset.TextWidthRatio),
-		RubySize:            maxInt(16, int(float64(preset.RubySize)*scale)),
-		HanziSize:           maxInt(24, int(float64(preset.HanziSize)*scale)),
-		EnglishSize:         maxInt(18, int(float64(preset.EnglishSize)*scale)),
-		BaseGap:             maxInt(2, int(float64(preset.BaseGap)*scale)),
+		RubySize:            maxInt(16, int(float64(preset.RubySize)*scale)) + 5,
+		HanziSize:           maxInt(24, int(float64(preset.HanziSize)*scale)) + 5,
+		EnglishSize:         maxInt(18, int(float64(preset.EnglishSize)*scale)) + 5,
+		BaseGap:             maxInt(1, int(float64(preset.BaseGap)*scale*0.5)),
 		RowGap:              maxInt(1, int(float64(preset.RowGap)*scale)),
 		TokenLineGap:        maxInt(6, int(float64(preset.TokenLineGap)*scale)),
 		EnglishLineGap:      maxInt(4, int(float64(preset.EnglishLineGap)*scale)),
@@ -386,7 +394,7 @@ func buildTokenCells(tokens []dto.PodcastToken, layout subtitleLayout) []tokenCe
 			startMS := 0
 			endMS := 0
 			for j := i; j <= end; j++ {
-				word.WriteString(strings.TrimSpace(tokens[j].Text))
+				word.WriteString(strings.TrimSpace(tokens[j].Char))
 				if startMS == 0 || (tokens[j].StartMS > 0 && tokens[j].StartMS < startMS) {
 					startMS = tokens[j].StartMS
 				}
@@ -407,7 +415,7 @@ func buildTokenCells(tokens []dto.PodcastToken, layout subtitleLayout) []tokenCe
 			continue
 		}
 		tk := tokens[i]
-		hanzi := strings.TrimSpace(tk.Text)
+		hanzi := strings.TrimSpace(tk.Char)
 		ruby := strings.TrimSpace(tk.Reading)
 		if hanzi == "" && ruby == "" {
 			continue
@@ -469,7 +477,7 @@ func splitTokenLines(cells []tokenCell, maxWidth int, maxLines int) [][]tokenCel
 
 // Main subtitle pages are display-only splits. We keep natural long segments
 // intact in the audio/script, but prefer punctuation boundaries on screen and
-// cap each page to at most 18 visible characters.
+// cap each page to at most 20 visible characters.
 func paginateTokenCells(cells []tokenCell, layout subtitleLayout) [][]tokenCell {
 	if len(cells) == 0 {
 		return nil
@@ -495,7 +503,6 @@ func chooseChinesePageBreak(cells []tokenCell, start int, layout subtitleLayout)
 	limit := float64(layout.MaxTextWidth)
 	bestEnd := start
 	bestPunctEnd := -1
-	bestPunctChars := 0
 
 	for i := start; i < len(cells); i++ {
 		unitChars := subtitleRuneCount(cells[i].Hanzi)
@@ -516,7 +523,6 @@ func chooseChinesePageBreak(cells []tokenCell, start int, layout subtitleLayout)
 		bestEnd = i + 1
 		if subtitleEndsWithPunctuation(cells[i].Hanzi) {
 			bestPunctEnd = i + 1
-			bestPunctChars = charCount
 		}
 		if charCount >= subtitlePageMaxChars {
 			break
@@ -525,7 +531,7 @@ func chooseChinesePageBreak(cells []tokenCell, start int, layout subtitleLayout)
 	if bestEnd == start {
 		return start + 1
 	}
-	if bestPunctEnd > start && charCount-bestPunctChars <= 4 {
+	if bestPunctEnd > start {
 		return bestPunctEnd
 	}
 	return bestEnd
@@ -553,6 +559,18 @@ func chinesePageHasRuby(page []tokenCell) bool {
 		}
 	}
 	return false
+}
+
+func chinesePageWeights(pages [][]tokenCell) []int {
+	out := make([]int, 0, len(pages))
+	for _, page := range pages {
+		weight := 0
+		for _, cell := range page {
+			weight += maxInt(1, subtitleRuneCount(cell.Hanzi))
+		}
+		out = append(out, maxInt(1, weight))
+	}
+	return out
 }
 
 func splitEnglishPagesSynced(text string, layout subtitleLayout, pageCount int) []string {
@@ -803,11 +821,11 @@ func isInlineEnglishText(s string) bool {
 }
 
 func inlineEnglishTokenRun(tokens []dto.PodcastToken, start int) (int, bool) {
-	if start < 0 || start >= len(tokens) || !isInlineEnglishText(tokens[start].Text) {
+	if start < 0 || start >= len(tokens) || !isInlineEnglishText(tokens[start].Char) {
 		return 0, false
 	}
 	end := start
-	for end+1 < len(tokens) && isInlineEnglishText(tokens[end+1].Text) {
+	for end+1 < len(tokens) && isInlineEnglishText(tokens[end+1].Char) {
 		end++
 	}
 	return end, true
@@ -822,6 +840,13 @@ func maxFloat(a, b float64) float64 {
 
 func maxInt(a, b int) int {
 	if a > b {
+		return a
+	}
+	return b
+}
+
+func minInt(a, b int) int {
+	if a < b {
 		return a
 	}
 	return b

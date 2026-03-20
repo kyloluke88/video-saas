@@ -11,21 +11,40 @@ type subtitlePageWindow struct {
 
 // Subtitle paging is display-only: we keep the original segment/audio intact,
 // and only split a long segment into multiple on-screen pages.
-func buildSubtitlePageWindows(segmentStartMS, segmentEndMS int, rawPageStarts []int) []subtitlePageWindow {
-	if len(rawPageStarts) == 0 {
+func buildSubtitlePageWindows(segmentStartMS, segmentEndMS int, rawPageStarts []int, pageWeights []int) []subtitlePageWindow {
+	pageCount := len(rawPageStarts)
+	if pageCount == 0 {
+		pageCount = len(pageWeights)
+	}
+	if pageCount == 0 {
 		return nil
 	}
 	if segmentEndMS <= segmentStartMS {
-		segmentEndMS = segmentStartMS + len(rawPageStarts)
+		segmentEndMS = segmentStartMS + pageCount
+	}
+	if len(rawPageStarts) != pageCount {
+		rawPageStarts = make([]int, pageCount)
+	}
+	if len(pageWeights) != pageCount {
+		pageWeights = make([]int, pageCount)
+		for i := range pageWeights {
+			pageWeights[i] = 1
+		}
 	}
 
-	starts := make([]int, len(rawPageStarts))
+	starts := make([]int, pageCount)
 	starts[0] = segmentStartMS
 	duration := maxInt(1, segmentEndMS-segmentStartMS)
+	totalWeight := 0
+	for _, weight := range pageWeights {
+		totalWeight += maxInt(1, weight)
+	}
+	accWeight := 0
 
 	for i := 1; i < len(rawPageStarts); i++ {
+		accWeight += maxInt(1, pageWeights[i-1])
+		fallback := segmentStartMS + (duration*accWeight)/maxInt(1, totalWeight)
 		candidate := rawPageStarts[i]
-		fallback := segmentStartMS + (duration*i)/len(rawPageStarts)
 		if candidate <= starts[i-1] || candidate >= segmentEndMS {
 			candidate = fallback
 		}
@@ -42,7 +61,7 @@ func buildSubtitlePageWindows(segmentStartMS, segmentEndMS int, rawPageStarts []
 	for i, start := range starts {
 		end := segmentEndMS
 		if i+1 < len(starts) {
-			end = starts[i+1]
+			end = starts[i+1] - 10
 		}
 		if end <= start {
 			end = start + 1
@@ -70,4 +89,13 @@ func subtitleEndsWithPunctuation(text string) bool {
 	}
 	runes := []rune(trimmed)
 	return isPunctuationRune(runes[len(runes)-1])
+}
+
+func clampWindow(startMS, endMS, windowStartMS, windowEndMS int) (int, int, bool) {
+	start := maxInt(startMS, windowStartMS)
+	end := minInt(endMS, windowEndMS)
+	if end <= start {
+		return 0, 0, false
+	}
+	return start, end, true
 }
