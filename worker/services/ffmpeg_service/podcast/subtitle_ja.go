@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"unicode"
 	"worker/internal/dto"
 )
 
@@ -134,6 +135,32 @@ func buildJapaneseCharCells(seg dto.PodcastSegment, layout subtitleLayout) []jap
 func buildJapaneseLayoutCells(tokens []dto.PodcastToken, layout subtitleLayout) []japaneseCharCell {
 	out := make([]japaneseCharCell, 0, len(tokens))
 	for i := 0; i < len(tokens); {
+		if end, ok := inlineLatinWordTokenRun(tokens, i); ok {
+			var word strings.Builder
+			startMS := 0
+			endMS := 0
+			for j := i; j <= end; j++ {
+				word.WriteString(strings.TrimSpace(tokens[j].Char))
+				if startMS == 0 || (tokens[j].StartMS > 0 && tokens[j].StartMS < startMS) {
+					startMS = tokens[j].StartMS
+				}
+				if tokens[j].EndMS > endMS {
+					endMS = tokens[j].EndMS
+				}
+			}
+			text := word.String()
+			out = append(out, japaneseCharCell{
+				StartIndex: i,
+				EndIndex:   end,
+				Char:       text,
+				Width:      estimateTextWidth(text, float64(layout.HanziSize), false),
+				Gap:        layout.HanziSpacing,
+				StartMS:    startMS,
+				EndMS:      endMS,
+			})
+			i = end + 1
+			continue
+		}
 		out = append(out, japaneseCharCell{
 			StartIndex: i,
 			EndIndex:   i,
@@ -317,6 +344,7 @@ func chooseJapanesePageBreak(groups []japaneseTokenGroup, start int, layout subt
 	charCount := 0
 	width := 0.0
 	limit := float64(layout.MaxTextWidth)
+	charLimit := subtitlePageCharLimit(layout)
 	bestEnd := start
 	bestPunctEnd := -1
 
@@ -332,7 +360,7 @@ func chooseJapanesePageBreak(groups []japaneseTokenGroup, start int, layout subt
 			nextWidth += prevCells[len(prevCells)-1].Gap
 		}
 		nextWidth += groupWidth
-		if i > start && (charCount+groupChars > subtitlePageMaxChars || nextWidth > limit) {
+		if i > start && (charCount+groupChars > charLimit || nextWidth > limit) {
 			break
 		}
 
@@ -342,17 +370,22 @@ func chooseJapanesePageBreak(groups []japaneseTokenGroup, start int, layout subt
 		if japaneseTokenGroupEndsWithPunctuation(groups[i]) {
 			bestPunctEnd = i + 1
 		}
-		if charCount >= subtitlePageMaxChars {
+		if charCount >= charLimit {
 			break
 		}
 	}
 	if bestEnd == start {
 		return start + 1
 	}
+	candidateEnd := bestEnd
 	if bestPunctEnd > start {
-		return bestPunctEnd
+		candidateEnd = bestPunctEnd
 	}
-	return bestEnd
+	texts := make([]string, len(groups))
+	for i := range groups {
+		texts[i] = japaneseTokenGroupText(groups[i])
+	}
+	return adjustSubtitlePageBreak(texts, start, candidateEnd)
 }
 
 func layoutJapanesePage(cells []japaneseCharCell, layout subtitleLayout) []japaneseCharCell {
@@ -417,6 +450,17 @@ func japaneseTokenGroupEndsWithPunctuation(group japaneseTokenGroup) bool {
 		return false
 	}
 	return subtitleEndsWithPunctuation(group.Cells[len(group.Cells)-1].Char)
+}
+
+func japaneseTokenGroupText(group japaneseTokenGroup) string {
+	if len(group.Cells) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	for _, cell := range group.Cells {
+		b.WriteString(cell.Char)
+	}
+	return b.String()
 }
 
 func buildJapaneseTokenGroups(seg dto.PodcastSegment, cells []japaneseCharCell) []japaneseTokenGroup {
@@ -508,9 +552,9 @@ func japaneseSegmentTokens(seg dto.PodcastSegment) []dto.PodcastToken {
 		return nil
 	}
 
-	details := buildJapaneseAnnotationDetails(seg)
-	for _, detail := range details {
-		assignJapaneseDisplayRange(&out, detail.Span.StartIndex, detail.Span.EndIndex, detail.StartMS, detail.EndMS)
+	highlightRanges := japaneseDisplayHighlightRanges(seg)
+	for _, highlight := range highlightRanges {
+		assignJapaneseDisplayRange(&out, highlight.StartIndex, highlight.EndIndex, highlight.StartMS, highlight.EndMS)
 	}
 	fillJapaneseDisplayTokenTimingGaps(out, seg.StartMS, seg.EndMS)
 	return out
@@ -530,9 +574,9 @@ func estimateJapaneseCellWidth(text string, layout subtitleLayout) float64 {
 
 func japaneseCharGap(char string, layout subtitleLayout) float64 {
 	if isPunctuationText(char) {
-		return float64(layout.BaseGap) * 0.30
+		return layout.HanziSpacing * layout.PunctuationGapRatio
 	}
-	return float64(layout.BaseGap) * 0.65
+	return layout.HanziSpacing
 }
 
 func computeJapaneseCellCenters(cells []japaneseCharCell, layout subtitleLayout) []int {
@@ -611,10 +655,10 @@ func writeJapaneseASSHeader(b *strings.Builder, layout subtitleLayout) {
 	b.WriteString("[V4+ Styles]\n")
 	b.WriteString("Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding\n")
 	b.WriteString("Style: Box," + layout.HanziFontName + "," + strconv.Itoa(layout.HanziSize) + "," + layout.BoxColor + "," + layout.BoxColor + "," + layout.BoxColor + "," + layout.BoxColor + ",0,0,0,0,100,100,0,0,1,0,0,7,0,0,0,1\n")
-	b.WriteString("Style: Ruby," + layout.RubyFontName + "," + strconv.Itoa(layout.RubySize) + "," + layout.RubyColor + "," + layout.RubyColor + "," + layout.OutlineColor + ",&H64000000," + strconv.Itoa(layout.RubyBold) + ",0,0,0,100,100,0,0,1,0,0,5,10,10,10,1\n")
-	b.WriteString("Style: JaBase," + layout.HanziFontName + "," + strconv.Itoa(layout.HanziSize) + "," + layout.HanziColor + "," + layout.HanziColor + "," + layout.OutlineColor + ",&H64000000," + strconv.Itoa(layout.HanziBold) + ",0,0,0,100,100,0,0,1,0,0,5,10,10,10,1\n")
-	b.WriteString("Style: JaActive," + layout.HanziFontName + "," + strconv.Itoa(layout.HanziSize) + ",&H00CC66CC,&H00CC66CC," + layout.OutlineColor + ",&H64000000,0,0,0,0,100,100,0,0,1,0,0,5,10,10,10,1\n")
-	b.WriteString("Style: English," + layout.EnglishFontName + "," + strconv.Itoa(layout.EnglishSize) + "," + layout.EnglishColor + "," + layout.EnglishColor + "," + layout.EnglishColor + ",&H00000000," + strconv.Itoa(layout.EnglishBold) + ",0,0,0,100,100,0,0,1,0,0,5,10,10,10,1\n\n")
+	b.WriteString("Style: Ruby," + layout.RubyFontName + "," + strconv.Itoa(layout.RubySize) + "," + layout.RubyColor + "," + layout.RubyColor + "," + layout.OutlineColor + ",&H64000000," + strconv.Itoa(layout.RubyBold) + ",0,0,0,100,100," + assSpacingText(layout.RubySpacing) + ",0,1,0,0,5,10,10,10,1\n")
+	b.WriteString("Style: JaBase," + layout.HanziFontName + "," + strconv.Itoa(layout.HanziSize) + "," + layout.HanziColor + "," + layout.HanziColor + "," + layout.OutlineColor + ",&H64000000," + strconv.Itoa(layout.HanziBold) + ",0,0,0,100,100," + assSpacingText(layout.HanziSpacing) + ",0,1,0,0,5,10,10,10,1\n")
+	b.WriteString("Style: JaActive," + layout.HanziFontName + "," + strconv.Itoa(layout.HanziSize) + ",&H00CC66CC,&H00CC66CC," + layout.OutlineColor + ",&H64000000,0,0,0,0,100,100," + assSpacingText(layout.HanziSpacing) + ",0,1,0,0,5,10,10,10,1\n")
+	b.WriteString("Style: English," + layout.EnglishFontName + "," + strconv.Itoa(layout.EnglishSize) + "," + layout.EnglishColor + "," + layout.EnglishColor + "," + layout.EnglishColor + ",&H00000000," + strconv.Itoa(layout.EnglishBold) + ",0,0,0,100,100," + assSpacingText(layout.EnglishSpacing) + ",0,1,0,0,5,10,10,10,1\n\n")
 
 	b.WriteString("[Events]\n")
 	b.WriteString("Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text\n")
@@ -627,67 +671,95 @@ func japaneseSubtitleLayout(playW, playH, style int) subtitleLayout {
 func japaneseSubtitlePresetFor(style int) subtitlePreset {
 	switch style {
 	case 2:
-		return subtitlePreset{
-			RubyFontName:          "Maruko Gothic CJKjp Light",  // 假名字体
-			HanziFontName:         "Maruko Gothic CJKjp Medium", // 日文正文汉字/假名字体
-			EnglishFontName:       "Radley",                     // 英文字幕字体
-			BoxLeftRatio:          0,                            // 字幕底框左边距占画面宽度比例
-			BoxTopRatio:           0.5561,                       // 字幕底框顶部位置占画面高度比例
-			BoxWidthRatio:         1,                            // 字幕底框宽度占画面宽度比例
-			BoxHeightRatio:        0.4029,                       // 字幕底框高度占画面高度比例
-			TextWidthRatio:        0.94,                         // 正文可用排版宽度占底框宽度比例
-			TopSectionRatio:       0.7301,                       // 汉字区域高度占底框高度比例
-			BottomSectionRatio:    0.2699,                       // 英文区域高度占底框高度比例
-			TopSectionTopInset:    0,                            // 上半区顶部额外内边距比例
-			BottomSectionTopInset: 0,                            // 下半区顶部额外内边距比例
-			RubySize:              39,                           // 假名字号
-			HanziSize:             76,                           // 日文正文字号
-			EnglishSize:           46,                           // 英文字号
-			BaseGap:               1,                            // 字与字之间的基础间距
-			RowGap:                1,                            // 假名与正文之间的垂直间距
-			TokenLineGap:          16,                           // 两行日文之间的垂直间距
-			EnglishLineGap:        8,                            // 英文多行时的行间距
-			BoxColor:              "&HFF000000",                 // 底框颜色
-			RubyColor:             "&H00000000",                 // 假名颜色
-			HanziColor:            "&H00000000",                 // 日文正文颜色
-			EnglishColor:          "&H00494393",                 // 英文字幕颜色
-			OutlineColor:          "&H00DDD6CF",                 // 轮廓/描边颜色
-			RubyBold:              0,                            // 假名是否粗体
-			HanziBold:             0,                            // 日文正文是否粗体
-			EnglishBold:           1,                            // 英文字幕是否粗体
-		}
+		return japaneseSubtitlePresetStyle2()
+	case 3:
+		return japaneseSubtitlePresetStyle3()
 	case 1:
 		fallthrough
 	default:
-		return subtitlePreset{
-			RubyFontName:          "Maruko Gothic CJKjp Light",  // 假名字体
-			HanziFontName:         "Maruko Gothic CJKjp Medium", // 日文正文汉字/假名字体
-			EnglishFontName:       "Radley",                     // 英文字幕字体
-			BoxLeftRatio:          0,                            // 字幕底框左边距占画面宽度比例
-			BoxTopRatio:           0.5561,                       // 字幕底框顶部位置占画面高度比例
-			BoxWidthRatio:         1,                            // 字幕底框宽度占画面宽度比例
-			BoxHeightRatio:        0.4029,                       // 字幕底框高度占画面高度比例
-			TextWidthRatio:        0.94,                         // 正文可用排版宽度占底框宽度比例
-			TopSectionRatio:       0.7301,                       // 汉字区域高度占底框高度比例
-			BottomSectionRatio:    0.2699,                       // 英文区域高度占底框高度比例
-			TopSectionTopInset:    0,                            // 上半区顶部额外内边距比例
-			BottomSectionTopInset: 0,                            // 下半区顶部额外内边距比例
-			RubySize:              39,                           // 假名字号
-			HanziSize:             76,                           // 日文正文字号
-			EnglishSize:           46,                           // 英文字号
-			BaseGap:               1,                            // 字与字之间的基础间距
-			RowGap:                1,                            // 假名与正文之间的垂直间距
-			TokenLineGap:          16,                           // 两行日文之间的垂直间距
-			EnglishLineGap:        6,                            // 英文多行时的行间距
-			BoxColor:              "&HFF000000",                 // 底框颜色
-			RubyColor:             "&H00000000",                 // 假名颜色
-			HanziColor:            "&H00000000",                 // 日文正文颜色
-			EnglishColor:          "&H00066F8A",                 // 英文字幕颜色
-			OutlineColor:          "&H003B5B55",                 // 轮廓/描边颜色
-			RubyBold:              0,                            // 假名是否粗体
-			HanziBold:             0,                            // 日文正文是否粗体
-			EnglishBold:           1,                            // 英文字幕是否粗体
-		}
+		return japaneseSubtitlePresetStyle1()
+	}
+}
+
+func japaneseSubtitlePresetStyle1() subtitlePreset {
+	return japaneseSubtitlePresetStyle2()
+}
+
+func japaneseSubtitlePresetStyle2() subtitlePreset {
+	return subtitlePreset{
+		RubyFontName:          "Maruko Gothic CJKjp Light",  // 假名字体
+		HanziFontName:         "Maruko Gothic CJKjp Medium", // 日文正文汉字/假名字体
+		EnglishFontName:       "Radley",                     // 英文字幕字体
+		BoxLeftRatio:          0,                            // 字幕底框左边距占画面宽度比例
+		BoxTopRatio:           0.5561,                       // 字幕底框顶部位置占画面高度比例
+		BoxWidthRatio:         1,                            // 字幕底框宽度占画面宽度比例
+		BoxHeightRatio:        0.4029,                       // 字幕底框高度占画面高度比例
+		TextWidthRatio:        0.94,                         // 正文可用排版宽度占底框宽度比例
+		TopSectionRatio:       0.7301,                       // 汉字区域高度占底框高度比例
+		BottomSectionRatio:    0.2699,                       // 英文区域高度占底框高度比例
+		TopSectionTopInset:    0,                            // 上半区顶部额外内边距比例
+		BottomSectionTopInset: 0,                            // 下半区顶部额外内边距比例
+		RubySize:              36,                           // 假名字号
+		HanziSize:             76,                           // 日文正文字号
+		EnglishSize:           46,                           // 英文字号
+		BaseGap:               1,                            // 字与字之间的基础间距
+		HanziSpacing:          0.1083333333,
+		RubySpacing:           -2, // ruby 假名字距
+		EnglishSpacing:        0,  // 英文字距
+		PunctuationGapRatio:   0.4615384615,
+		MaxLineChars:          22,           // 正文每行最大字符数
+		RowGap:                1,            // 假名与正文之间的垂直间距
+		TokenLineGap:          16,           // 两行日文之间的垂直间距
+		EnglishLineGap:        8,            // 英文多行时的行间距
+		BoxColor:              "&HFF000000", // 底框颜色
+		RubyColor:             "&H00000000", // 假名颜色
+		HanziColor:            "&H00000000", // 日文正文颜色
+		EnglishColor:          "&H00494393", // 英文字幕颜色
+		OutlineColor:          "&H00DDD6CF", // 轮廓/描边颜色
+		RubyBold:              0,            // 假名是否粗体
+		HanziBold:             0,            // 日文正文是否粗体
+		EnglishBold:           1,            // 英文字幕是否粗体
+	}
+}
+
+func japaneseSubtitlePresetStyle3() subtitlePreset {
+	return japaneseSubtitlePresetStyle2()
+}
+
+func japaneseSubtitlePresetBase() subtitlePreset {
+	return subtitlePreset{
+		RubyFontName:          "Maruko Gothic CJKjp Light",  // 假名字体
+		HanziFontName:         "Maruko Gothic CJKjp Medium", // 日文正文汉字/假名字体
+		EnglishFontName:       "Radley",                     // 英文字幕字体
+		BoxLeftRatio:          0,                            // 字幕底框左边距占画面宽度比例
+		BoxTopRatio:           0.5561,                       // 字幕底框顶部位置占画面高度比例
+		BoxWidthRatio:         1,                            // 字幕底框宽度占画面宽度比例
+		BoxHeightRatio:        0.4029,                       // 字幕底框高度占画面高度比例
+		TextWidthRatio:        0.94,                         // 正文可用排版宽度占底框宽度比例
+		TopSectionRatio:       0.7301,                       // 汉字区域高度占底框高度比例
+		BottomSectionRatio:    0.2699,                       // 英文区域高度占底框高度比例
+		TopSectionTopInset:    0,                            // 上半区顶部额外内边距比例
+		BottomSectionTopInset: 0,                            // 下半区顶部额外内边距比例
+		RubySize:              36,                           // 假名字号
+		HanziSize:             76,                           // 日文正文字号
+		EnglishSize:           46,                           // 英文字号
+		BaseGap:               1,                            // 字与字之间的基础间距
+		HanziSpacing:          0.1083333333,
+		RubySpacing:           -2, // ruby 假名字距
+		EnglishSpacing:        0,  // 英文字距
+		PunctuationGapRatio:   0.4615384615,
+		MaxLineChars:          22,           // 正文每行最大字符数
+		RowGap:                1,            // 假名与正文之间的垂直间距
+		TokenLineGap:          16,           // 两行日文之间的垂直间距
+		EnglishLineGap:        6,            // 英文多行时的行间距
+		BoxColor:              "&HFF000000", // 底框颜色
+		RubyColor:             "&H00000000", // 假名颜色
+		HanziColor:            "&H00000000", // 日文正文颜色
+		EnglishColor:          "&H00066F8A", // 英文字幕颜色
+		OutlineColor:          "&H003B5B55", // 轮廓/描边颜色
+		RubyBold:              0,            // 假名是否粗体
+		HanziBold:             0,            // 日文正文是否粗体
+		EnglishBold:           1,            // 英文字幕是否粗体
 	}
 }
 
@@ -720,31 +792,128 @@ type japaneseAnnotationDetail struct {
 	EndMS   int
 }
 
+type japaneseHighlightRange struct {
+	StartIndex int
+	EndIndex   int
+	StartMS    int
+	EndMS      int
+}
+
 func buildJapaneseAnnotationDetails(seg dto.PodcastSegment) []japaneseAnnotationDetail {
-	spans := buildJapaneseTokenSpans(seg)
-	if len(spans) == 0 {
+	refs := dto.BuildJapaneseTokenSpanRefs(strings.TrimSpace(seg.Text), seg.Tokens)
+	if len(refs) == 0 {
 		return nil
 	}
-	validTokens := make([]dto.PodcastToken, 0, len(seg.Tokens))
-	for _, token := range seg.Tokens {
+	out := make([]japaneseAnnotationDetail, 0, len(refs))
+	for _, ref := range refs {
+		if ref.TokenIndex < 0 || ref.TokenIndex >= len(seg.Tokens) {
+			continue
+		}
+		token := seg.Tokens[ref.TokenIndex]
 		if strings.TrimSpace(token.Char) == "" || strings.TrimSpace(token.Reading) == "" {
 			continue
 		}
-		validTokens = append(validTokens, token)
-	}
-	limit := len(spans)
-	if len(validTokens) < limit {
-		limit = len(validTokens)
-	}
-	out := make([]japaneseAnnotationDetail, 0, limit)
-	for i := 0; i < limit; i++ {
 		out = append(out, japaneseAnnotationDetail{
-			Span:    spans[i],
-			StartMS: validTokens[i].StartMS,
-			EndMS:   validTokens[i].EndMS,
+			Span:    ref.Span,
+			StartMS: token.StartMS,
+			EndMS:   token.EndMS,
 		})
 	}
 	return out
+}
+
+func buildJapaneseHighlightRanges(seg dto.PodcastSegment) []japaneseHighlightRange {
+	details := buildJapaneseAnnotationDetails(seg)
+	if len(details) == 0 {
+		return nil
+	}
+
+	runes := []rune(strings.TrimSpace(seg.Text))
+	out := make([]japaneseHighlightRange, 0, len(details))
+	current := japaneseHighlightRange{
+		StartIndex: details[0].Span.StartIndex,
+		EndIndex:   details[0].Span.EndIndex,
+		StartMS:    details[0].StartMS,
+		EndMS:      details[0].EndMS,
+	}
+
+	for i := 1; i < len(details); i++ {
+		next := details[i]
+		if shouldMergeJapaneseHighlightRange(runes, current, next) {
+			current.EndIndex = next.Span.EndIndex
+			if next.StartMS < current.StartMS {
+				current.StartMS = next.StartMS
+			}
+			if next.EndMS > current.EndMS {
+				current.EndMS = next.EndMS
+			}
+			continue
+		}
+
+		out = append(out, current)
+		current = japaneseHighlightRange{
+			StartIndex: next.Span.StartIndex,
+			EndIndex:   next.Span.EndIndex,
+			StartMS:    next.StartMS,
+			EndMS:      next.EndMS,
+		}
+	}
+
+	out = append(out, current)
+	return out
+}
+
+func japaneseDisplayHighlightRanges(seg dto.PodcastSegment) []japaneseHighlightRange {
+	if len(seg.HighlightSpans) > 0 {
+		out := make([]japaneseHighlightRange, 0, len(seg.HighlightSpans))
+		for _, span := range seg.HighlightSpans {
+			if span.EndIndex < span.StartIndex || span.EndMS <= span.StartMS {
+				continue
+			}
+			out = append(out, japaneseHighlightRange{
+				StartIndex: span.StartIndex,
+				EndIndex:   span.EndIndex,
+				StartMS:    span.StartMS,
+				EndMS:      span.EndMS,
+			})
+		}
+		if len(out) > 0 {
+			return out
+		}
+	}
+	return buildJapaneseHighlightRanges(seg)
+}
+
+func shouldMergeJapaneseHighlightRange(runes []rune, current japaneseHighlightRange, next japaneseAnnotationDetail) bool {
+	if next.StartMS > current.EndMS {
+		return false
+	}
+	if next.Span.StartIndex <= current.EndIndex {
+		return true
+	}
+	if current.EndIndex < 0 || next.Span.StartIndex > len(runes) || current.EndIndex+1 > next.Span.StartIndex {
+		return false
+	}
+	return japaneseRuneGapLooksLikeSameWord(runes[current.EndIndex+1 : next.Span.StartIndex])
+}
+
+func japaneseRuneGapLooksLikeSameWord(gap []rune) bool {
+	if len(gap) == 0 {
+		return true
+	}
+	for _, r := range gap {
+		switch {
+		case unicode.IsSpace(r):
+			continue
+		case unicode.In(r, unicode.Hiragana, unicode.Katakana):
+			continue
+		case r == 'ー' || r == '〜':
+			continue
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 func assignJapaneseDisplayRange(tokens *[]dto.PodcastToken, start, end, startMS, endMS int) {

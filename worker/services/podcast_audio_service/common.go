@@ -14,12 +14,12 @@ func scriptPathFor(filename string) string {
 	return filepath.Join(conf.Get[string]("worker.worker_assets_dir"), "podcast", "scripts", filepath.Base(strings.TrimSpace(filename)))
 }
 
-func projectDirFor(projectID string) string {
-	return filepath.Join(conf.Get[string]("worker.ffmpeg_work_dir"), "projects", projectID)
+func projectScriptInputPath(projectDir string) string {
+	return filepath.Join(projectDir, "script_input.json")
 }
 
-func directProjectSourceDir(name string) string {
-	return filepath.Join(conf.Get[string]("worker.ffmpeg_work_dir"), "projects", filepath.Base(strings.TrimSpace(name)))
+func projectDirFor(projectID string) string {
+	return filepath.Join(conf.Get[string]("worker.ffmpeg_work_dir"), "projects", projectID)
 }
 
 func sanitizeSegmentID(segmentID string) string {

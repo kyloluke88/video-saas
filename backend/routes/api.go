@@ -34,6 +34,15 @@ func RegisterApiRoutes(r *gin.Engine) {
 		systemGroup.POST("/deepseek/test", sys.DeepSeekTest)
 	}
 
+	publicProjectCtrl := new(clientCtrl.PublicProjectController)
+	publicGroup := v1.Group("/public")
+	publicGroup.Use(middlewares.LimitIP("1000-H"))
+	{
+		publicGroup.GET("/projects", publicProjectCtrl.ListProjects)
+		publicGroup.GET("/projects/:projectID", publicProjectCtrl.ShowProject)
+		publicGroup.GET("/projects/:projectID/assets/:assetName", publicProjectCtrl.ServeProjectAsset)
+	}
+
 	videoCtrl := new(clientCtrl.VideoController)
 	videoGroup := v1.Group("/video")
 	videoGroup.Use(middlewares.LimitIP("300-H"))

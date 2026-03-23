@@ -9,8 +9,16 @@ type waveformPreset struct {
 }
 
 func waveformPresetFor(style int, resolution string) waveformPreset {
-	_ = style
-	return presetSilkThreadPulse(resolution)
+	switch style {
+	case 2:
+		return presetSoftParallaxWave(resolution)
+	case 3:
+		return presetStudyGlowWave(resolution)
+	case 1:
+		fallthrough
+	default:
+		return presetSilkThreadPulse(resolution)
+	}
 }
 
 // presetSilkThreadPulse renders a cleaner centered waveform without the extra horizontal guide line.
@@ -29,6 +37,14 @@ func presetSilkThreadPulse(resolution string) waveformPreset {
 		BackgroundFilter: "",
 		Overlay:          fmt.Sprintf("(W-w)/2:%d", y),
 	}
+}
+
+func presetSoftParallaxWave(resolution string) waveformPreset {
+	return presetSilkThreadPulse(resolution)
+}
+
+func presetStudyGlowWave(resolution string) waveformPreset {
+	return presetSilkThreadPulse(resolution)
 }
 
 func waveMaxInt(a, b int) int {

@@ -75,6 +75,9 @@ func Compose(input ComposeInput) (ComposeResult, error) {
 	}); err != nil {
 		return ComposeResult{}, err
 	}
+	if err := cleanupPodcastIntermediates(projectDir); err != nil {
+		log.Printf("⚠️ podcast compose cleanup warning project_id=%s err=%v", input.ProjectID, err)
+	}
 	log.Printf("✅ podcast compose output project_id=%s final=%s", input.ProjectID, finalPath)
 	return ComposeResult{FinalVideoPath: finalPath}, nil
 }

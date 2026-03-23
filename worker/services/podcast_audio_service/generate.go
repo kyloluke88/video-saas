@@ -21,7 +21,6 @@ import (
 type GenerateInput struct {
 	ProjectID      string
 	Language       string
-	IsDirect       bool
 	ScriptFilename string
 }
 
@@ -61,28 +60,8 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 		return GenerateResult{}, err
 	}
 
-	if input.IsDirect {
-		reusable, err := loadDirectProjectArtifacts(input.ScriptFilename, artifacts.dialoguePath, artifacts.alignedPath)
-		if err != nil {
-			return GenerateResult{}, err
-		}
-		if err := validateScriptLanguage(reusable.Script.Language, language); err != nil {
-			return GenerateResult{}, err
-		}
-		reusable.Script.Language = language
-		finalScript, err := finalizeAlignedScript(input.ProjectID, artifacts.alignedPath, artifacts.dialoguePath, reusable.Script)
-		if err != nil {
-			return GenerateResult{}, err
-		}
-		reusable.Script = finalScript
-		return *reusable, nil
-	}
-
-	script, err := loadScriptForGeneration(language, input.ScriptFilename)
+	script, err := loadScriptForGeneration(projectDir, language, input.ScriptFilename)
 	if err != nil {
-		return GenerateResult{}, err
-	}
-	if err := writeJSON(filepath.Join(projectDir, "script_input.json"), script); err != nil {
 		return GenerateResult{}, err
 	}
 
@@ -144,8 +123,26 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 	}, nil
 }
 
-func loadScriptForGeneration(language, scriptFilename string) (dto.PodcastScript, error) {
+func loadScriptForGeneration(projectDir, language, scriptFilename string) (dto.PodcastScript, error) {
+	projectScriptPath := projectScriptInputPath(projectDir)
+	if fileExists(projectScriptPath) {
+		log.Printf("📘 podcast script reuse project_id=%s path=%s", filepath.Base(projectDir), projectScriptPath)
+		return loadScriptFromPath(language, projectScriptPath)
+	}
+
 	scriptPath := scriptPathFor(scriptFilename)
+	script, err := loadScriptFromPath(language, scriptPath)
+	if err != nil {
+		return dto.PodcastScript{}, err
+	}
+	if err := writeJSON(projectScriptPath, script); err != nil {
+		return dto.PodcastScript{}, err
+	}
+	log.Printf("📝 podcast script cached project_id=%s source=%s path=%s", filepath.Base(projectDir), scriptPath, projectScriptPath)
+	return script, nil
+}
+
+func loadScriptFromPath(language, scriptPath string) (dto.PodcastScript, error) {
 	var script dto.PodcastScript
 	if err := readJSON(scriptPath, &script); err != nil {
 		return dto.PodcastScript{}, err
@@ -177,6 +174,7 @@ func normalizeScriptForSpeech(script dto.PodcastScript) dto.PodcastScript {
 				seg.Tokens[k].StartMS = 0
 				seg.Tokens[k].EndMS = 0
 			}
+			seg.HighlightSpans = nil
 			seg.TokenSpans = nil
 			script.Blocks[i].Segments[j] = seg
 		}
@@ -187,18 +185,41 @@ func normalizeScriptForSpeech(script dto.PodcastScript) dto.PodcastScript {
 
 func synthesizeOrResumeBlock(ctx context.Context, client *googlecloud.Client, aligner *blockAligner, language string, artifacts audioArtifacts, index int, block dto.PodcastBlock) (blockSynthesisResult, error) {
 	blockID := strings.TrimSpace(block.BlockID)
-	audioPath, ok := existingBlockAudioPath(artifacts.blocksDir, index, blockID)
-	if ok {
-		if state, ok, err := loadBlockCheckpoint(artifacts.blockStatesDir, index, blockID); err == nil && ok && blockCheckpointComplete(language, state, audioPath) {
-			log.Printf("♻️ podcast block resume block=%s audio=%s duration_ms=%d", blockID, audioPath, state.DurationMS)
-			return blockSynthesisResult{
-				AudioPath:    audioPath,
-				DurationMS:   state.DurationMS,
-				AlignedBlock: state.Block,
-			}, nil
-		} else if err != nil {
+	for _, candidate := range reusableBlockAudioCandidates(artifacts, index, blockID) {
+		state, stateOK, err := loadBlockCheckpoint(candidate.stateDir, index, blockID)
+		if err != nil {
 			return blockSynthesisResult{}, err
 		}
+		if !stateOK || canReuseCachedBlockAudio(language, block, state.Block) {
+			audioPath := candidate.audioPath
+			if candidate.copyToProject {
+				audioPath, err = ensureProjectBlockAudio(artifacts, index, blockID, candidate.audioPath)
+				if err != nil {
+					return blockSynthesisResult{}, err
+				}
+			}
+			durationMS := state.DurationMS
+			if durationMS <= 0 {
+				durationMS, err = audioDurationMS(candidate.audioPath)
+				if err != nil {
+					return blockSynthesisResult{}, err
+				}
+			}
+			alignedBlock, err := aligner.AlignBlock(ctx, language, block, audioPath, durationMS)
+			if err != nil {
+				return blockSynthesisResult{}, err
+			}
+			if err := persistBlockCheckpoint(artifacts.blockStatesDir, index, alignedBlock, durationMS); err != nil {
+				return blockSynthesisResult{}, err
+			}
+			log.Printf("♻️ podcast block reuse cached tts block=%s source=%s audio=%s duration_ms=%d", blockID, candidate.audioPath, audioPath, durationMS)
+			return blockSynthesisResult{
+				AudioPath:    audioPath,
+				DurationMS:   durationMS,
+				AlignedBlock: alignedBlock,
+			}, nil
+		}
+		log.Printf("🔁 cached tts audio ignored block=%s reason=script_changed source=%s", blockID, candidate.audioPath)
 	}
 
 	// Each block is synthesized independently so a failed run can resume from the
@@ -232,6 +253,23 @@ func synthesizeOrResumeBlock(ctx context.Context, client *googlecloud.Client, al
 		DurationMS:   durationMS,
 		AlignedBlock: alignedBlock,
 	}, nil
+}
+
+func canReuseCachedBlockAudio(language string, current, cached dto.PodcastBlock) bool {
+	if len(current.Segments) != len(cached.Segments) {
+		return false
+	}
+	for i := range current.Segments {
+		currentSeg := current.Segments[i]
+		cachedSeg := cached.Segments[i]
+		if defaultSpeaker(currentSeg.Speaker) != defaultSpeaker(cachedSeg.Speaker) {
+			return false
+		}
+		if strings.TrimSpace(spokenTextForSynthesis(language, currentSeg)) != strings.TrimSpace(spokenTextForSynthesis(language, cachedSeg)) {
+			return false
+		}
+	}
+	return true
 }
 
 // assembleDialogue is the single place where relative block timings become absolute
@@ -283,6 +321,10 @@ func clonePodcastSegment(seg dto.PodcastSegment) dto.PodcastSegment {
 		out.TokenSpans = make([]dto.PodcastTokenSpan, len(seg.TokenSpans))
 		copy(out.TokenSpans, seg.TokenSpans)
 	}
+	if len(seg.HighlightSpans) > 0 {
+		out.HighlightSpans = make([]dto.PodcastHighlightSpan, len(seg.HighlightSpans))
+		copy(out.HighlightSpans, seg.HighlightSpans)
+	}
 	return out
 }
 
@@ -305,6 +347,10 @@ func shiftSegmentTiming(seg *dto.PodcastSegment, offsetMS int) {
 		seg.Tokens[i].StartMS += offsetMS
 		seg.Tokens[i].EndMS += offsetMS
 	}
+	for i := range seg.HighlightSpans {
+		seg.HighlightSpans[i].StartMS += offsetMS
+		seg.HighlightSpans[i].EndMS += offsetMS
+	}
 }
 
 func buildConversationRequest(language string, block dto.PodcastBlock) googlecloud.SynthesizeConversationRequest {
@@ -321,27 +367,24 @@ func buildConversationRequest(language string, block dto.PodcastBlock) googleclo
 	}
 	return googlecloud.SynthesizeConversationRequest{
 		LanguageCode:  language,
-		Prompt:        buildGeminiBlockPrompt(language, block),
+		Prompt:        buildGeminiBlockPrompt(language),
 		Turns:         turns,
 		MaleVoiceID:   conf.Get[string]("worker.google_tts_male_voice_id"),
 		FemaleVoiceID: conf.Get[string]("worker.google_tts_female_voice_id"),
+		SpeakingRate:  ttsSpeakingRate(language),
 	}
 }
 
-func buildGeminiBlockPrompt(language string, block dto.PodcastBlock) string {
-	// Gemini responds best when we keep the direction focused on relationship,
-	// delivery, and emotional color instead of repeating structural rules.
+func buildGeminiBlockPrompt(language string) string {
+	// Keep the prompt focused on stable voice traits and avoid storyline/context
+	// framing that a stateless TTS request cannot truly carry across blocks.
 	var base string
 	if isJapaneseLanguage(language) {
-		base = strings.TrimSpace(fmt.Sprintf(
-			"Create a natural Japanese two-friend podcast block. They are longtime close friends, relaxed and unguarded, never stiff or broadcaster-like. Male speaker is steady, explanatory, and easy to follow. Female speaker reacts quickly, asks natural follow-up questions, and sounds emotionally present. Use warm everyday spoken Japanese that feels like real close-friend conversation, not textbook dialogue. When the text implies it, allow small natural laughs, sighs, surprise, hesitation, soft overlap, and playful reactions. Keep the pacing comfortable, human, and nuanced. Block purpose: %s.",
-			strings.TrimSpace(block.Purpose),
-		))
+		base = strings.TrimSpace(
+			"Generate a natural two-speaker Japanese learning podcast dialogue. Use stable voice characterization and keep the overall delivery consistent. Male speaker: late-20s to early-30s, calm, grounded, low-to-mid pitch, steady warmth, clear explanatory delivery, natural everyday Japanese, never announcer-like, never theatrical, never overly energetic. Female speaker: mid-to-late-20s, bright but natural, mid pitch, curious and responsive, friendly warmth, everyday spoken Japanese, never childish, never anime-like, never overly cute, never exaggerated. Keep both voices relaxed, emotionally controlled, and easy to follow. Allow subtle warmth, light conversational responsiveness, and small emotional shading when the text supports it, but keep the same voice identity and overall energy level stable. Naturalness must come from timing and clarity, not from stronger acting. Avoid dramatic laughs, audible sighs, breathy performance, exaggerated surprise, performative interjections, or large style shifts.")
 	} else {
-		base = strings.TrimSpace(fmt.Sprintf(
-			"Create a natural Mandarin Chinese two-friend podcast block. They are longtime close friends, relaxed and unguarded, never stiff or presenter-like. Male speaker leads with clear, easy explanations. Female speaker asks stronger follow-up questions and reacts from an everyday-life perspective. Use warm daily spoken Mandarin, not news-anchor or textbook language. Speak a little slower than casual native speed so Chinese learners can follow comfortably, while still sounding natural and human. When the text implies it, allow small natural laughs, sighs, surprise, hesitation, and playful reactions. Keep the pacing comfortable, warm, and nuanced. Block purpose: %s.",
-			strings.TrimSpace(block.Purpose),
-		))
+		base = strings.TrimSpace(
+			"Generate a natural two-speaker Mandarin Chinese learning podcast dialogue. Use stable voice characterization and keep the overall delivery consistent. Male speaker: late-20s to early-30s, calm, grounded, low-to-mid pitch, warm, steady, clear explanatory delivery, everyday spoken Mandarin, never news-anchor-like, never presenter-like, never theatrical. Female speaker: mid-to-late-20s, bright but natural, mid pitch, curious and responsive, warm and conversational, everyday spoken Mandarin, never childish, never overly cute, never exaggerated. Keep both voices relaxed, emotionally controlled, and easy to follow. Allow subtle natural warmth, light conversational reactions, and small emotional shading when the text supports it, but keep the same voice identity and overall energy level stable. Naturalness must come from timing, phrasing, and clarity, not from changing character. Avoid dramatic laughs, sighs, gasps, breathy delivery, exaggerated surprise, playful overacting, or large style shifts.")
 	}
 	appendParts := []string{strings.TrimSpace(conf.Get[string]("worker.google_tts_prompt_append"))}
 	if isJapaneseLanguage(language) {
@@ -363,6 +406,16 @@ func buildGeminiBlockPrompt(language string, block dto.PodcastBlock) string {
 	// Env-configured prompt additions are appended verbatim so we can tune
 	// delivery without touching code or disturbing the default base direction.
 	return strings.TrimSpace(base + " " + strings.Join(extras, " "))
+}
+
+func ttsSpeakingRate(language string) float64 {
+	base := conf.Get[float64]("worker.google_tts_speaking_rate")
+	if isJapaneseLanguage(language) {
+		if value := conf.Get[float64]("worker.google_tts_ja_speaking_rate"); value > 0 {
+			return value
+		}
+	}
+	return base
 }
 
 func spokenTextForSynthesis(language string, seg dto.PodcastSegment) string {
@@ -402,6 +455,8 @@ func newMFAClient() *mfa.Client {
 		Enabled:               conf.Get[bool]("worker.mfa_enabled"),
 		Command:               conf.Get[string]("worker.mfa_command"),
 		TemporaryDirectory:    conf.Get[string]("worker.mfa_temporary_directory"),
+		Beam:                  conf.Get[int]("worker.mfa_beam"),
+		RetryBeam:             conf.Get[int]("worker.mfa_retry_beam"),
 		MandarinDictionary:    conf.Get[string]("worker.mfa_zh_dictionary"),
 		MandarinAcousticModel: conf.Get[string]("worker.mfa_zh_acoustic_model"),
 		MandarinG2PModel:      conf.Get[string]("worker.mfa_zh_g2p_model"),
@@ -420,39 +475,48 @@ func existingBlockAudioPath(dir string, index int, blockID string) (string, bool
 	return matches[0], true
 }
 
-func loadDirectProjectArtifacts(sourceProjectName, targetDialoguePath, targetAlignedPath string) (*GenerateResult, error) {
-	sourceDir := directProjectSourceDir(sourceProjectName)
-	sourceDialoguePath := filepath.Join(sourceDir, "dialogue.mp3")
-	sourceAlignedPath := filepath.Join(sourceDir, "script_aligned.json")
+type reusableBlockAudio struct {
+	audioPath     string
+	stateDir      string
+	copyToProject bool
+}
 
-	if _, err := os.Stat(sourceDialoguePath); err != nil {
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("direct project dialogue missing: %s", sourceDialoguePath)
+func reusableBlockAudioCandidates(artifacts audioArtifacts, index int, blockID string) []reusableBlockAudio {
+	candidates := make([]reusableBlockAudio, 0, 2)
+	if audioPath, ok := existingBlockAudioPath(artifacts.blocksDir, index, blockID); ok {
+		candidates = append(candidates, reusableBlockAudio{
+			audioPath: audioPath,
+			stateDir:  artifacts.blockStatesDir,
+		})
+	}
+	if artifacts.reuseBlocksDir != "" && filepath.Clean(artifacts.reuseBlocksDir) != filepath.Clean(artifacts.blocksDir) {
+		if audioPath, ok := existingBlockAudioPath(artifacts.reuseBlocksDir, index, blockID); ok {
+			stateDir := artifacts.reuseStatesDir
+			if strings.TrimSpace(stateDir) == "" {
+				stateDir = artifacts.blockStatesDir
+			}
+			candidates = append(candidates, reusableBlockAudio{
+				audioPath:     audioPath,
+				stateDir:      stateDir,
+				copyToProject: true,
+			})
 		}
-		return nil, err
 	}
-	if _, err := os.Stat(sourceAlignedPath); err != nil {
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("direct project aligned script missing: %s", sourceAlignedPath)
-		}
-		return nil, err
-	}
-	if err := copyFile(sourceDialoguePath, targetDialoguePath); err != nil {
-		return nil, fmt.Errorf("copy direct project dialogue failed: %w", err)
-	}
-	if err := copyFile(sourceAlignedPath, targetAlignedPath); err != nil {
-		return nil, fmt.Errorf("copy direct project aligned script failed: %w", err)
-	}
+	return candidates
+}
 
-	var script dto.PodcastScript
-	if err := readJSON(targetAlignedPath, &script); err != nil {
-		return nil, fmt.Errorf("read direct project aligned script failed: %w", err)
+func ensureProjectBlockAudio(artifacts audioArtifacts, index int, blockID, sourceAudioPath string) (string, error) {
+	targetAudioPath := unitAudioPath(artifacts.blocksDir, index, blockID, filepath.Ext(sourceAudioPath))
+	if filepath.Clean(sourceAudioPath) == filepath.Clean(targetAudioPath) {
+		return targetAudioPath, nil
 	}
-	return &GenerateResult{
-		DialogueAudioPath: targetDialoguePath,
-		AlignedScriptPath: targetAlignedPath,
-		Script:            script,
-	}, nil
+	if fileExists(targetAudioPath) {
+		return targetAudioPath, nil
+	}
+	if err := copyFile(sourceAudioPath, targetAudioPath); err != nil {
+		return "", fmt.Errorf("copy cached block audio failed: %w", err)
+	}
+	return targetAudioPath, nil
 }
 
 func requirePodcastLanguage(value string) (string, error) {

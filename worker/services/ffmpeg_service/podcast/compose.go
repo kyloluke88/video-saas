@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	conf "worker/pkg/config"
 	"worker/services/ffmpeg_service/common"
@@ -22,22 +23,21 @@ func ComposeVideo(input ComposeInput) error {
 	}
 
 	projectDir := filepath.Dir(input.OutputPath)
-	scale := common.ResolutionToScale(input.Resolution)
 	wave := waveformPresetFor(input.DesignStyle, input.Resolution)
 	x264Preset := podcastX264Preset()
+	ffmpegTimeout := podcastComposeFFmpegTimeout(input.DialogueAudioPath)
 
 	baseOutput := filepath.Join(projectDir, "podcast_base.mp4")
 	contentOutput := input.OutputPath
 	if shouldKeepPodcastContentVideo(input) {
 		contentOutput = filepath.Join(projectDir, "podcast_content.mp4")
 	}
-	bgFilter := fmt.Sprintf("[0:v]scale=%s", scale)
+	bgFilter := backgroundGraphFor(input.DesignStyle, input.Resolution)
 	if strings.TrimSpace(wave.BackgroundFilter) != "" {
 		bgFilter += "," + wave.BackgroundFilter
 	}
-	bgFilter += "[bg]"
 	complexFilter := fmt.Sprintf("%s;%s;[bg][sw]overlay=%s[v]", bgFilter, wave.AudioGraph, wave.Overlay)
-	if err := common.RunFFmpeg(
+	if err := common.RunFFmpegWithTimeout(ffmpegTimeout,
 		"-y",
 		"-loop", "1",
 		"-i", input.BackgroundImagePath,
@@ -56,7 +56,7 @@ func ComposeVideo(input ComposeInput) error {
 	}
 
 	if input.Script == nil {
-		return common.RunFFmpeg(
+		return common.RunFFmpegWithTimeout(ffmpegTimeout,
 			"-y",
 			"-i", baseOutput,
 			"-c", "copy",
@@ -69,7 +69,7 @@ func ComposeVideo(input ComposeInput) error {
 		return err
 	}
 	if strings.TrimSpace(assPath) == "" {
-		return common.RunFFmpeg(
+		return common.RunFFmpegWithTimeout(ffmpegTimeout,
 			"-y",
 			"-i", baseOutput,
 			"-c", "copy",
@@ -78,7 +78,7 @@ func ComposeVideo(input ComposeInput) error {
 	}
 
 	filter := fmt.Sprintf("subtitles=%s:fontsdir=%s", escapeFFmpegPath(assPath), escapeFFmpegPath(podcastFontsDir()))
-	if err := common.RunFFmpeg(
+	if err := common.RunFFmpegWithTimeout(ffmpegTimeout,
 		"-y",
 		"-i", baseOutput,
 		"-vf", filter,
@@ -90,7 +90,7 @@ func ComposeVideo(input ComposeInput) error {
 	); err != nil {
 		return err
 	}
-	if err := prependPodcastIntroIfNeeded(input, contentOutput, x264Preset); err != nil {
+	if err := prependPodcastIntroIfNeeded(input, contentOutput, x264Preset, ffmpegTimeout); err != nil {
 		return err
 	}
 	return nil
@@ -120,7 +120,7 @@ func podcastX264Preset() string {
 	return strings.TrimSpace(conf.Get[string]("worker.podcast_x264_preset", "veryfast"))
 }
 
-func prependPodcastIntroIfNeeded(input ComposeInput, contentOutput, x264Preset string) error {
+func prependPodcastIntroIfNeeded(input ComposeInput, contentOutput, x264Preset string, ffmpegTimeout time.Duration) error {
 	if input.Script == nil || strings.TrimSpace(contentOutput) == "" {
 		return nil
 	}
@@ -129,7 +129,7 @@ func prependPodcastIntroIfNeeded(input ComposeInput, contentOutput, x264Preset s
 		if contentOutput == input.OutputPath {
 			return nil
 		}
-		return common.RunFFmpeg(
+		return common.RunFFmpegWithTimeout(ffmpegTimeout,
 			"-y",
 			"-i", contentOutput,
 			"-c", "copy",
@@ -143,7 +143,7 @@ func prependPodcastIntroIfNeeded(input ComposeInput, contentOutput, x264Preset s
 
 	introPath := podcastIntroAnimationPath(language)
 	if strings.TrimSpace(introPath) == "" {
-		return common.RunFFmpeg(
+		return common.RunFFmpegWithTimeout(ffmpegTimeout,
 			"-y",
 			"-i", contentOutput,
 			"-c", "copy",
@@ -152,7 +152,7 @@ func prependPodcastIntroIfNeeded(input ComposeInput, contentOutput, x264Preset s
 	}
 	if _, err := os.Stat(introPath); err != nil {
 		if os.IsNotExist(err) {
-			return common.RunFFmpeg(
+			return common.RunFFmpegWithTimeout(ffmpegTimeout,
 				"-y",
 				"-i", contentOutput,
 				"-c", "copy",
@@ -167,7 +167,7 @@ func prependPodcastIntroIfNeeded(input ComposeInput, contentOutput, x264Preset s
 		return err
 	}
 	if introDurationSec <= 0 {
-		return common.RunFFmpeg(
+		return common.RunFFmpegWithTimeout(ffmpegTimeout,
 			"-y",
 			"-i", contentOutput,
 			"-c", "copy",
@@ -177,7 +177,7 @@ func prependPodcastIntroIfNeeded(input ComposeInput, contentOutput, x264Preset s
 
 	scale := common.ResolutionToScale(input.Resolution)
 	filter := fmt.Sprintf("[0:v]scale=%s,setsar=1[v0];[0:a]aresample=48000,asetpts=N/SR/TB[a0];[1:v]setsar=1[v1];[1:a]aresample=48000,asetpts=N/SR/TB[a1];[v0][a0][v1][a1]concat=n=2:v=1:a=1[v][a]", scale)
-	if err := common.RunFFmpeg(
+	if err := common.RunFFmpegWithTimeout(ffmpegTimeout,
 		"-y",
 		"-i", introPath,
 		"-i", contentOutput,
@@ -193,6 +193,42 @@ func prependPodcastIntroIfNeeded(input ComposeInput, contentOutput, x264Preset s
 		return err
 	}
 	return nil
+}
+
+func podcastComposeFFmpegTimeout(dialogueAudioPath string) time.Duration {
+	configured := time.Duration(conf.Get[int]("worker.podcast_ffmpeg_timeout_sec")) * time.Second
+	fallback := time.Duration(conf.Get[int]("worker.ffmpeg_timeout_sec", 300)) * time.Second
+	durationSec := 0.0
+	if measured, err := common.AudioDurationSec(dialogueAudioPath); err == nil && measured > 0 {
+		durationSec = measured
+	}
+	return computePodcastComposeTimeout(configured, fallback, durationSec)
+}
+
+func computePodcastComposeTimeout(configured, fallback time.Duration, audioDurationSec float64) time.Duration {
+	if configured > 0 {
+		return configured
+	}
+
+	timeout := fallback
+	if timeout <= 0 {
+		timeout = 5 * time.Minute
+	}
+
+	if audioDurationSec > 0 {
+		estimated := time.Duration(audioDurationSec*float64(time.Second))*2 + 10*time.Minute
+		if estimated > timeout {
+			timeout = estimated
+		}
+	}
+
+	if timeout < 20*time.Minute {
+		timeout = 20 * time.Minute
+	}
+	if timeout > 2*time.Hour {
+		timeout = 2 * time.Hour
+	}
+	return timeout
 }
 
 func shouldKeepPodcastContentVideo(input ComposeInput) bool {

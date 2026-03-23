@@ -16,6 +16,8 @@ type audioArtifacts struct {
 	blocksDir      string
 	blockStatesDir string
 	blockGapPath   string
+	reuseBlocksDir string
+	reuseStatesDir string
 }
 
 func prepareAudioArtifacts(projectDir string) (audioArtifacts, error) {
@@ -51,6 +53,9 @@ func finalizeAlignedScript(projectID, alignedPath, dialoguePath string, script d
 		return dto.PodcastScript{}, err
 	}
 	if err := exportYouTubePublishFiles(filepath.Dir(alignedPath), finalScript); err != nil {
+		return dto.PodcastScript{}, err
+	}
+	if err := exportYouTubeTranscriptFile(filepath.Dir(alignedPath), finalScript); err != nil {
 		return dto.PodcastScript{}, err
 	}
 	if err := exportConversationMinimalFile(filepath.Dir(alignedPath), projectID, finalScript); err != nil {

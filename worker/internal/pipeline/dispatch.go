@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"worker/internal/dto"
 	conf "worker/pkg/config"
@@ -45,8 +46,11 @@ func HandleMessage(ch *amqp.Channel, msg amqp.Delivery, scheduler map[string]Tas
 			_ = msg.Nack(false, true)
 			return retryErr
 		}
+		log.Printf("🔁 任务进入延迟重试 task_id=%s next_retry=%d delay=%s", task.TaskID, retries+1, TaskRetryDelay(retries+1).String())
 		return msg.Ack(false)
 	}
+
+	log.Printf("✅ 任务处理完成 task_id=%s type=%s project_id=%s", task.TaskID, task.TaskType, taskProjectID(task))
 
 	return msg.Ack(false)
 }
@@ -60,13 +64,15 @@ func processTask(ch *amqp.Channel, task dto.VideoTaskMessage, scheduler map[stri
 }
 
 func publishToRetry(ch *amqp.Channel, body []byte, retries int) error {
-	return ch.Publish(conf.Get[string]("worker.rabbitmq_exchange"), conf.Get[string]("worker.rabbitmq_retry_routing_key"), false, false, amqp.Publishing{
+	delay := TaskRetryDelay(retries)
+	return ch.Publish(conf.Get[string]("worker.rabbitmq_exchange"), TaskRetryRoutingKey(conf.Get[string]("worker.rabbitmq_retry_routing_key"), retries), false, false, amqp.Publishing{
 		ContentType:  "application/json",
 		DeliveryMode: amqp.Persistent,
 		Timestamp:    nowUTC(),
 		Body:         body,
 		Headers: amqp.Table{
-			"x-retry-count": int32(retries),
+			"x-retry-count":    int32(retries),
+			"x-retry-delay-ms": int32(delay / time.Millisecond),
 		},
 	})
 }
@@ -86,4 +92,18 @@ func publishToDLQ(ch *amqp.Channel, body []byte, retries int) error {
 func isNonRetryable(err error) bool {
 	var svcPermanent services.NonRetryableError
 	return errors.As(err, &svcPermanent)
+}
+
+func taskProjectID(task dto.VideoTaskMessage) string {
+	if task.Payload == nil {
+		return ""
+	}
+	value, ok := task.Payload["project_id"]
+	if !ok || value == nil {
+		return ""
+	}
+	if projectID, ok := value.(string); ok {
+		return projectID
+	}
+	return fmt.Sprint(value)
 }

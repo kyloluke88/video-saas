@@ -116,86 +116,18 @@ func fillUnalignedJapaneseAnnotationTokens(seg dto.PodcastSegment) dto.PodcastSe
 }
 
 func buildJapaneseAnnotationSpans(seg dto.PodcastSegment) []japaneseAnnotationSpan {
-	textRunes := []rune(japaneseDisplayText(seg))
-	if len(textRunes) == 0 || len(seg.Tokens) == 0 {
+	refs := dto.BuildJapaneseTokenSpanRefs(japaneseDisplayText(seg), seg.Tokens)
+	if len(refs) == 0 {
 		return nil
 	}
-	out := make([]japaneseAnnotationSpan, 0, len(seg.Tokens))
-	searchFrom := 0
-	for idx, token := range seg.Tokens {
-		surface := strings.TrimSpace(token.Char)
-		reading := strings.TrimSpace(token.Reading)
-		if surface == "" || reading == "" {
-			continue
-		}
-		start, end, ok := findJapaneseSurfaceRange(textRunes, []rune(surface), searchFrom)
-		if !ok {
-			continue
-		}
-		span, ok := normalizeJapaneseSpanRange(textRunes, dto.PodcastTokenSpan{
-			StartIndex: start,
-			EndIndex:   end,
-			Reading:    reading,
-		})
-		if !ok {
-			searchFrom = end + 1
-			continue
-		}
+	out := make([]japaneseAnnotationSpan, 0, len(refs))
+	for _, ref := range refs {
 		out = append(out, japaneseAnnotationSpan{
-			TokenIndex: idx,
-			Span:       span,
+			TokenIndex: ref.TokenIndex,
+			Span:       ref.Span,
 		})
-		searchFrom = end + 1
 	}
 	return out
-}
-
-func findJapaneseSurfaceRange(textRunes, surfaceRunes []rune, searchFrom int) (int, int, bool) {
-	if len(surfaceRunes) == 0 || len(textRunes) == 0 || searchFrom >= len(textRunes) {
-		return 0, 0, false
-	}
-	maxStart := len(textRunes) - len(surfaceRunes)
-	for start := maxInt(searchFrom, 0); start <= maxStart; start++ {
-		match := true
-		for i := range surfaceRunes {
-			if textRunes[start+i] != surfaceRunes[i] {
-				match = false
-				break
-			}
-		}
-		if match {
-			return start, start + len(surfaceRunes) - 1, true
-		}
-	}
-	return 0, 0, false
-}
-
-func normalizeJapaneseSpanRange(runes []rune, span dto.PodcastTokenSpan) (dto.PodcastTokenSpan, bool) {
-	firstHan := -1
-	lastHan := -1
-	for i := span.StartIndex; i <= span.EndIndex; i++ {
-		if i < 0 || i >= len(runes) {
-			return dto.PodcastTokenSpan{}, false
-		}
-		if dto.ContainsJapaneseKanji(string(runes[i])) {
-			if firstHan == -1 {
-				firstHan = i
-			}
-			lastHan = i
-		}
-	}
-	if firstHan == -1 {
-		return dto.PodcastTokenSpan{}, false
-	}
-	for firstHan > 0 && dto.ContainsJapaneseKanji(string(runes[firstHan-1])) {
-		firstHan--
-	}
-	for lastHan+1 < len(runes) && dto.ContainsJapaneseKanji(string(runes[lastHan+1])) {
-		lastHan++
-	}
-	span.StartIndex = firstHan
-	span.EndIndex = lastHan
-	return span, true
 }
 
 func japaneseDisplayText(seg dto.PodcastSegment) string {

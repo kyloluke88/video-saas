@@ -2,6 +2,7 @@ package podcast_audio_service
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -70,18 +71,24 @@ func (a *blockAligner) AlignBlock(ctx context.Context, language string, block dt
 		Transcript:   blockTranscript(language, block),
 		WorkingDir:   a.workingDir,
 	})
-	if err != nil {
-		return dto.PodcastBlock{}, err
-	}
-	if len(words) == 0 {
-		return a.alignBlockHeuristically(language, block, durationMS), nil
+	if err == nil && len(words) > 0 {
+		aligned, ok := alignBlockWithTimedWords(language, block, words, durationMS)
+		if ok {
+			return aligned, nil
+		}
 	}
 
-	aligned, ok := alignBlockWithTimedWords(language, block, words, durationMS)
-	if !ok {
-		return a.alignBlockHeuristically(language, block, durationMS), nil
+	segmented, segErr := a.alignBlockBySegments(ctx, language, block, alignmentAudioPath, durationMS)
+	if segErr == nil {
+		return segmented, nil
 	}
-	return aligned, nil
+	if err != nil {
+		return dto.PodcastBlock{}, fmt.Errorf("%w; segment_retry=%v", err, segErr)
+	}
+	if len(words) == 0 {
+		return dto.PodcastBlock{}, fmt.Errorf("mfa block alignment returned no words and segment retry failed: %w", segErr)
+	}
+	return dto.PodcastBlock{}, fmt.Errorf("mfa block alignment did not map cleanly and segment retry failed: %w", segErr)
 }
 
 func extractAlignmentAudio(audioPath, workingDir string) (string, error) {
@@ -115,6 +122,43 @@ func extractAlignmentAudio(audioPath, workingDir string) (string, error) {
 	return chunkPath, nil
 }
 
+func extractAlignmentAudioChunk(audioPath, workingDir string, startMS, endMS int) (string, error) {
+	startMS = maxInt(0, startMS)
+	endMS = maxInt(startMS+1, endMS)
+	if strings.TrimSpace(workingDir) == "" {
+		workingDir = os.TempDir()
+	}
+	if err := os.MkdirAll(workingDir, 0o755); err != nil {
+		return "", err
+	}
+	chunkFile, err := os.CreateTemp(workingDir, "align_chunk_*.wav")
+	if err != nil {
+		return "", err
+	}
+	chunkPath := chunkFile.Name()
+	if err := chunkFile.Close(); err != nil {
+		_ = os.Remove(chunkPath)
+		return "", err
+	}
+
+	startSec := fmt.Sprintf("%.3f", float64(startMS)/1000.0)
+	endSec := fmt.Sprintf("%.3f", float64(endMS)/1000.0)
+	if err := ffmpegcommon.RunFFmpeg(
+		"-y",
+		"-i", audioPath,
+		"-ss", startSec,
+		"-to", endSec,
+		"-ac", "1",
+		"-ar", "16000",
+		"-c:a", "pcm_s16le",
+		chunkPath,
+	); err != nil {
+		_ = os.Remove(chunkPath)
+		return "", err
+	}
+	return chunkPath, nil
+}
+
 func blockTranscript(language string, block dto.PodcastBlock) string {
 	parts := make([]string, 0, len(block.Segments))
 	for _, seg := range block.Segments {
@@ -132,6 +176,74 @@ func spokenTextForAlignment(language string, seg dto.PodcastSegment) string {
 		return japaneseDisplayText(seg)
 	}
 	return strings.TrimSpace(seg.Text)
+}
+
+func (a *blockAligner) alignBlockBySegments(ctx context.Context, language string, block dto.PodcastBlock, audioPath string, blockDurationMS int) (dto.PodcastBlock, error) {
+	estimated := a.alignBlockHeuristically(language, block, blockDurationMS)
+	aligned := block
+
+	for i, seg := range block.Segments {
+		estimatedSeg := estimated.Segments[i]
+		chunkStartMS, chunkEndMS := paddedSegmentWindow(i, estimated.Segments, blockDurationMS)
+		chunkPath, err := extractAlignmentAudioChunk(audioPath, a.workingDir, chunkStartMS, chunkEndMS)
+		if err != nil {
+			return dto.PodcastBlock{}, fmt.Errorf("extract segment chunk %s failed: %w", seg.SegmentID, err)
+		}
+
+		words, alignErr := a.client.AlignWords(ctx, mfa.AlignRequest{
+			LanguageCode: language,
+			AudioPath:    chunkPath,
+			Transcript:   spokenTextForAlignment(language, seg),
+			WorkingDir:   a.workingDir,
+		})
+		_ = os.Remove(chunkPath)
+		if alignErr != nil {
+			return dto.PodcastBlock{}, fmt.Errorf("segment %s mfa align failed: %w", seg.SegmentID, alignErr)
+		}
+		if len(words) == 0 {
+			return dto.PodcastBlock{}, fmt.Errorf("segment %s mfa align returned no words", seg.SegmentID)
+		}
+
+		alignedSeg, ok := alignSingleSegmentWithWords(language, seg, words, chunkStartMS, chunkEndMS)
+		if !ok {
+			return dto.PodcastBlock{}, fmt.Errorf("segment %s mfa words could not be mapped to transcript", seg.SegmentID)
+		}
+		if alignedSeg.EndMS <= alignedSeg.StartMS {
+			alignedSeg.StartMS = estimatedSeg.StartMS
+			alignedSeg.EndMS = estimatedSeg.EndMS
+		}
+		aligned.Segments[i] = alignedSeg
+	}
+	return aligned, nil
+}
+
+func paddedSegmentWindow(index int, segments []dto.PodcastSegment, blockDurationMS int) (int, int) {
+	if index < 0 || index >= len(segments) {
+		return 0, maxInt(1, blockDurationMS)
+	}
+	seg := segments[index]
+	startMS := seg.StartMS
+	endMS := seg.EndMS
+	if endMS <= startMS {
+		return 0, maxInt(1, blockDurationMS)
+	}
+
+	padMS := 180
+	if index > 0 {
+		prevGap := startMS - segments[index-1].EndMS
+		startMS -= minInt(padMS, maxInt(0, prevGap/2))
+	}
+	if index+1 < len(segments) {
+		nextGap := segments[index+1].StartMS - endMS
+		endMS += minInt(padMS, maxInt(0, nextGap/2))
+	}
+
+	startMS = maxInt(0, startMS)
+	endMS = minInt(blockDurationMS, endMS)
+	if endMS <= startMS {
+		endMS = minInt(blockDurationMS, startMS+1)
+	}
+	return startMS, endMS
 }
 
 func alignBlockWithTimedWords(language string, block dto.PodcastBlock, words []mfa.WordTiming, blockDurationMS int) (dto.PodcastBlock, bool) {
@@ -353,6 +465,84 @@ func segmentWordMatches(spec segmentSpec, matches []timedWordMatch) []timedWordM
 	return out
 }
 
+func alignSingleSegmentWithWords(language string, seg dto.PodcastSegment, words []mfa.WordTiming, chunkStartMS, chunkEndMS int) (dto.PodcastSegment, bool) {
+	spec := buildSingleSegmentSpec(language, seg)
+	if len(spec.Normalized) == 0 {
+		return seg, false
+	}
+	matches := matchWordsToSingleSegment(spec, words, chunkStartMS)
+	if len(matches) == 0 {
+		return seg, false
+	}
+	window := windowForMatches(matches, chunkStartMS, chunkEndMS)
+	if isJapaneseLanguage(language) {
+		return alignJapaneseSegmentWithWords(seg, spec, matches, window), true
+	}
+	return alignChineseSegmentWithWords(seg, spec, matches, window), true
+}
+
+func buildSingleSegmentSpec(language string, seg dto.PodcastSegment) segmentSpec {
+	text := spokenTextForAlignment(language, seg)
+	runes := []rune(text)
+	normalized, normToOriginal := normalizeTextForAlignment(text)
+	return segmentSpec{
+		Text:           text,
+		Runes:          runes,
+		Normalized:     normalized,
+		NormToOriginal: normToOriginal,
+	}
+}
+
+func matchWordsToSingleSegment(spec segmentSpec, words []mfa.WordTiming, offsetMS int) []timedWordMatch {
+	matches := make([]timedWordMatch, 0, len(words))
+	cursor := 0
+
+	for _, word := range words {
+		normalized, _ := normalizeTextForAlignment(word.Text)
+		if len(normalized) == 0 {
+			continue
+		}
+
+		start := findSubslice(spec.Normalized, normalized, cursor)
+		if start < 0 {
+			start = findSubslice(spec.Normalized, normalized, 0)
+		}
+		if start < 0 {
+			continue
+		}
+		end := start + len(normalized)
+		if end > len(spec.NormToOriginal) {
+			continue
+		}
+
+		matches = append(matches, timedWordMatch{
+			StartNorm: spec.NormToOriginal[start],
+			EndNorm:   spec.NormToOriginal[end-1] + 1,
+			StartMS:   offsetMS + word.StartMS,
+			EndMS:     offsetMS + maxInt(word.EndMS, word.StartMS+1),
+		})
+		cursor = end
+	}
+	return matches
+}
+
+func windowForMatches(matches []timedWordMatch, fallbackStartMS, fallbackEndMS int) segmentWindow {
+	window := segmentWindow{
+		StartMS: fallbackStartMS,
+		EndMS:   maxInt(fallbackEndMS, fallbackStartMS+1),
+	}
+	for i, match := range matches {
+		if i == 0 || match.StartMS < window.StartMS {
+			window.StartMS = match.StartMS
+		}
+		if i == 0 || match.EndMS > window.EndMS {
+			window.EndMS = match.EndMS
+		}
+	}
+	window.HasMatch = len(matches) > 0 && window.EndMS > window.StartMS
+	return window
+}
+
 func alignChineseSegmentWithWords(seg dto.PodcastSegment, spec segmentSpec, matches []timedWordMatch, window segmentWindow) dto.PodcastSegment {
 	seg.StartMS = window.StartMS
 	seg.EndMS = maxInt(window.EndMS, window.StartMS+1)
@@ -393,6 +583,7 @@ func chineseTokenIndexByRune(seg dto.PodcastSegment, tokens []dto.PodcastToken) 
 func alignJapaneseSegmentWithWords(seg dto.PodcastSegment, spec segmentSpec, matches []timedWordMatch, window segmentWindow) dto.PodcastSegment {
 	seg.StartMS = window.StartMS
 	seg.EndMS = maxInt(window.EndMS, window.StartMS+1)
+	seg.HighlightSpans = buildJapaneseMFAHighlightSpans(spec.Runes, matches)
 	spans := buildJapaneseAnnotationSpans(seg)
 	if len(spans) == 0 {
 		return normalizeJapaneseSegment(seg)
@@ -421,6 +612,52 @@ func alignJapaneseSegmentWithWords(seg dto.PodcastSegment, spec segmentSpec, mat
 	}
 	seg.Tokens = tokens
 	return normalizeJapaneseSegment(seg)
+}
+
+func buildJapaneseMFAHighlightSpans(runes []rune, matches []timedWordMatch) []dto.PodcastHighlightSpan {
+	if len(runes) == 0 || len(matches) == 0 {
+		return nil
+	}
+
+	out := make([]dto.PodcastHighlightSpan, 0, len(matches))
+	for _, match := range matches {
+		start := maxInt(0, match.StartNorm)
+		end := minInt(len(runes), match.EndNorm) - 1
+		if start >= len(runes) || end < start {
+			continue
+		}
+		if match.EndMS <= match.StartMS {
+			continue
+		}
+
+		span := dto.PodcastHighlightSpan{
+			StartIndex: start,
+			EndIndex:   end,
+			StartMS:    match.StartMS,
+			EndMS:      match.EndMS,
+		}
+
+		if len(out) > 0 && span.StartIndex <= out[len(out)-1].EndIndex {
+			prev := &out[len(out)-1]
+			if span.EndIndex > prev.EndIndex {
+				prev.EndIndex = span.EndIndex
+			}
+			if span.StartMS < prev.StartMS {
+				prev.StartMS = span.StartMS
+			}
+			if span.EndMS > prev.EndMS {
+				prev.EndMS = span.EndMS
+			}
+			continue
+		}
+
+		out = append(out, span)
+	}
+
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 func (a *blockAligner) alignBlockHeuristically(language string, block dto.PodcastBlock, blockDurationMS int) dto.PodcastBlock {

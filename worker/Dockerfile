@@ -26,7 +26,7 @@ RUN arch="$(uname -m)" && \
     rm -f /tmp/miniforge.sh && \
     /opt/conda/bin/conda config --system --set auto_update_conda false && \
     /opt/conda/bin/conda install -y -n base -c conda-forge mamba && \
-    /opt/conda/bin/mamba create -y -p /opt/mfa-env -c conda-forge python=3.10 montreal-forced-aligner spacy sudachipy sudachidict-core && \
+    /opt/conda/bin/mamba create -y -p /opt/mfa-env -c conda-forge python=3.10 montreal-forced-aligner spacy sudachipy sudachidict-core pip && \
     mkdir -p /opt/mfa && \
     useradd -ms /bin/bash mfauser && \
     chown -R mfauser /opt/mfa /opt/mfa-env && \
@@ -42,7 +42,8 @@ RUN arch="$(uname -m)" && \
         sleep $((attempts * 5)); \
       done; \
     } && \
-    su - mfauser -c 'export PATH=/opt/mfa-env/bin:$PATH; /opt/mfa-env/bin/python -c "import spacy, sudachipy, sudachidict_core"' && \
+    retry su - mfauser -c 'export PATH=/opt/mfa-env/bin:$PATH; /opt/mfa-env/bin/pip install --no-cache-dir spacy-pkuseg dragonmapper hanziconv' && \
+    su - mfauser -c 'export PATH=/opt/mfa-env/bin:$PATH; /opt/mfa-env/bin/python -c "import spacy, sudachipy, sudachidict_core, spacy_pkuseg, dragonmapper, hanziconv"' && \
     su - mfauser -c 'export PATH=/opt/mfa-env/bin:$PATH; MFA_ROOT_DIR=/opt/mfa mfa server init' && \
     retry su - mfauser -c 'export PATH=/opt/mfa-env/bin:$PATH; MFA_ROOT_DIR=/opt/mfa mfa model download dictionary japanese_mfa' && \
     retry su - mfauser -c 'export PATH=/opt/mfa-env/bin:$PATH; MFA_ROOT_DIR=/opt/mfa mfa model download acoustic japanese_mfa' && \

@@ -11,7 +11,7 @@ type PodcastAudioGeneratePayload struct {
 	ProjectID      string `json:"project_id"`
 	Lang           string `json:"lang"`
 	ContentProfile string `json:"content_profile"`
-	IsDirect       int    `json:"is_direct,omitempty"`
+	RunMode        int    `json:"run_mode,omitempty"`
 	Title          string `json:"title,omitempty"`
 	ScriptFilename string `json:"script_filename"`
 	BgImgFilename  string `json:"bg_img_filename"`
@@ -33,11 +33,12 @@ type PodcastComposePayload struct {
 }
 
 type PodcastScript struct {
-	Language string           `json:"language,omitempty"`
-	Title    string           `json:"title,omitempty"`
-	YouTube  PodcastYouTube   `json:"youtube,omitempty"`
-	Blocks   []PodcastBlock   `json:"blocks,omitempty"`
-	Segments []PodcastSegment `json:"segments,omitempty"`
+	Language        string           `json:"language,omitempty"`
+	DifficultyLevel string           `json:"difficulty_level,omitempty"`
+	Title           string           `json:"title,omitempty"`
+	YouTube         PodcastYouTube   `json:"youtube,omitempty"`
+	Blocks          []PodcastBlock   `json:"blocks,omitempty"`
+	Segments        []PodcastSegment `json:"segments,omitempty"`
 }
 
 type PodcastBlock struct {
@@ -52,6 +53,8 @@ type PodcastYouTube struct {
 	Chapters                  []PodcastYouTubeChapter `json:"chapters,omitempty"`
 	InThisEpisodeYouWillLearn []string                `json:"in_this_episode_you_will_learn,omitempty"`
 	DescriptionIntro          []string                `json:"description_intro,omitempty"`
+	Hashtags                  []string                `json:"hashtags,omitempty"`
+	VideoTags                 []string                `json:"video_tags,omitempty"`
 }
 
 type PodcastYouTubeChapter struct {
@@ -70,8 +73,9 @@ type PodcastSegment struct {
 	StartMS   int    `json:"start_ms,omitempty"`
 	EndMS     int    `json:"end_ms,omitempty"`
 
-	Tokens     []PodcastToken     `json:"tokens,omitempty"`
-	TokenSpans []PodcastTokenSpan `json:"-"`
+	Tokens         []PodcastToken         `json:"tokens,omitempty"`
+	HighlightSpans []PodcastHighlightSpan `json:"highlight_spans,omitempty"`
+	TokenSpans     []PodcastTokenSpan     `json:"-"`
 }
 
 type PodcastToken struct {
@@ -87,19 +91,33 @@ type PodcastTokenSpan struct {
 	Reading    string
 }
 
+type PodcastHighlightSpan struct {
+	StartIndex int `json:"start_index"`
+	EndIndex   int `json:"end_index"`
+	StartMS    int `json:"start_ms,omitempty"`
+	EndMS      int `json:"end_ms,omitempty"`
+}
+
+type PodcastTokenSpanRef struct {
+	TokenIndex int
+	Span       PodcastTokenSpan
+}
+
 func (s *PodcastScript) UnmarshalJSON(data []byte) error {
 	type rawScript struct {
-		Language string           `json:"language"`
-		Title    string           `json:"title"`
-		YouTube  PodcastYouTube   `json:"youtube"`
-		Blocks   []PodcastBlock   `json:"blocks"`
-		Segments []PodcastSegment `json:"segments"`
+		Language        string           `json:"language"`
+		DifficultyLevel string           `json:"difficulty_level"`
+		Title           string           `json:"title"`
+		YouTube         PodcastYouTube   `json:"youtube"`
+		Blocks          []PodcastBlock   `json:"blocks"`
+		Segments        []PodcastSegment `json:"segments"`
 	}
 	var raw rawScript
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
 	}
 	s.Language = strings.TrimSpace(raw.Language)
+	s.DifficultyLevel = strings.TrimSpace(raw.DifficultyLevel)
 	s.Title = strings.TrimSpace(raw.Title)
 	s.YouTube = raw.YouTube
 	s.Blocks = raw.Blocks
@@ -151,16 +169,17 @@ func (c *PodcastYouTubeChapter) UnmarshalJSON(data []byte) error {
 
 func (s *PodcastSegment) UnmarshalJSON(data []byte) error {
 	type rawSegment struct {
-		SegmentID  string         `json:"segment_id"`
-		Speaker    string         `json:"speaker"`
-		Text       string         `json:"text"`
-		DisplayJA  string         `json:"display_ja"`
-		EN         string         `json:"en"`
-		Summary    bool           `json:"summary"`
-		StartMS    int            `json:"start_ms"`
-		EndMS      int            `json:"end_ms"`
-		Tokens     []PodcastToken `json:"tokens"`
-		RubyTokens []PodcastToken `json:"ruby_tokens"`
+		SegmentID      string                 `json:"segment_id"`
+		Speaker        string                 `json:"speaker"`
+		Text           string                 `json:"text"`
+		DisplayJA      string                 `json:"display_ja"`
+		EN             string                 `json:"en"`
+		Summary        bool                   `json:"summary"`
+		StartMS        int                    `json:"start_ms"`
+		EndMS          int                    `json:"end_ms"`
+		Tokens         []PodcastToken         `json:"tokens"`
+		RubyTokens     []PodcastToken         `json:"ruby_tokens"`
+		HighlightSpans []PodcastHighlightSpan `json:"highlight_spans"`
 	}
 	var raw rawSegment
 	if err := json.Unmarshal(data, &raw); err != nil {
@@ -174,6 +193,7 @@ func (s *PodcastSegment) UnmarshalJSON(data []byte) error {
 	s.StartMS = raw.StartMS
 	s.EndMS = raw.EndMS
 	s.Tokens = raw.Tokens
+	s.HighlightSpans = raw.HighlightSpans
 	if len(s.Tokens) == 0 {
 		s.Tokens = raw.RubyTokens
 	}
@@ -332,13 +352,25 @@ func formatSegmentID(index int) string {
 }
 
 func BuildJapaneseTokenSpans(text string, tokens []PodcastToken) []PodcastTokenSpan {
+	refs := BuildJapaneseTokenSpanRefs(text, tokens)
+	if len(refs) == 0 {
+		return nil
+	}
+	out := make([]PodcastTokenSpan, 0, len(refs))
+	for _, ref := range refs {
+		out = append(out, ref.Span)
+	}
+	return out
+}
+
+func BuildJapaneseTokenSpanRefs(text string, tokens []PodcastToken) []PodcastTokenSpanRef {
 	runes := []rune(strings.TrimSpace(text))
 	if len(runes) == 0 || len(tokens) == 0 {
 		return nil
 	}
-	out := make([]PodcastTokenSpan, 0, len(tokens))
+	out := make([]PodcastTokenSpanRef, 0, len(tokens))
 	searchFrom := 0
-	for _, token := range tokens {
+	for tokenIndex, token := range tokens {
 		surface := strings.TrimSpace(token.Char)
 		reading := strings.TrimSpace(token.Reading)
 		if surface == "" || reading == "" {
@@ -357,10 +389,13 @@ func BuildJapaneseTokenSpans(text string, tokens []PodcastToken) []PodcastTokenS
 			searchFrom = end + 1
 			continue
 		}
-		out = append(out, span)
+		out = append(out, PodcastTokenSpanRef{
+			TokenIndex: tokenIndex,
+			Span:       span,
+		})
 		searchFrom = end + 1
 	}
-	return dedupeJapaneseTokenSpans(out)
+	return dedupeJapaneseTokenSpanRefs(out)
 }
 
 func ContainsJapaneseKanji(text string) bool {
@@ -439,6 +474,22 @@ func dedupeJapaneseTokenSpans(spans []PodcastTokenSpan) []PodcastTokenSpan {
 		}
 		out = append(out, span)
 		lastEnd = span.EndIndex
+	}
+	return out
+}
+
+func dedupeJapaneseTokenSpanRefs(refs []PodcastTokenSpanRef) []PodcastTokenSpanRef {
+	if len(refs) == 0 {
+		return nil
+	}
+	out := make([]PodcastTokenSpanRef, 0, len(refs))
+	lastEnd := -1
+	for _, ref := range refs {
+		if ref.Span.StartIndex <= lastEnd {
+			continue
+		}
+		out = append(out, ref)
+		lastEnd = ref.Span.EndIndex
 	}
 	return out
 }

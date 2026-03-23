@@ -13,17 +13,26 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	services "worker/services"
 )
 
 const cloudPlatformScope = "https://www.googleapis.com/auth/cloud-platform"
+
+var ttsRequestRetryDelays = []time.Duration{
+	3 * time.Second,
+	10 * time.Second,
+	30 * time.Second,
+}
 
 type Config struct {
 	ProjectID   string
@@ -39,6 +48,7 @@ type Config struct {
 	TTSModel         string
 	TTSAudioEncoding string
 	TTSSampleRateHz  int
+	TTSSpeakingRate  float64
 
 	MaleVoiceID        string
 	FemaleVoiceID      string
@@ -88,6 +98,7 @@ type SynthesizeConversationRequest struct {
 	Turns         []ConversationTurn
 	MaleVoiceID   string
 	FemaleVoiceID string
+	SpeakingRate  float64
 }
 
 type ConversationTurn struct {
@@ -100,6 +111,7 @@ type SynthesizeSingleRequest struct {
 	Prompt       string
 	Text         string
 	VoiceID      string
+	SpeakingRate float64
 }
 
 type AudioResult struct {
@@ -123,6 +135,9 @@ func New(cfg Config) (*Client, error) {
 	}
 	if cfg.TTSSampleRateHz <= 0 {
 		cfg.TTSSampleRateHz = 24000
+	}
+	if cfg.TTSSpeakingRate <= 0 {
+		cfg.TTSSpeakingRate = 1.0
 	}
 	if cfg.HTTPTimeoutSeconds <= 0 {
 		cfg.HTTPTimeoutSeconds = 180
@@ -195,6 +210,9 @@ func (c *Client) SynthesizeConversation(ctx context.Context, req SynthesizeConve
 			"sampleRateHertz": c.cfg.TTSSampleRateHz,
 		},
 	}
+	if speakingRate := firstPositiveFloat(req.SpeakingRate, c.cfg.TTSSpeakingRate); speakingRate > 0 {
+		body["audioConfig"].(map[string]any)["speakingRate"] = speakingRate
+	}
 	if prompt := strings.TrimSpace(req.Prompt); prompt != "" {
 		body["input"].(map[string]any)["prompt"] = prompt
 	}
@@ -202,7 +220,7 @@ func (c *Client) SynthesizeConversation(ctx context.Context, req SynthesizeConve
 	var resp struct {
 		AudioContent string `json:"audioContent"`
 	}
-	raw, err := c.doJSON(ctx, http.MethodPost, c.cfg.TTSURL, body, &resp)
+	raw, err := c.doJSONWithRetry(ctx, http.MethodPost, c.cfg.TTSURL, body, &resp)
 	if err != nil {
 		return AudioResult{}, err
 	}
@@ -245,6 +263,9 @@ func (c *Client) SynthesizeSingle(ctx context.Context, req SynthesizeSingleReque
 			"sampleRateHertz": c.cfg.TTSSampleRateHz,
 		},
 	}
+	if speakingRate := firstPositiveFloat(req.SpeakingRate, c.cfg.TTSSpeakingRate); speakingRate > 0 {
+		body["audioConfig"].(map[string]any)["speakingRate"] = speakingRate
+	}
 	if prompt := strings.TrimSpace(req.Prompt); prompt != "" {
 		body["input"].(map[string]any)["prompt"] = prompt
 	}
@@ -252,7 +273,7 @@ func (c *Client) SynthesizeSingle(ctx context.Context, req SynthesizeSingleReque
 	var resp struct {
 		AudioContent string `json:"audioContent"`
 	}
-	raw, err := c.doJSON(ctx, http.MethodPost, c.cfg.TTSURL, body, &resp)
+	raw, err := c.doJSONWithRetry(ctx, http.MethodPost, c.cfg.TTSURL, body, &resp)
 	if err != nil {
 		return AudioResult{}, err
 	}
@@ -469,6 +490,9 @@ func (c *Client) doJSON(ctx context.Context, method, requestURL string, body any
 		if isNonRetryableStatus(resp.StatusCode) {
 			return raw, services.NonRetryableError{Err: err}
 		}
+		if isRetryableStatus(resp.StatusCode) {
+			return raw, retryableGoogleError{err: err}
+		}
 		return raw, err
 	}
 	if out != nil {
@@ -477,6 +501,45 @@ func (c *Client) doJSON(ctx context.Context, method, requestURL string, body any
 		}
 	}
 	return raw, nil
+}
+
+func (c *Client) doJSONWithRetry(ctx context.Context, method, requestURL string, body any, out any) ([]byte, error) {
+	attempts := len(ttsRequestRetryDelays) + 1
+	var lastRaw []byte
+	var lastErr error
+
+	for attempt := 1; attempt <= attempts; attempt++ {
+		lastRaw, lastErr = c.doJSON(ctx, method, requestURL, body, out)
+		if lastErr == nil {
+			return lastRaw, nil
+		}
+		if !isRetryableGoogleRequestError(lastErr) || attempt == attempts {
+			return lastRaw, lastErr
+		}
+
+		delay := ttsRequestRetryDelays[attempt-1]
+		log.Printf("🔁 google tts request retry attempt=%d/%d delay=%s error=%v", attempt, attempts, delay.String(), lastErr)
+		if err := sleepWithContext(ctx, delay); err != nil {
+			return lastRaw, lastErr
+		}
+	}
+
+	return lastRaw, lastErr
+}
+
+type retryableGoogleError struct {
+	err error
+}
+
+func (e retryableGoogleError) Error() string {
+	if e.err == nil {
+		return "retryable google api error"
+	}
+	return e.err.Error()
+}
+
+func (e retryableGoogleError) Unwrap() error {
+	return e.err
 }
 
 func isNonRetryableStatus(status int) bool {
@@ -493,6 +556,65 @@ func isNonRetryableStatus(status int) bool {
 	}
 }
 
+func isRetryableStatus(status int) bool {
+	switch status {
+	case http.StatusRequestTimeout,
+		http.StatusTooManyRequests,
+		http.StatusInternalServerError,
+		http.StatusBadGateway,
+		http.StatusServiceUnavailable,
+		http.StatusGatewayTimeout:
+		return true
+	default:
+		return false
+	}
+}
+
+func isRetryableGoogleRequestError(err error) bool {
+	if err == nil {
+		return false
+	}
+	var permanent services.NonRetryableError
+	if errors.As(err, &permanent) {
+		return false
+	}
+	var retryable retryableGoogleError
+	if errors.As(err, &retryable) {
+		return true
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+		return true
+	}
+	if errors.Is(err, syscall.ECONNRESET) || errors.Is(err, syscall.ECONNABORTED) || errors.Is(err, syscall.ETIMEDOUT) {
+		return true
+	}
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return true
+	}
+
+	message := strings.ToLower(strings.TrimSpace(err.Error()))
+	return strings.Contains(message, "tls handshake timeout") ||
+		strings.Contains(message, "unexpected eof") ||
+		strings.Contains(message, "connection reset") ||
+		strings.Contains(message, "timeout") ||
+		strings.Contains(message, "temporarily unavailable")
+}
+
+func sleepWithContext(ctx context.Context, delay time.Duration) error {
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
+
 func audioExtForEncoding(encoding string) string {
 	switch strings.ToUpper(strings.TrimSpace(encoding)) {
 	case "OGG_OPUS":
@@ -502,6 +624,15 @@ func audioExtForEncoding(encoding string) string {
 	default:
 		return "mp3"
 	}
+}
+
+func firstPositiveFloat(values ...float64) float64 {
+	for _, value := range values {
+		if value > 0 {
+			return value
+		}
+	}
+	return 0
 }
 
 func normalizeLanguageCode(language string) string {

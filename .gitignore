@@ -44,6 +44,9 @@ worker/.cache/
 worker/credentials/
 worker/doc/contentLLM/temp.md
 backend/storage/logs/
+frontend/.next/
+frontend/node_modules/
+frontend/out/
 
 # Env files
 .env

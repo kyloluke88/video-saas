@@ -151,18 +151,22 @@ func (ctrl *VideoController) CreatePodcastDialogue(c *gin.Context) {
 		return
 	}
 
-	lang := normalizePodcastLang(req.Lang)
-	projectSeed := req.Title
-	if strings.TrimSpace(projectSeed) == "" {
-		projectSeed = req.ScriptFilename
+	runMode := normalizePodcastRunMode(req.RunMode)
+	projectID, err := resolvePodcastProjectID(req, runMode)
+	if err != nil {
+		response.BadRequest(c, err, err.Error())
+		return
 	}
-	projectID := buildPodcastProjectID(lang, projectSeed)
+	if err := validatePodcastCreateRequest(req, runMode); err != nil {
+		response.BadRequest(c, err, err.Error())
+		return
+	}
 
 	payload := map[string]interface{}{
 		"project_id":      projectID,
-		"lang":            lang,
+		"lang":            strings.TrimSpace(req.Lang),
 		"content_profile": strings.TrimSpace(req.ContentProfile),
-		"is_direct":       req.IsDirect,
+		"run_mode":        runMode,
 		"title":           strings.TrimSpace(req.Title),
 		"script_filename": strings.TrimSpace(req.ScriptFilename),
 		"bg_img_filename": strings.TrimSpace(req.BgImgFilename),
@@ -203,6 +207,61 @@ func buildPodcastProjectID(lang, seed string) string {
 	prefix := normalizePodcastLang(lang) + "_podcast"
 	slug := slugForID(strings.TrimSpace(seed))
 	return fmt.Sprintf("%s_%s_%s", prefix, time.Now().Format("20060102150405"), slug)
+}
+
+func normalizePodcastRunMode(value int) int {
+	switch value {
+	case 1, 2:
+		return value
+	default:
+		return 0
+	}
+}
+
+func resolvePodcastProjectID(req video.CreatePodcastDialogueRequest, runMode int) (string, error) {
+	if runMode == 1 || runMode == 2 {
+		projectID := strings.TrimSpace(req.ProjectID)
+		if projectID == "" {
+			return "", fmt.Errorf("project_id is required when run_mode is 1 or 2")
+		}
+		return projectID, nil
+	}
+
+	lang := normalizePodcastLang(req.Lang)
+	projectSeed := req.Title
+	if strings.TrimSpace(projectSeed) == "" {
+		projectSeed = req.ScriptFilename
+	}
+	return buildPodcastProjectID(lang, projectSeed), nil
+}
+
+func validatePodcastCreateRequest(req video.CreatePodcastDialogueRequest, runMode int) error {
+	switch runMode {
+	case 1:
+		if strings.TrimSpace(req.ProjectID) == "" {
+			return fmt.Errorf("project_id is required when run_mode is 1")
+		}
+		return nil
+	case 2:
+		if strings.TrimSpace(req.ProjectID) == "" {
+			return fmt.Errorf("project_id is required when run_mode is 2")
+		}
+		return nil
+	default:
+		if strings.TrimSpace(req.Lang) == "" {
+			return fmt.Errorf("lang is required when run_mode is 0")
+		}
+		if strings.TrimSpace(req.ContentProfile) == "" {
+			return fmt.Errorf("content_profile is required when run_mode is 0")
+		}
+		if strings.TrimSpace(req.ScriptFilename) == "" {
+			return fmt.Errorf("script_filename is required when run_mode is 0")
+		}
+		if strings.TrimSpace(req.BgImgFilename) == "" {
+			return fmt.Errorf("bg_img_filename is required when run_mode is 0")
+		}
+		return nil
+	}
 }
 
 func normalizePodcastLang(value string) string {

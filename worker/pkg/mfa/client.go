@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -17,6 +18,8 @@ type Config struct {
 	Enabled            bool
 	Command            string
 	TemporaryDirectory string
+	Beam               int
+	RetryBeam          int
 
 	MandarinDictionary    string
 	MandarinAcousticModel string
@@ -82,18 +85,15 @@ func (c *Client) AlignWords(ctx context.Context, req AlignRequest) ([]WordTiming
 	if err != nil {
 		return nil, err
 	}
-	defer os.RemoveAll(runDir)
+	keepRunDir := false
+	defer func() {
+		if !keepRunDir {
+			_ = os.RemoveAll(runDir)
+		}
+	}()
 
 	corpusDir := filepath.Join(runDir, "corpus")
-	outputDir := filepath.Join(runDir, "output")
-	tempDir := firstNonEmpty(strings.TrimSpace(c.cfg.TemporaryDirectory), filepath.Join(runDir, "tmp"))
 	if err := os.MkdirAll(corpusDir, 0o755); err != nil {
-		return nil, err
-	}
-	if err := os.MkdirAll(outputDir, 0o755); err != nil {
-		return nil, err
-	}
-	if err := os.MkdirAll(tempDir, 0o755); err != nil {
 		return nil, err
 	}
 
@@ -106,30 +106,63 @@ func (c *Client) AlignWords(ctx context.Context, req AlignRequest) ([]WordTiming
 		return nil, err
 	}
 
-	args := []string{
-		"align",
-		corpusDir,
-		dictionary,
-		acousticModel,
-		outputDir,
-		"--output_format", "csv",
-		"--clean",
-		"--disable_mp",
-		"--single_speaker",
-		"--temporary_directory", tempDir,
-		"-q",
+	attempts := c.alignAttempts()
+	var (
+		lastErr    error
+		lastOutput string
+		outputDir  string
+	)
+	for attemptIndex, attempt := range attempts {
+		outputDir = filepath.Join(runDir, fmt.Sprintf("output_attempt_%d", attemptIndex+1))
+		tempDir := firstNonEmpty(strings.TrimSpace(c.cfg.TemporaryDirectory), filepath.Join(runDir, fmt.Sprintf("tmp_attempt_%d", attemptIndex+1)))
+		if err := os.MkdirAll(outputDir, 0o755); err != nil {
+			return nil, err
+		}
+		if err := os.MkdirAll(tempDir, 0o755); err != nil {
+			return nil, err
+		}
+
+		args := []string{
+			"align",
+			corpusDir,
+			dictionary,
+			acousticModel,
+			outputDir,
+			"--output_format", "csv",
+			"--clean",
+			"--disable_mp",
+			"--single_speaker",
+			"--temporary_directory", tempDir,
+			"--beam", strconv.Itoa(attempt.Beam),
+			"--retry_beam", strconv.Itoa(attempt.RetryBeam),
+			"-q",
+		}
+		if strings.TrimSpace(g2pModel) != "" {
+			args = append(args, "--g2p_model_path", g2pModel)
+		}
+
+		cmd := exec.CommandContext(ctx, commandPath, args...)
+		raw, err := cmd.CombinedOutput()
+		lastOutput = strings.TrimSpace(string(raw))
+		if err == nil {
+			lastErr = nil
+			break
+		}
+		lastErr = err
+		if !shouldRetryWithWiderBeam(lastOutput) || attemptIndex == len(attempts)-1 {
+			break
+		}
 	}
-	if strings.TrimSpace(g2pModel) != "" {
-		args = append(args, "--g2p_model_path", g2pModel)
+	if lastErr != nil {
+		keepRunDir = true
+		debugPath, writeErr := preserveFailureOutput(runDir, lastOutput)
+		if writeErr != nil {
+			return nil, services.NonRetryableError{Err: fmt.Errorf("mfa align failed: %w output=%s debug_write_error=%v", lastErr, lastOutput, writeErr)}
+		}
+		return nil, services.NonRetryableError{Err: fmt.Errorf("mfa align failed: %w output=%s debug_dir=%s", lastErr, lastOutput, debugPath)}
 	}
 
-	cmd := exec.CommandContext(ctx, commandPath, args...)
-	raw, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, services.NonRetryableError{Err: fmt.Errorf("mfa align failed: %w output=%s", err, strings.TrimSpace(string(raw)))}
-	}
-
-	csvPath, err := firstCSVFile(outputDir)
+	csvPath, err := firstAlignmentCSVFile(outputDir)
 	if err != nil {
 		return nil, services.NonRetryableError{Err: err}
 	}
@@ -138,6 +171,44 @@ func (c *Client) AlignWords(ctx context.Context, req AlignRequest) ([]WordTiming
 		return nil, err
 	}
 	return words, nil
+}
+
+type alignAttempt struct {
+	Beam      int
+	RetryBeam int
+}
+
+func (c *Client) alignAttempts() []alignAttempt {
+	baseBeam := c.cfg.Beam
+	if baseBeam <= 0 {
+		baseBeam = 10
+	}
+	baseRetryBeam := c.cfg.RetryBeam
+	if baseRetryBeam <= 0 {
+		baseRetryBeam = 40
+	}
+
+	attempts := []alignAttempt{
+		{Beam: baseBeam, RetryBeam: baseRetryBeam},
+	}
+	if baseBeam < 100 || baseRetryBeam < 400 {
+		attempts = append(attempts, alignAttempt{Beam: 100, RetryBeam: 400})
+	}
+	return attempts
+}
+
+func shouldRetryWithWiderBeam(output string) bool {
+	value := strings.ToLower(strings.TrimSpace(output))
+	return strings.Contains(value, "noalignmentserror") ||
+		strings.Contains(value, "no successful alignments") ||
+		strings.Contains(value, "rerunning with a larger beam")
+}
+
+func preserveFailureOutput(runDir, output string) (string, error) {
+	if err := os.WriteFile(filepath.Join(runDir, "mfa_output.log"), []byte(strings.TrimSpace(output)+"\n"), 0o644); err != nil {
+		return "", err
+	}
+	return runDir, nil
 }
 
 func (c *Client) modelsForLanguage(language string) (string, string, string, error) {
@@ -157,8 +228,8 @@ func (c *Client) modelsForLanguage(language string) (string, string, string, err
 	}
 }
 
-func firstCSVFile(root string) (string, error) {
-	var found string
+func firstAlignmentCSVFile(root string) (string, error) {
+	candidates := make([]string, 0, 4)
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -167,18 +238,68 @@ func firstCSVFile(root string) (string, error) {
 			return nil
 		}
 		if strings.EqualFold(filepath.Ext(path), ".csv") {
-			found = path
-			return filepath.SkipAll
+			candidates = append(candidates, path)
 		}
 		return nil
 	})
-	if err != nil && err != filepath.SkipAll {
+	if err != nil {
 		return "", err
 	}
-	if strings.TrimSpace(found) == "" {
+
+	sort.Strings(candidates)
+	filtered := make([]string, 0, len(candidates))
+	for _, candidate := range candidates {
+		if isAnalysisCSV(candidate) {
+			continue
+		}
+		filtered = append(filtered, candidate)
+	}
+	if len(filtered) == 0 {
+		filtered = candidates
+	}
+
+	for _, candidate := range filtered {
+		ok, err := csvHasWordTimingColumns(candidate)
+		if err != nil {
+			return "", err
+		}
+		if ok {
+			return candidate, nil
+		}
+	}
+
+	if len(candidates) == 0 {
 		return "", fmt.Errorf("mfa output csv not found in %s", root)
 	}
-	return found, nil
+	return "", fmt.Errorf("mfa alignment csv with required columns not found in %s (found: %s)", root, strings.Join(candidates, ", "))
+}
+
+func isAnalysisCSV(path string) bool {
+	name := strings.ToLower(strings.TrimSpace(filepath.Base(path)))
+	return strings.Contains(name, "analysis") || strings.Contains(name, "confidence") || strings.Contains(name, "summary")
+}
+
+func csvHasWordTimingColumns(path string) (bool, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return false, err
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	reader.FieldsPerRecord = -1
+	headerRow, err := reader.Read()
+	if err != nil {
+		return false, err
+	}
+
+	header := make(map[string]int, len(headerRow))
+	for i, value := range headerRow {
+		header[strings.ToLower(strings.TrimSpace(value))] = i
+	}
+	return firstHeaderIndex(header, "begin", "start", "start_time") >= 0 &&
+		firstHeaderIndex(header, "end", "stop", "end_time") >= 0 &&
+		firstHeaderIndex(header, "label", "text", "word") >= 0, nil
 }
 
 func parseCSVWordTimings(path string) ([]WordTiming, error) {

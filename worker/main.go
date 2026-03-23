@@ -105,9 +105,8 @@ func setupTopology(ch *amqp.Channel) error {
 	routingKey := conf.Get[string]("worker.rabbitmq_routing_key")
 	dlq := conf.Get[string]("worker.rabbitmq_dlq")
 	dlqRoutingKey := conf.Get[string]("worker.rabbitmq_dlq_routing_key")
-	retryQueue := conf.Get[string]("worker.rabbitmq_retry_queue")
-	retryRoutingKey := conf.Get[string]("worker.rabbitmq_retry_routing_key")
-	retryDelayMs := conf.Get[int]("worker.rabbitmq_retry_delay_ms")
+	retryQueueBase := conf.Get[string]("worker.rabbitmq_retry_queue")
+	retryRoutingKeyBase := conf.Get[string]("worker.rabbitmq_retry_routing_key")
 
 	if err := ch.ExchangeDeclare(exchange, exchangeType, true, false, false, false, nil); err != nil {
 		return err
@@ -134,15 +133,23 @@ func setupTopology(ch *amqp.Channel) error {
 		return err
 	}
 
-	retryArgs := amqp.Table{
-		"x-message-ttl":             int32(retryDelayMs),
-		"x-dead-letter-exchange":    exchange,
-		"x-dead-letter-routing-key": routingKey,
+	for attempt := 1; attempt <= 3; attempt++ {
+		delay := pipeline.TaskRetryDelay(attempt)
+		retryArgs := amqp.Table{
+			"x-message-ttl":             int32(delay / time.Millisecond),
+			"x-dead-letter-exchange":    exchange,
+			"x-dead-letter-routing-key": routingKey,
+		}
+		retryQueue := pipeline.TaskRetryQueueName(retryQueueBase, attempt)
+		retryRoutingKey := pipeline.TaskRetryRoutingKey(retryRoutingKeyBase, attempt)
+		if _, err := ch.QueueDeclare(retryQueue, true, false, false, false, retryArgs); err != nil {
+			return err
+		}
+		if err := ch.QueueBind(retryQueue, retryRoutingKey, exchange, false, nil); err != nil {
+			return err
+		}
 	}
-	if _, err := ch.QueueDeclare(retryQueue, true, false, false, false, retryArgs); err != nil {
-		return err
-	}
-	return ch.QueueBind(retryQueue, retryRoutingKey, exchange, false, nil)
+	return nil
 }
 
 func connectAndPrepare(amqpURL string) (*amqp.Connection, *amqp.Channel, error) {

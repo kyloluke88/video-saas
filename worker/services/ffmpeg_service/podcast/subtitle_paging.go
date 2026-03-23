@@ -1,8 +1,15 @@
 package podcast
 
-import "strings"
+import (
+	"strings"
+	"unicode"
 
-const subtitlePageMaxChars = 20
+	"worker/internal/dto"
+)
+
+func subtitlePageCharLimit(layout subtitleLayout) int {
+	return maxInt(1, layout.MaxLineChars)
+}
 
 type subtitlePageWindow struct {
 	StartMS int
@@ -89,6 +96,162 @@ func subtitleEndsWithPunctuation(text string) bool {
 	}
 	runes := []rune(trimmed)
 	return isPunctuationRune(runes[len(runes)-1])
+}
+
+func adjustSubtitlePageBreak(texts []string, start, end int) int {
+	if end <= start {
+		return end
+	}
+	for {
+		end = extendSubtitleBreakForAttachedSuffixes(texts, end)
+		if end >= len(texts) {
+			return end
+		}
+		stack := subtitleWrapperStack(texts, start, end)
+		if len(stack) == 0 {
+			return end
+		}
+		advanced := false
+		for end < len(texts) {
+			stack = subtitleApplyWrapperText(stack, texts[end])
+			end++
+			advanced = true
+			if len(stack) == 0 {
+				break
+			}
+		}
+		if !advanced {
+			return end
+		}
+	}
+}
+
+func extendSubtitleBreakForAttachedSuffixes(texts []string, end int) int {
+	for end < len(texts) && subtitleTextAttachesToPrevious(texts[end]) {
+		end++
+	}
+	return end
+}
+
+func subtitleTextAttachesToPrevious(text string) bool {
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" {
+		return false
+	}
+	visible := false
+	for _, r := range []rune(trimmed) {
+		if unicode.IsSpace(r) {
+			continue
+		}
+		visible = true
+		if !isSubtitleTrailingAttachedRune(r) {
+			return false
+		}
+	}
+	return visible
+}
+
+func subtitleWrapperStack(texts []string, start, end int) []rune {
+	stack := make([]rune, 0, 4)
+	for i := start; i < end && i < len(texts); i++ {
+		stack = subtitleApplyWrapperText(stack, texts[i])
+	}
+	return stack
+}
+
+func subtitleApplyWrapperText(stack []rune, text string) []rune {
+	for _, r := range []rune(strings.TrimSpace(text)) {
+		if closing, ok := subtitleClosingWrapperFor(r); ok {
+			stack = append(stack, closing)
+			continue
+		}
+		if len(stack) > 0 && r == stack[len(stack)-1] {
+			stack = stack[:len(stack)-1]
+		}
+	}
+	return stack
+}
+
+func subtitleClosingWrapperFor(r rune) (rune, bool) {
+	switch r {
+	case '（':
+		return '）', true
+	case '(':
+		return ')', true
+	case '【':
+		return '】', true
+	case '[':
+		return ']', true
+	case '《':
+		return '》', true
+	case '〈':
+		return '〉', true
+	case '「':
+		return '」', true
+	case '『':
+		return '』', true
+	case '“':
+		return '”', true
+	case '‘':
+		return '’', true
+	default:
+		return 0, false
+	}
+}
+
+func isSubtitleTrailingAttachedRune(r rune) bool {
+	return isTrailingAttachedPunctuationRune(r) || isSubtitleClosingWrapperRune(r)
+}
+
+func isTrailingAttachedPunctuationRune(r rune) bool {
+	return strings.ContainsRune("，。！？；：、…,.!?;:，。、！？；：", r)
+}
+
+func isSubtitleClosingWrapperRune(r rune) bool {
+	switch r {
+	case '）', ')', '】', ']', '》', '〉', '」', '』', '”', '’':
+		return true
+	default:
+		return false
+	}
+}
+
+func inlineLatinWordTokenRun(tokens []dto.PodcastToken, start int) (int, bool) {
+	if start < 0 || start >= len(tokens) || !isLatinWordBodyToken(tokens[start].Char) {
+		return 0, false
+	}
+	end := start
+	for end+1 < len(tokens) {
+		switch {
+		case isLatinWordBodyToken(tokens[end+1].Char):
+			end++
+		case isLatinWordConnectorToken(tokens[end+1].Char) && end+2 < len(tokens) && isLatinWordBodyToken(tokens[end+2].Char):
+			end++
+		default:
+			return end, true
+		}
+	}
+	return end, true
+}
+
+func isLatinWordBodyToken(text string) bool {
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" {
+		return false
+	}
+	for _, r := range []rune(trimmed) {
+		if unicode.In(unicode.ToLower(r), unicode.Latin) || unicode.IsDigit(r) {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+func isLatinWordConnectorToken(text string) bool {
+	trimmed := strings.TrimSpace(text)
+	rs := []rune(trimmed)
+	return len(rs) == 1 && (rs[0] == '-' || rs[0] == '\'')
 }
 
 func clampWindow(startMS, endMS, windowStartMS, windowEndMS int) (int, int, bool) {
