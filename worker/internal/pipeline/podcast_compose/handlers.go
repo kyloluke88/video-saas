@@ -26,11 +26,11 @@ func HandleCompose(ch *amqp.Channel, task dto.VideoTaskMessage) error {
 	}
 
 	result, err := podcastcomposeservice.Compose(podcastcomposeservice.ComposeInput{
-		ProjectID:     payload.ProjectID,
-		Language:      payload.Lang,
-		BgImgFilename: payload.BgImgFilename,
-		Resolution:    payload.Resolution,
-		DesignStyle:   payload.DesignStyle,
+		ProjectID:      payload.ProjectID,
+		Language:       payload.Lang,
+		BgImgFilenames: payload.BgImgFilenames,
+		Resolution:     payload.Resolution,
+		DesignStyle:    payload.DesignStyle,
 	})
 	if err != nil {
 		return err

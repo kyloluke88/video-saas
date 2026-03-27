@@ -11,17 +11,17 @@ func TestBuildComposePayloadForRunMode2UsesCurrentVisualOverrides(t *testing.T) 
 		ProjectID:      "proj_123",
 		Lang:           "zh",
 		Title:          "old title",
-		BgImgFilename:  "old-bg.png",
+		BgImgFilenames: []string{"old-a.png", "old-b.png"},
 		TargetPlatform: "youtube",
 		AspectRatio:    "16:9",
 		Resolution:     "720p",
 		DesignStyle:    1,
 	}
 	current := dto.PodcastAudioGeneratePayload{
-		ProjectID:     "proj_123",
-		BgImgFilename: "new-bg.png",
-		Resolution:    "1080p",
-		DesignStyle:   3,
+		ProjectID:      "proj_123",
+		BgImgFilenames: []string{"new-a.png", "new-b.png", "new-c.png"},
+		Resolution:     "1080p",
+		DesignStyle:    3,
 	}
 
 	payload, err := buildComposePayloadForRunMode2(saved, current)
@@ -31,8 +31,8 @@ func TestBuildComposePayloadForRunMode2UsesCurrentVisualOverrides(t *testing.T) 
 	if payload.ProjectID != "proj_123" {
 		t.Fatalf("project_id mismatch: %s", payload.ProjectID)
 	}
-	if payload.BgImgFilename != "new-bg.png" {
-		t.Fatalf("expected current bg override, got %s", payload.BgImgFilename)
+	if len(payload.BgImgFilenames) != 3 || payload.BgImgFilenames[0] != "new-a.png" {
+		t.Fatalf("expected current bg list override, got %#v", payload.BgImgFilenames)
 	}
 	if payload.Resolution != "1080p" {
 		t.Fatalf("expected current resolution override, got %s", payload.Resolution)
@@ -44,10 +44,12 @@ func TestBuildComposePayloadForRunMode2UsesCurrentVisualOverrides(t *testing.T) 
 
 func TestBuildComposePayloadForRunMode2RejectsLanguageMismatch(t *testing.T) {
 	saved := dto.PodcastAudioGeneratePayload{
-		ProjectID:     "proj_123",
-		Lang:          "zh",
-		BgImgFilename: "bg.png",
-		DesignStyle:   1,
+		ProjectID: "proj_123",
+		Lang:      "zh",
+		BgImgFilenames: []string{
+			"bg.png",
+		},
+		DesignStyle: 1,
 	}
 	current := dto.PodcastAudioGeneratePayload{
 		ProjectID: "proj_123",
@@ -56,5 +58,22 @@ func TestBuildComposePayloadForRunMode2RejectsLanguageMismatch(t *testing.T) {
 
 	if _, err := buildComposePayloadForRunMode2(saved, current); err == nil {
 		t.Fatalf("expected lang mismatch error")
+	}
+}
+
+func TestBuildComposePayloadForRunMode2FallsBackToBackgroundList(t *testing.T) {
+	saved := dto.PodcastAudioGeneratePayload{
+		ProjectID:      "proj_123",
+		Lang:           "zh",
+		BgImgFilenames: []string{"saved-a.png", "saved-b.png"},
+		DesignStyle:    1,
+	}
+
+	payload, err := buildComposePayloadForRunMode2(saved, dto.PodcastAudioGeneratePayload{ProjectID: "proj_123"})
+	if err != nil {
+		t.Fatalf("buildComposePayloadForRunMode2 returned err: %v", err)
+	}
+	if len(payload.BgImgFilenames) != 2 {
+		t.Fatalf("expected saved bg list to survive, got %#v", payload.BgImgFilenames)
 	}
 }

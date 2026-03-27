@@ -162,6 +162,7 @@ func (ctrl *VideoController) CreatePodcastDialogue(c *gin.Context) {
 		return
 	}
 
+	bgImgFilenames := compactStringSlice(req.BgImgFilenames)
 	payload := map[string]interface{}{
 		"project_id":      projectID,
 		"lang":            strings.TrimSpace(req.Lang),
@@ -169,11 +170,13 @@ func (ctrl *VideoController) CreatePodcastDialogue(c *gin.Context) {
 		"run_mode":        runMode,
 		"title":           strings.TrimSpace(req.Title),
 		"script_filename": strings.TrimSpace(req.ScriptFilename),
-		"bg_img_filename": strings.TrimSpace(req.BgImgFilename),
 		"target_platform": defaultIfEmpty(strings.TrimSpace(req.TargetPlatform), "youtube"),
 		"aspect_ratio":    defaultIfEmpty(strings.TrimSpace(req.AspectRatio), "16:9"),
 		"resolution":      defaultIfEmpty(strings.TrimSpace(req.Resolution), defaultPodcastResolution()),
 		"design_style":    defaultInt(req.DesignStyle, 1),
+	}
+	if len(bgImgFilenames) > 0 {
+		payload["bg_img_filenames"] = bgImgFilenames
 	}
 
 	taskID, err := queue.PublishVideoTask("podcast.audio.generate.v1", payload)
@@ -257,11 +260,25 @@ func validatePodcastCreateRequest(req video.CreatePodcastDialogueRequest, runMod
 		if strings.TrimSpace(req.ScriptFilename) == "" {
 			return fmt.Errorf("script_filename is required when run_mode is 0")
 		}
-		if strings.TrimSpace(req.BgImgFilename) == "" {
-			return fmt.Errorf("bg_img_filename is required when run_mode is 0")
+		if !hasPodcastBackgroundInput(req.BgImgFilenames) {
+			return fmt.Errorf("bg_img_filenames is required when run_mode is 0")
 		}
 		return nil
 	}
+}
+
+func compactStringSlice(values []string) []string {
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	return out
+}
+
+func hasPodcastBackgroundInput(many []string) bool {
+	return len(compactStringSlice(many)) > 0
 }
 
 func normalizePodcastLang(value string) string {

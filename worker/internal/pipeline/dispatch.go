@@ -50,7 +50,7 @@ func HandleMessage(ch *amqp.Channel, msg amqp.Delivery, scheduler map[string]Tas
 		return msg.Ack(false)
 	}
 
-	log.Printf("✅ 任务处理完成 task_id=%s type=%s project_id=%s", task.TaskID, task.TaskType, taskProjectID(task))
+	log.Printf("✅ 当前任务节点处理完成 task_id=%s type=%s project_id=%s", task.TaskID, task.TaskType, taskProjectID(task))
 
 	return msg.Ack(false)
 }

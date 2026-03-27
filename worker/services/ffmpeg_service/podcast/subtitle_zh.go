@@ -153,8 +153,11 @@ func newSubtitleLayout(playW, playH int, preset subtitlePreset) subtitleLayout {
 		boxHeight = playH - boxTop
 	}
 	topSectionHeight := int(float64(boxHeight) * preset.TopSectionRatio)
-	bottomSectionTop := boxTop + topSectionHeight
 	bottomSectionHeight := int(float64(boxHeight) * preset.BottomSectionRatio)
+	// Keep the English area anchored to its original baseline. Using the
+	// complement ratio preserves the previous position exactly despite
+	// integer rounding.
+	bottomSectionTop := boxTop + int(float64(boxHeight)*(1.0-preset.BottomSectionRatio))
 
 	return subtitleLayout{
 		PlayW:               playW,
@@ -260,9 +263,9 @@ func chineseSubtitlePresetStyle2() subtitlePreset {
 		BoxWidthRatio:         1,      // 字幕底框宽度占画面宽度比例
 		BoxHeightRatio:        0.4029, // 字幕底框高度占画面高度比例
 		TextWidthRatio:        0.94,   // 正文可用排版宽度占底框宽度比例
-		TopSectionRatio:       0.7301, // 汉字区域高度占底框高度比例
+		TopSectionRatio:       0.7101, // 汉字区域高度占底框高度比例
 		BottomSectionRatio:    0.2699, // 英文区域高度占底框高度比例
-		TopSectionTopInset:    0,      // 上半区顶部额外内边距比例
+		TopSectionTopInset:    0.02,   // 上半区顶部额外内边距比例
 		BottomSectionTopInset: 0,      // 下半区顶部额外内边距比例
 		RubySize:              36,     // 假名字号
 		HanziSize:             76,     // 中文正文字号
@@ -272,7 +275,7 @@ func chineseSubtitlePresetStyle2() subtitlePreset {
 		RubySpacing:           -2,
 		EnglishSpacing:        0, // 英文字距
 		PunctuationGapRatio:   0.4615384615,
-		MaxLineChars:          22, // 正文每行最大字符数
+		MaxLineChars:          20, // 正文每行最大字符数
 		RowGap:                1,
 		TokenLineGap:          18,
 		EnglishLineGap:        8,
@@ -291,41 +294,9 @@ func chineseSubtitlePresetStyle3() subtitlePreset {
 	return chineseSubtitlePresetStyle2()
 }
 
+// Keep a stable "base" entry for future style tuning workflows.
 func chineseSubtitlePresetBase() subtitlePreset {
-	return subtitlePreset{
-		RubyFontName:          "Tenor Sans",
-		HanziFontName:         "ChillKai Regular",
-		EnglishFontName:       "Jacques Francois",
-		BoxLeftRatio:          0,      // 字幕底框左边距占画面宽度比例
-		BoxTopRatio:           0.5561, // 字幕底框顶部位置占画面高度比例
-		BoxWidthRatio:         1,      // 字幕底框宽度占画面宽度比例
-		BoxHeightRatio:        0.4029, // 字幕底框高度占画面高度比例
-		TextWidthRatio:        0.94,   // 正文可用排版宽度占底框宽度比例
-		TopSectionRatio:       0.7301, // 汉字区域高度占底框高度比例
-		BottomSectionRatio:    0.2699, // 英文区域高度占底框高度比例
-		TopSectionTopInset:    0,      // 上半区顶部额外内边距比例
-		BottomSectionTopInset: 0,      // 下半区顶部额外内边距比例
-		RubySize:              36,     // 假名字号
-		HanziSize:             76,     // 中文正文字号
-		EnglishSize:           46,     // 英文字号
-		BaseGap:               1,      // 字与字之间的基础间距
-		HanziSpacing:          0.1083333333,
-		RubySpacing:           -2,
-		EnglishSpacing:        0, // 英文字距
-		PunctuationGapRatio:   0.4615384615,
-		MaxLineChars:          22, // 正文每行最大字符数
-		RowGap:                1,
-		TokenLineGap:          18,
-		EnglishLineGap:        6,
-		BoxColor:              "&HFF000000",
-		RubyColor:             "&H00000000",
-		HanziColor:            "&H00000000",
-		EnglishColor:          "&H00066F8A",
-		OutlineColor:          "&H003B5B55",
-		RubyBold:              0,
-		HanziBold:             1,
-		EnglishBold:           1,
-	}
+	return chineseSubtitlePresetStyle2()
 }
 
 func segmentTokens(seg dto.PodcastSegment) []dto.PodcastToken {
@@ -423,11 +394,12 @@ func buildTokenCells(tokens []dto.PodcastToken, layout subtitleLayout) []tokenCe
 				}
 			}
 			text := word.String()
+			gap := latinCellGapAfter(tokens, end, layout)
 			out = append(out, tokenCell{
 				Hanzi:   text,
 				Ruby:    "",
 				Width:   estimateTextWidth(text, float64(layout.HanziSize), false),
-				Gap:     layout.HanziSpacing,
+				Gap:     gap,
 				StartMS: startMS,
 				EndMS:   endMS,
 			})
@@ -435,6 +407,17 @@ func buildTokenCells(tokens []dto.PodcastToken, layout subtitleLayout) []tokenCe
 			continue
 		}
 		tk := tokens[i]
+		if isWhitespaceOnlyText(tk.Char) {
+			out = append(out, tokenCell{
+				Hanzi:   tk.Char,
+				Ruby:    "",
+				Width:   estimateWhitespaceWidth(tk.Char, float64(layout.HanziSize)),
+				Gap:     0,
+				StartMS: tk.StartMS,
+				EndMS:   tk.EndMS,
+			})
+			continue
+		}
 		hanzi := strings.TrimSpace(tk.Char)
 		ruby := strings.TrimSpace(tk.Reading)
 		if hanzi == "" && ruby == "" {
@@ -449,6 +432,12 @@ func buildTokenCells(tokens []dto.PodcastToken, layout subtitleLayout) []tokenCe
 		gap := layout.HanziSpacing
 		if isPunctuationText(hanzi) {
 			gap = layout.HanziSpacing * layout.PunctuationGapRatio
+		}
+		if isQuotePunctuationText(hanzi) {
+			w = maxFloat(estimateTextWidth(hanzi, float64(layout.HanziSize), false)*0.55, float64(layout.HanziSize)*0.18)
+			if quoteTouchesInlineLatin(tokens, out, i) {
+				gap = 0
+			}
 		}
 		out = append(out, tokenCell{Hanzi: hanzi, Ruby: ruby, Width: w, Gap: gap, StartMS: tk.StartMS, EndMS: tk.EndMS})
 	}
@@ -497,7 +486,7 @@ func splitTokenLines(cells []tokenCell, maxWidth int, maxLines int) [][]tokenCel
 
 // Main subtitle pages are display-only splits. We keep natural long segments
 // intact in the audio/script, but prefer punctuation boundaries on screen and
-// cap each page to at most 18 visible characters.
+// cap each page to at most 20 visible characters.
 func paginateTokenCells(cells []tokenCell, layout subtitleLayout) [][]tokenCell {
 	if len(cells) == 0 {
 		return nil
@@ -524,10 +513,11 @@ func chooseChinesePageBreak(cells []tokenCell, start int, layout subtitleLayout)
 	charLimit := subtitlePageCharLimit(layout)
 	bestEnd := start
 	bestPunctEnd := -1
+	forcedWrappedBlockBreak := -1
 
 	for i := start; i < len(cells); i++ {
-		unitChars := subtitleRuneCount(cells[i].Hanzi)
-		if unitChars <= 0 {
+		unitChars := chineseCellPageUnits(cells[i])
+		if unitChars <= 0 && !isWhitespaceOnlyText(cells[i].Hanzi) {
 			unitChars = 1
 		}
 		nextWidth := width
@@ -542,12 +532,19 @@ func chooseChinesePageBreak(cells []tokenCell, start int, layout subtitleLayout)
 		charCount += unitChars
 		width = nextWidth
 		bestEnd = i + 1
-		if subtitleEndsWithPunctuation(cells[i].Hanzi) {
+		if subtitleEndsWithPunctuation(cells[i].Hanzi) && !isOpeningWrapperText(cells[i].Hanzi) {
 			bestPunctEnd = i + 1
+			if i > start && isBoundarySymbolText(cells[i].Hanzi) && longWrappedSpanStartsAfter(cells, i, charLimit, limit) {
+				forcedWrappedBlockBreak = i + 1
+				break
+			}
 		}
 		if charCount >= charLimit {
 			break
 		}
+	}
+	if forcedWrappedBlockBreak > start {
+		return forcedWrappedBlockBreak
 	}
 	if bestEnd == start {
 		return start + 1
@@ -560,7 +557,128 @@ func chooseChinesePageBreak(cells []tokenCell, start int, layout subtitleLayout)
 	for i := range cells {
 		texts[i] = cells[i].Hanzi
 	}
-	return adjustSubtitlePageBreak(texts, start, candidateEnd)
+	adjusted := adjustSubtitlePageBreak(texts, start, candidateEnd)
+	if adjusted > candidateEnd {
+		units, width := chinesePageMetrics(cells, start, adjusted)
+		if units > charLimit || width > limit {
+			return candidateEnd
+		}
+	}
+	return adjusted
+}
+
+func longWrappedSpanStartsAfter(cells []tokenCell, breakAt int, charLimit int, widthLimit float64) bool {
+	next := nextNonWhitespaceCellIndex(cells, breakAt+1)
+	if next < 0 || !isOpeningWrapperText(cells[next].Hanzi) {
+		return false
+	}
+	end, ok := findWrappedSpanEnd(cells, next)
+	if !ok || end <= next {
+		return false
+	}
+	units, width := chinesePageMetrics(cells, next, end+1)
+	return units > charLimit || width > widthLimit
+}
+
+func nextNonWhitespaceCellIndex(cells []tokenCell, start int) int {
+	for i := start; i < len(cells); i++ {
+		if !isWhitespaceOnlyText(cells[i].Hanzi) {
+			return i
+		}
+	}
+	return -1
+}
+
+func findWrappedSpanEnd(cells []tokenCell, openIndex int) (int, bool) {
+	if openIndex < 0 || openIndex >= len(cells) {
+		return 0, false
+	}
+	open := strings.TrimSpace(cells[openIndex].Hanzi)
+	if open == "" {
+		return 0, false
+	}
+	close, symmetric, ok := pairedClosingWrapper(open)
+	if !ok {
+		return 0, false
+	}
+	depth := 1
+	for i := openIndex + 1; i < len(cells); i++ {
+		current := strings.TrimSpace(cells[i].Hanzi)
+		if current == "" {
+			continue
+		}
+		if symmetric {
+			if current == close {
+				depth--
+				if depth == 0 {
+					return i, true
+				}
+			}
+			continue
+		}
+		if current == open {
+			depth++
+			continue
+		}
+		if current == close {
+			depth--
+			if depth == 0 {
+				return i, true
+			}
+		}
+	}
+	return 0, false
+}
+
+func pairedClosingWrapper(open string) (string, bool, bool) {
+	switch open {
+	case "'", "\"":
+		return open, true, true
+	case "‘":
+		return "’", false, true
+	case "“":
+		return "”", false, true
+	case "「":
+		return "」", false, true
+	case "『":
+		return "』", false, true
+	case "(":
+		return ")", false, true
+	case "（":
+		return "）", false, true
+	case "[":
+		return "]", false, true
+	case "【":
+		return "】", false, true
+	case "《":
+		return "》", false, true
+	case "〈":
+		return "〉", false, true
+	default:
+		return "", false, false
+	}
+}
+
+func chinesePageMetrics(cells []tokenCell, start, end int) (int, float64) {
+	if start < 0 {
+		start = 0
+	}
+	if end > len(cells) {
+		end = len(cells)
+	}
+	if end <= start {
+		return 0, 0
+	}
+	units := 0
+	width := 0.0
+	for i := start; i < end; i++ {
+		units += chineseCellPageUnits(cells[i])
+		if i > start {
+			width += cells[i-1].Gap
+		}
+		width += cells[i].Width
+	}
+	return units, width
 }
 
 func chinesePageStartTimes(pages [][]tokenCell) []int {
@@ -592,7 +710,7 @@ func chinesePageWeights(pages [][]tokenCell) []int {
 	for _, page := range pages {
 		weight := 0
 		for _, cell := range page {
-			weight += maxInt(1, subtitleRuneCount(cell.Hanzi))
+			weight += chineseCellPageUnits(cell)
 		}
 		out = append(out, maxInt(1, weight))
 	}
@@ -600,7 +718,7 @@ func chinesePageWeights(pages [][]tokenCell) []int {
 }
 
 func splitEnglishPagesSynced(text string, layout subtitleLayout, pageCount int) []string {
-	text = strings.TrimSpace(text)
+	text = normalizeEnglishSubtitleSpacing(text)
 	if text == "" {
 		return nil
 	}
@@ -652,7 +770,7 @@ func splitEnglishPagesSynced(text string, layout subtitleLayout, pageCount int) 
 		}
 
 		if bestPunct != "" && lastGood != "" && lastGoodIndex-bestPunctIndex <= 3 {
-			pages = append(pages, bestPunct)
+			pages = append(pages, normalizeEnglishSubtitleSpacing(bestPunct))
 			index = bestPunctIndex
 			continue
 		}
@@ -660,7 +778,7 @@ func splitEnglishPagesSynced(text string, layout subtitleLayout, pageCount int) 
 			lastGood = words[index]
 			lastGoodIndex = index + 1
 		}
-		pages = append(pages, lastGood)
+		pages = append(pages, normalizeEnglishSubtitleSpacing(lastGood))
 		index = lastGoodIndex
 	}
 	return pages
@@ -730,7 +848,7 @@ func computeTopSectionRows(layout subtitleLayout, lineCount int, hasRuby bool) [
 }
 
 func splitEnglishLines(text string, layout subtitleLayout, maxLines int) []string {
-	text = strings.TrimSpace(text)
+	text = normalizeEnglishSubtitleSpacing(text)
 	if text == "" {
 		return nil
 	}
@@ -754,10 +872,10 @@ func splitEnglishLines(text string, layout subtitleLayout, maxLines int) []strin
 		current = candidate
 	}
 	if current != "" {
-		lines = append(lines, current)
+		lines = append(lines, normalizeEnglishSubtitleSpacing(current))
 	}
 	if len(lines) > maxLines {
-		tail := strings.Join(lines[maxLines-1:], " ")
+		tail := normalizeEnglishSubtitleSpacing(strings.Join(lines[maxLines-1:], " "))
 		lines = append(lines[:maxLines-1], tail)
 	}
 	return lines
@@ -806,6 +924,47 @@ func estimateTextWidth(text string, fontSize float64, cjk bool) float64 {
 	return width
 }
 
+func estimateWhitespaceWidth(text string, fontSize float64) float64 {
+	width := 0.0
+	for _, r := range []rune(text) {
+		if unicode.IsSpace(r) {
+			width += fontSize * 0.12
+		}
+	}
+	return width
+}
+
+func normalizeEnglishSubtitleSpacing(text string) string {
+	text = strings.Join(strings.Fields(strings.TrimSpace(text)), " ")
+	if text == "" {
+		return ""
+	}
+
+	replacer := strings.NewReplacer(
+		" ,", ",",
+		" .", ".",
+		" !", "!",
+		" ?", "?",
+		" ;", ";",
+		" :", ":",
+		" )", ")",
+		" ]", "]",
+		" }", "}",
+		" ’", "’",
+		" ”", "”",
+		"( ", "(",
+		"[ ", "[",
+		"{ ", "{",
+		"‘ ", "‘",
+		"“ ", "“",
+		" '", "'",
+		"' ", "'",
+		" \"", "\"",
+		"\" ", "\"",
+	)
+	return replacer.Replace(text)
+}
+
 func hasAnyRuby(tokens []dto.PodcastToken) bool {
 	for _, t := range tokens {
 		if strings.TrimSpace(t.Reading) != "" {
@@ -821,6 +980,10 @@ func isPunctuationText(s string) bool {
 		return false
 	}
 	return isPunctuationRune(rs[0])
+}
+
+func isWhitespaceOnlyText(s string) bool {
+	return s != "" && strings.TrimSpace(s) == ""
 }
 
 func isPunctuationRune(r rune) bool {
@@ -844,6 +1007,93 @@ func isInlineEnglishText(s string) bool {
 		}
 	}
 	return hasAlphaNum
+}
+
+func latinCellGapAfter(tokens []dto.PodcastToken, end int, layout subtitleLayout) float64 {
+	if end < 0 || end >= len(tokens)-1 {
+		return layout.HanziSpacing
+	}
+	nextRaw := tokens[end+1].Char
+	if isWhitespaceOnlyText(nextRaw) {
+		return 0
+	}
+	if isQuotePunctuationText(nextRaw) {
+		return 0
+	}
+	if isLatinWordConnectorToken(nextRaw) {
+		return 0
+	}
+	if isLatinWordBodyToken(nextRaw) {
+		return estimateWhitespaceWidth(" ", float64(layout.HanziSize))
+	}
+	if hasTrailingWhitespace(tokens[end].Char) {
+		return estimateWhitespaceWidth(" ", float64(layout.HanziSize))
+	}
+	return layout.HanziSpacing
+}
+
+func quoteTouchesInlineLatin(tokens []dto.PodcastToken, built []tokenCell, idx int) bool {
+	prevInline := len(built) > 0 && isInlineEnglishText(built[len(built)-1].Hanzi)
+	if prevInline {
+		return true
+	}
+	if idx+1 >= len(tokens) {
+		return false
+	}
+	_, ok := inlineLatinWordTokenRun(tokens, idx+1)
+	return ok
+}
+
+func isQuotePunctuationText(s string) bool {
+	switch strings.TrimSpace(s) {
+	case "'", "\"", "‘", "’", "“", "”", "「", "」", "『", "』":
+		return true
+	default:
+		return false
+	}
+}
+
+func isOpeningWrapperText(s string) bool {
+	trimmed := strings.TrimSpace(s)
+	if trimmed == "" {
+		return false
+	}
+	_, _, ok := pairedClosingWrapper(trimmed)
+	return ok
+}
+
+func isBoundarySymbolText(s string) bool {
+	trimmed := strings.TrimSpace(s)
+	if trimmed == "" {
+		return false
+	}
+	rs := []rune(trimmed)
+	if len(rs) != 1 {
+		return false
+	}
+	if isOpeningWrapperText(trimmed) {
+		return false
+	}
+	return isPunctuationRune(rs[0])
+}
+
+func hasTrailingWhitespace(s string) bool {
+	rs := []rune(s)
+	if len(rs) == 0 {
+		return false
+	}
+	return unicode.IsSpace(rs[len(rs)-1])
+}
+
+func chineseCellPageUnits(cell tokenCell) int {
+	switch {
+	case isWhitespaceOnlyText(cell.Hanzi):
+		return 0
+	case isInlineEnglishText(cell.Hanzi):
+		return 1
+	default:
+		return subtitleRuneCount(cell.Hanzi)
+	}
 }
 
 func maxFloat(a, b float64) float64 {

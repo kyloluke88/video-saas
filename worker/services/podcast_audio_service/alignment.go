@@ -566,16 +566,26 @@ func alignChineseSegmentWithWords(seg dto.PodcastSegment, spec segmentSpec, matc
 
 func chineseTokenIndexByRune(seg dto.PodcastSegment, tokens []dto.PodcastToken) map[int]int {
 	indexes := make(map[int]int, len(tokens))
-	tokenCursor := 0
+	visibleRuneIndexes := make([]int, 0, len([]rune(strings.TrimSpace(seg.Text))))
 	for runeIndex, r := range []rune(strings.TrimSpace(seg.Text)) {
 		if unicode.IsSpace(r) {
 			continue
 		}
-		if tokenCursor >= len(tokens) {
-			break
+		visibleRuneIndexes = append(visibleRuneIndexes, runeIndex)
+	}
+
+	visibleCursor := 0
+	for tokenIndex, token := range tokens {
+		for _, r := range []rune(token.Char) {
+			if unicode.IsSpace(r) {
+				continue
+			}
+			if visibleCursor >= len(visibleRuneIndexes) {
+				return indexes
+			}
+			indexes[visibleRuneIndexes[visibleCursor]] = tokenIndex
+			visibleCursor++
 		}
-		indexes[runeIndex] = tokenCursor
-		tokenCursor++
 	}
 	return indexes
 }

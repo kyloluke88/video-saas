@@ -160,14 +160,34 @@ func subtitleWrapperStack(texts []string, start, end int) []rune {
 }
 
 func subtitleApplyWrapperText(stack []rune, text string) []rune {
-	for _, r := range []rune(strings.TrimSpace(text)) {
-		if closing, ok := subtitleClosingWrapperFor(r); ok {
-			stack = append(stack, closing)
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" {
+		return stack
+	}
+	rs := []rune(trimmed)
+	if len(rs) == 1 {
+		return subtitleApplyWrapperRune(stack, rs[0], true)
+	}
+	for _, r := range rs {
+		// Ignore symmetric quote runes inside multi-rune tokens (e.g. "I'm"),
+		// otherwise apostrophes in words would accidentally close quote wrappers.
+		if isSubtitleSymmetricWrapperRune(r) {
 			continue
 		}
-		if len(stack) > 0 && r == stack[len(stack)-1] {
-			stack = stack[:len(stack)-1]
+		stack = subtitleApplyWrapperRune(stack, r, false)
+	}
+	return stack
+}
+
+func subtitleApplyWrapperRune(stack []rune, r rune, allowSymmetricOpen bool) []rune {
+	if len(stack) > 0 && r == stack[len(stack)-1] {
+		return stack[:len(stack)-1]
+	}
+	if closing, ok := subtitleClosingWrapperFor(r); ok {
+		if isSubtitleSymmetricWrapperRune(r) && !allowSymmetricOpen {
+			return stack
 		}
+		return append(stack, closing)
 	}
 	return stack
 }
@@ -194,9 +214,17 @@ func subtitleClosingWrapperFor(r rune) (rune, bool) {
 		return '”', true
 	case '‘':
 		return '’', true
+	case '"':
+		return '"', true
+	case '\'':
+		return '\'', true
 	default:
 		return 0, false
 	}
+}
+
+func isSubtitleSymmetricWrapperRune(r rune) bool {
+	return r == '"' || r == '\''
 }
 
 func isSubtitleTrailingAttachedRune(r rune) bool {
@@ -223,15 +251,32 @@ func inlineLatinWordTokenRun(tokens []dto.PodcastToken, start int) (int, bool) {
 	end := start
 	for end+1 < len(tokens) {
 		switch {
-		case isLatinWordBodyToken(tokens[end+1].Char):
+		case isLatinWordBodyToken(tokens[end+1].Char) && canMergeAdjacentLatinBody(tokens[end].Char, tokens[end+1].Char):
 			end++
 		case isLatinWordConnectorToken(tokens[end+1].Char) && end+2 < len(tokens) && isLatinWordBodyToken(tokens[end+2].Char):
-			end++
+			end += 2
 		default:
 			return end, true
 		}
 	}
 	return end, true
+}
+
+func canMergeAdjacentLatinBody(prevRaw, nextRaw string) bool {
+	prev := strings.TrimSpace(prevRaw)
+	next := strings.TrimSpace(nextRaw)
+	if prev == "" || next == "" {
+		return false
+	}
+	if prevRaw != prev || nextRaw != next {
+		return false
+	}
+	prevRunes := []rune(prev)
+	nextRunes := []rune(next)
+	if len(prevRunes) != 1 || len(nextRunes) != 1 {
+		return false
+	}
+	return isLatinWordBodyToken(prev) && isLatinWordBodyToken(next)
 }
 
 func isLatinWordBodyToken(text string) bool {

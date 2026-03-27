@@ -12,14 +12,15 @@ import (
 	conf "worker/pkg/config"
 	services "worker/services"
 	ffmpegpodcast "worker/services/ffmpeg_service/podcast"
+	podcastaudioservice "worker/services/podcast_audio_service"
 )
 
 type ComposeInput struct {
-	ProjectID     string
-	Language      string
-	BgImgFilename string
-	Resolution    string
-	DesignStyle   int
+	ProjectID      string
+	Language       string
+	BgImgFilenames []string
+	Resolution     string
+	DesignStyle    int
 }
 
 type ComposeResult struct {
@@ -34,8 +35,9 @@ func Compose(input ComposeInput) (ComposeResult, error) {
 	if err != nil {
 		return ComposeResult{}, err
 	}
-	if strings.TrimSpace(input.BgImgFilename) == "" {
-		return ComposeResult{}, fmt.Errorf("bg_img_filename is required")
+	backgroundPath, err := backgroundImagePathForRequest(input.BgImgFilenames)
+	if err != nil {
+		return ComposeResult{}, err
 	}
 	log.Printf("🎬 podcast compose start project_id=%s resolution=%s design_style=%d",
 		input.ProjectID, defaultPodcastResolution(input.Resolution), input.DesignStyle)
@@ -43,7 +45,6 @@ func Compose(input ComposeInput) (ComposeResult, error) {
 	projectDir := projectDirFor(input.ProjectID)
 	dialoguePath := filepath.Join(projectDir, "dialogue.mp3")
 	scriptPath := filepath.Join(projectDir, "script_aligned.json")
-	backgroundPath := backgroundImagePathFor(input.BgImgFilename)
 
 	if _, err := os.Stat(dialoguePath); err != nil {
 		return ComposeResult{}, fmt.Errorf("dialogue audio missing: %s", dialoguePath)
@@ -62,8 +63,6 @@ func Compose(input ComposeInput) (ComposeResult, error) {
 	}
 	script.Language = language
 	script.RefreshSegmentsFromBlocks()
-	log.Printf("📝 podcast compose script project_id=%s segments=%d", input.ProjectID, len(script.Segments))
-
 	finalPath := filepath.Join(projectDir, "podcast_final.mp4")
 	if err := ffmpegpodcast.ComposeVideo(ffmpegpodcast.ComposeInput{
 		BackgroundImagePath: backgroundPath,
@@ -75,10 +74,12 @@ func Compose(input ComposeInput) (ComposeResult, error) {
 	}); err != nil {
 		return ComposeResult{}, err
 	}
+	if err := podcastaudioservice.RefreshYouTubeExportFiles(projectDir, script); err != nil {
+		return ComposeResult{}, err
+	}
 	if err := cleanupPodcastIntermediates(projectDir); err != nil {
 		log.Printf("⚠️ podcast compose cleanup warning project_id=%s err=%v", input.ProjectID, err)
 	}
-	log.Printf("✅ podcast compose output project_id=%s final=%s", input.ProjectID, finalPath)
 	return ComposeResult{FinalVideoPath: finalPath}, nil
 }
 
@@ -90,19 +91,31 @@ func backgroundImagePathFor(filename string) string {
 	return filepath.Join(conf.Get[string]("worker.worker_assets_dir"), "podcast", "bg-images", filepath.Base(strings.TrimSpace(filename)))
 }
 
+func backgroundImagePathForRequest(many []string) (string, error) {
+	filenames := compactBackgroundNames(many)
+	if len(filenames) == 0 {
+		return "", fmt.Errorf("bg_img_filenames is required")
+	}
+	// Static background mode: only the first image is used for all design styles.
+	return backgroundImagePathFor(filenames[0]), nil
+}
+
+func compactBackgroundNames(values []string) []string {
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	return out
+}
+
 func readJSON(path string, out interface{}) error {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
 	return json.Unmarshal(raw, out)
-}
-
-func defaultString(v, fallback string) string {
-	if strings.TrimSpace(v) == "" {
-		return fallback
-	}
-	return v
 }
 
 func defaultPodcastResolution(value string) string {

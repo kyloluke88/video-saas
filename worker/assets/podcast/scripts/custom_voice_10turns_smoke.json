@@ -1,0 +1,46 @@
+{
+  "language_code": "cmn-CN",
+  "title": "Custom Voice Smoke Test 10 Turns",
+  "turns": [
+    {
+      "speaker": "male",
+      "text": "大家好，欢迎来到今天的练习。我们先用比较慢的速度热身。"
+    },
+    {
+      "speaker": "female",
+      "text": "好呀，我会先说一段轻松的内容，听听语气和停顿是不是自然。"
+    },
+    {
+      "speaker": "male",
+      "text": "第一句是，今天的天气很好，适合出门散步，也适合安静地学习。"
+    },
+    {
+      "speaker": "female",
+      "text": "第二句是，别着急，一步一步来，节奏稳定比速度更重要。"
+    },
+    {
+      "speaker": "male",
+      "text": "如果你能听清每个短句的边界，就更容易跟读和模仿。"
+    },
+    {
+      "speaker": "female",
+      "text": "对，我会把句尾收得干净一点，让你更容易分辨语气变化。"
+    },
+    {
+      "speaker": "male",
+      "text": "接下来我们加一点情感，但不要夸张，只保留自然的起伏。"
+    },
+    {
+      "speaker": "female",
+      "text": "你可以注意我在逗号后的小停顿，这样听起来会更清楚。"
+    },
+    {
+      "speaker": "male",
+      "text": "最后一轮，我们保持同样的音色和速度，再完整说一遍。"
+    },
+    {
+      "speaker": "female",
+      "text": "感谢收听这次测试，如果你觉得舒服，我们就用这套声音继续。"
+    }
+  ]
+}

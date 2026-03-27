@@ -110,8 +110,8 @@ func handleRunModeComposeOnly(ch *amqp.Channel, payload dto.PodcastAudioGenerate
 	if err != nil {
 		return err
 	}
-	log.Printf("🎬 podcast run_mode=2 compose-only project_id=%s background=%s design_style=%d resolution=%s",
-		composePayload.ProjectID, composePayload.BgImgFilename, composePayload.DesignStyle, composePayload.Resolution)
+	log.Printf("🎬 podcast run_mode=2 compose-only project_id=%s background=%s backgrounds=%d design_style=%d resolution=%s",
+		composePayload.ProjectID, firstBackgroundName(composePayload.BgImgFilenames), len(composePayload.BgImgFilenames), composePayload.DesignStyle, composePayload.Resolution)
 	return publishComposeTask(ch, composePayload)
 }
 
@@ -143,14 +143,14 @@ func validateFreshGeneratePayload(payload dto.PodcastAudioGeneratePayload) error
 	if strings.TrimSpace(payload.ScriptFilename) == "" {
 		return fmt.Errorf("script_filename is required")
 	}
-	if strings.TrimSpace(payload.BgImgFilename) == "" {
-		return fmt.Errorf("bg_img_filename is required")
+	if len(compactNonEmptyStrings(payload.BgImgFilenames)) == 0 {
+		return fmt.Errorf("bg_img_filenames is required")
 	}
 	return nil
 }
 
 func generateAndPublishCompose(ch *amqp.Channel, payload dto.PodcastAudioGeneratePayload) error {
-	result, err := podcastaudioservice.Generate(podcastaudioservice.GenerateInput{
+	_, err := podcastaudioservice.Generate(podcastaudioservice.GenerateInput{
 		ProjectID:      payload.ProjectID,
 		Language:       payload.Lang,
 		ScriptFilename: payload.ScriptFilename,
@@ -159,12 +159,11 @@ func generateAndPublishCompose(ch *amqp.Channel, payload dto.PodcastAudioGenerat
 		return err
 	}
 
-	log.Printf("🎧 podcast audio generated project_id=%s audio=%s script=%s", payload.ProjectID, result.DialogueAudioPath, result.AlignedScriptPath)
 	return publishComposeTask(ch, dto.PodcastComposePayload{
 		ProjectID:      payload.ProjectID,
 		Lang:           payload.Lang,
 		Title:          payload.Title,
-		BgImgFilename:  payload.BgImgFilename,
+		BgImgFilenames: compactNonEmptyStrings(payload.BgImgFilenames),
 		TargetPlatform: payload.TargetPlatform,
 		AspectRatio:    payload.AspectRatio,
 		Resolution:     payload.Resolution,
@@ -174,13 +173,22 @@ func generateAndPublishCompose(ch *amqp.Channel, payload dto.PodcastAudioGenerat
 
 func publishComposeTask(ch *amqp.Channel, payload dto.PodcastComposePayload) error {
 	return pipeline.PublishTask(ch, "podcast.compose.v1", map[string]interface{}{
-		"project_id":      payload.ProjectID,
-		"lang":            payload.Lang,
-		"title":           payload.Title,
-		"bg_img_filename": payload.BgImgFilename,
-		"target_platform": payload.TargetPlatform,
-		"aspect_ratio":    payload.AspectRatio,
-		"resolution":      payload.Resolution,
-		"design_style":    payload.DesignStyle,
+		"project_id":       payload.ProjectID,
+		"lang":             payload.Lang,
+		"title":            payload.Title,
+		"bg_img_filenames": payload.BgImgFilenames,
+		"target_platform":  payload.TargetPlatform,
+		"aspect_ratio":     payload.AspectRatio,
+		"resolution":       payload.Resolution,
+		"design_style":     payload.DesignStyle,
 	})
+}
+
+func firstBackgroundName(backgrounds []string) string {
+	for _, value := range backgrounds {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
 }

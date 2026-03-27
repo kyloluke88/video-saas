@@ -73,6 +73,8 @@ func init() {
 			"google_tts_prompt_append":         config.Env("GOOGLE_TTS_PROMPT_APPEND", ""),
 			"google_tts_zh_prompt_append":      config.Env("GOOGLE_TTS_ZH_PROMPT_APPEND", ""),
 			"google_tts_ja_prompt_append":      config.Env("GOOGLE_TTS_JA_PROMPT_APPEND", ""),
+			"google_tts_prompt_max_bytes":      cast.ToInt(config.Env("GOOGLE_TTS_PROMPT_MAX_BYTES", 1200)),
+			"podcast_tts_batch_count":          cast.ToInt(config.Env("PODCAST_TTS_BATCH_COUNT", 4)),
 			"mfa_enabled":                      cast.ToBool(config.Env("MFA_ENABLED", false)),
 			"mfa_command":                      config.Env("MFA_COMMAND", "mfa"),
 			"mfa_temporary_directory":          config.Env("MFA_TEMPORARY_DIRECTORY", ""),

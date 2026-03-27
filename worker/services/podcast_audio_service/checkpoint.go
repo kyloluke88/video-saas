@@ -52,10 +52,7 @@ func finalizeAlignedScript(projectID, alignedPath, dialoguePath string, script d
 	if err := writeJSON(alignedPath, finalScript); err != nil {
 		return dto.PodcastScript{}, err
 	}
-	if err := exportYouTubePublishFiles(filepath.Dir(alignedPath), finalScript); err != nil {
-		return dto.PodcastScript{}, err
-	}
-	if err := exportYouTubeTranscriptFile(filepath.Dir(alignedPath), finalScript); err != nil {
+	if err := RefreshYouTubeExportFiles(filepath.Dir(alignedPath), finalScript); err != nil {
 		return dto.PodcastScript{}, err
 	}
 	if err := exportConversationMinimalFile(filepath.Dir(alignedPath), projectID, finalScript); err != nil {
@@ -63,8 +60,8 @@ func finalizeAlignedScript(projectID, alignedPath, dialoguePath string, script d
 	}
 
 	timedSegments, totalSegments, timedTokens, totalTokens := alignedStats(finalScript)
-	log.Printf("🧭 script aligned ready project_id=%s path=%s segments_timed=%d/%d tokens_timed=%d/%d",
-		projectID, alignedPath, timedSegments, totalSegments, timedTokens, totalTokens)
+	log.Printf("🎧 podcast audio ready project_id=%s audio=%s script=%s segments_timed=%d/%d tokens_timed=%d/%d",
+		projectID, dialoguePath, alignedPath, timedSegments, totalSegments, timedTokens, totalTokens)
 	return finalScript, nil
 }
 

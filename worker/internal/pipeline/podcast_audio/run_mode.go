@@ -37,16 +37,16 @@ func buildComposePayloadForRunMode2(saved, current dto.PodcastAudioGeneratePaylo
 		return dto.PodcastComposePayload{}, fmt.Errorf("lang must be zh or ja")
 	}
 
-	bg := firstNonEmpty(current.BgImgFilename, saved.BgImgFilename)
-	if strings.TrimSpace(bg) == "" {
-		return dto.PodcastComposePayload{}, fmt.Errorf("bg_img_filename is required")
+	backgrounds := firstNonEmptyStrings(current.BgImgFilenames, saved.BgImgFilenames)
+	if len(backgrounds) == 0 {
+		return dto.PodcastComposePayload{}, fmt.Errorf("bg_img_filenames is required")
 	}
 
 	return dto.PodcastComposePayload{
 		ProjectID:      projectID,
 		Lang:           lang,
 		Title:          firstNonEmpty(current.Title, saved.Title),
-		BgImgFilename:  bg,
+		BgImgFilenames: backgrounds,
 		TargetPlatform: firstNonEmpty(current.TargetPlatform, saved.TargetPlatform),
 		AspectRatio:    firstNonEmpty(current.AspectRatio, saved.AspectRatio),
 		Resolution:     firstNonEmpty(current.Resolution, saved.Resolution),
@@ -71,4 +71,24 @@ func firstPositive(values ...int) int {
 		}
 	}
 	return 0
+}
+
+func firstNonEmptyStrings(values ...[]string) []string {
+	for _, group := range values {
+		cleaned := compactNonEmptyStrings(group)
+		if len(cleaned) > 0 {
+			return cleaned
+		}
+	}
+	return nil
+}
+
+func compactNonEmptyStrings(values []string) []string {
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	return out
 }

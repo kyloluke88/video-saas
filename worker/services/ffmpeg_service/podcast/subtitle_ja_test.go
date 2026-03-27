@@ -83,3 +83,149 @@ func TestJapaneseSegmentTokens_UsesMFAHighlightSpanForWordInternalProgression(t 
 		}
 	}
 }
+
+func TestJapaneseSubtitleLayout_ShrinksTopSectionWithoutMovingEnglishArea(t *testing.T) {
+	layout := japaneseSubtitleLayout(1920, 1080, 2)
+	boxHeight := int(float64(layout.PlayH) * 0.4029)
+	boxTop := int(float64(layout.PlayH) * 0.5561)
+	oldBottomTop := boxTop + int(float64(boxHeight)*0.7301)
+	if got := layout.BottomSectionTop; got != oldBottomTop {
+		t.Fatalf("english area moved: got bottom top %d want %d", got, oldBottomTop)
+	}
+	expectedTop := boxTop + int(float64(boxHeight)*0.02) + int(float64(layout.PlayH)*0.03)
+	if got := layout.TopSectionTop; got != expectedTop {
+		t.Fatalf("top section did not shift down: got %d want %d", got, expectedTop)
+	}
+}
+
+func TestBuildJapaneseLayoutCells_PreservesSpaceBetweenEnglishWords(t *testing.T) {
+	layout := subtitleLayout{
+		HanziSize:    40,
+		HanziSpacing: 8,
+	}
+	tokens := []dto.PodcastToken{
+		{Char: "I", StartMS: 100, EndMS: 200},
+		{Char: " ", StartMS: 200, EndMS: 200},
+		{Char: "will", StartMS: 200, EndMS: 350},
+	}
+
+	cells := buildJapaneseLayoutCells(tokens, layout)
+	if len(cells) != 3 {
+		t.Fatalf("unexpected cell count: got %d want %d", len(cells), 3)
+	}
+	if cells[0].Char != "I" {
+		t.Fatalf("unexpected first cell: got %q want %q", cells[0].Char, "I")
+	}
+	if cells[0].Gap != 0 {
+		t.Fatalf("expected english word before space to have zero gap, got %v", cells[0].Gap)
+	}
+	if cells[1].Char != " " {
+		t.Fatalf("unexpected space cell text: got %q want single space", cells[1].Char)
+	}
+	if cells[1].Width <= 0 {
+		t.Fatalf("expected space cell to reserve width, got %v", cells[1].Width)
+	}
+	if cells[2].Char != "will" {
+		t.Fatalf("unexpected third cell: got %q want %q", cells[2].Char, "will")
+	}
+}
+
+func TestBuildJapaneseLayoutCells_InsertsVisualSpaceBetweenAdjacentEnglishWordTokens(t *testing.T) {
+	layout := subtitleLayout{
+		HanziSize:    40,
+		HanziSpacing: 8,
+	}
+	tokens := []dto.PodcastToken{
+		{Char: "I", StartMS: 100, EndMS: 200},
+		{Char: "will", StartMS: 200, EndMS: 350},
+		{Char: "go", StartMS: 350, EndMS: 450},
+	}
+
+	cells := buildJapaneseLayoutCells(tokens, layout)
+	if len(cells) != 3 {
+		t.Fatalf("unexpected cell count: got %d want %d", len(cells), 3)
+	}
+	if cells[0].Char != "I" || cells[1].Char != "will" || cells[2].Char != "go" {
+		t.Fatalf("unexpected english cells: %#v", cells)
+	}
+	if cells[0].Gap <= 0 || cells[1].Gap <= 0 {
+		t.Fatalf("expected positive inter-word visual space, got %v and %v", cells[0].Gap, cells[1].Gap)
+	}
+	if cells[0].Gap >= 8 || cells[1].Gap >= 8 {
+		t.Fatalf("expected compact inter-word visual space, got %v and %v", cells[0].Gap, cells[1].Gap)
+	}
+}
+
+func TestBuildJapaneseLayoutCells_AsciiQuotesStickToInlineEnglish(t *testing.T) {
+	layout := subtitleLayout{
+		HanziSize:    40,
+		HanziSpacing: 8,
+	}
+	tokens := []dto.PodcastToken{
+		{Char: "'"},
+		{Char: "will"},
+		{Char: "'"},
+	}
+
+	cells := buildJapaneseLayoutCells(tokens, layout)
+	if len(cells) != 3 {
+		t.Fatalf("unexpected cell count: got %d want %d", len(cells), 3)
+	}
+	if cells[0].Char != "'" || cells[1].Char != "will" || cells[2].Char != "'" {
+		t.Fatalf("unexpected cells: %#v", cells)
+	}
+	if cells[0].Gap != 0 {
+		t.Fatalf("expected opening quote to stick to word, got gap=%v", cells[0].Gap)
+	}
+	if cells[1].Gap != 0 {
+		t.Fatalf("expected word to stick to closing quote, got gap=%v", cells[1].Gap)
+	}
+}
+
+func TestChooseJapanesePageBreak_BreaksAfterBoundaryBeforeLongWrappedSpan(t *testing.T) {
+	layout := subtitleLayout{
+		MaxTextWidth: 9999,
+		MaxLineChars: 8,
+		HanziSize:    40,
+		HanziSpacing: 8,
+	}
+	groups := []japaneseTokenGroup{
+		{Cells: []japaneseCharCell{{Char: "前", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "置", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "。", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "（", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "長", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "い", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "、", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "文", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "、", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "です", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "）", Width: 20}}},
+	}
+	if got, want := chooseJapanesePageBreak(groups, 0, layout), 3; got != want {
+		t.Fatalf("unexpected break around boundary+long wrapped span: got %d want %d", got, want)
+	}
+}
+
+func TestChooseJapanesePageBreak_DoesNotForceBoundaryBreakForShortWrappedSpan(t *testing.T) {
+	layout := subtitleLayout{
+		MaxTextWidth: 9999,
+		MaxLineChars: 12,
+		HanziSize:    40,
+		HanziSpacing: 8,
+	}
+	groups := []japaneseTokenGroup{
+		{Cells: []japaneseCharCell{{Char: "前", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "置", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "。", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "（", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "短", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "、", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "句", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "）", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "後", Width: 20}}},
+	}
+	if got, want := chooseJapanesePageBreak(groups, 0, layout), 8; got != want {
+		t.Fatalf("unexpected forced break for short wrapped span: got %d want %d", got, want)
+	}
+}

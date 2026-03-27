@@ -3,6 +3,7 @@ package podcast_audio_service
 import (
 	"fmt"
 	"strings"
+	"unicode"
 
 	"worker/internal/dto"
 )
@@ -28,7 +29,15 @@ func validateChineseScriptInput(script dto.PodcastScript) error {
 			if len(seg.Tokens) == 0 {
 				return fmt.Errorf("segment %s tokens are required", seg.SegmentID)
 			}
+			expectedCount := chineseVisibleRuneCount(seg.Text)
+			actualCount := chineseVisibleTokenRuneCount(seg.Tokens)
+			if actualCount != expectedCount {
+				return fmt.Errorf("segment %s token coverage mismatch expected=%d actual=%d", seg.SegmentID, expectedCount, actualCount)
+			}
 			for _, token := range seg.Tokens {
+				if chineseWhitespaceToken(token) {
+					continue
+				}
 				if strings.TrimSpace(token.Char) == "" {
 					return fmt.Errorf("segment %s token char is required", seg.SegmentID)
 				}
@@ -36,6 +45,34 @@ func validateChineseScriptInput(script dto.PodcastScript) error {
 		}
 	}
 	return nil
+}
+
+func chineseVisibleRuneCount(text string) int {
+	count := 0
+	for _, r := range []rune(strings.TrimSpace(text)) {
+		if unicode.IsSpace(r) {
+			continue
+		}
+		count++
+	}
+	return count
+}
+
+func chineseVisibleTokenRuneCount(tokens []dto.PodcastToken) int {
+	count := 0
+	for _, token := range tokens {
+		for _, r := range []rune(token.Char) {
+			if unicode.IsSpace(r) {
+				continue
+			}
+			count++
+		}
+	}
+	return count
+}
+
+func chineseWhitespaceToken(token dto.PodcastToken) bool {
+	return strings.TrimSpace(token.Char) == "" && token.Char != ""
 }
 
 func chineseSegmentTokens(seg dto.PodcastSegment) []dto.PodcastToken {

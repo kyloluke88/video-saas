@@ -38,6 +38,28 @@ func TestInlineLatinWordTokenRun_MergesWordAndConnector(t *testing.T) {
 	}
 }
 
+func TestInlineLatinWordTokenRun_DoesNotMergeAdjacentWholeWords(t *testing.T) {
+	tokens := []dto.PodcastToken{
+		{Char: "I"},
+		{Char: "will"},
+		{Char: "go"},
+	}
+	end, ok := inlineLatinWordTokenRun(tokens, 0)
+	if !ok {
+		t.Fatal("expected latin word run")
+	}
+	if end != 0 {
+		t.Fatalf("unexpected run end: got %d want %d", end, 0)
+	}
+}
+
+func TestAdjustSubtitlePageBreak_KeepsAsciiQuotedSpanTogether(t *testing.T) {
+	texts := []string{"他说", "'", "I", "will", "'", "后来"}
+	if got, want := adjustSubtitlePageBreak(texts, 0, 4), 5; got != want {
+		t.Fatalf("unexpected ascii quoted break: got %d want %d", got, want)
+	}
+}
+
 func TestJapaneseBuildLayoutCells_MergesInlineEnglishWord(t *testing.T) {
 	layout := subtitleLayout{
 		HanziSize: 40,

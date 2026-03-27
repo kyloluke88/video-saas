@@ -8,28 +8,28 @@ import (
 )
 
 type PodcastAudioGeneratePayload struct {
-	ProjectID      string `json:"project_id"`
-	Lang           string `json:"lang"`
-	ContentProfile string `json:"content_profile"`
-	RunMode        int    `json:"run_mode,omitempty"`
-	Title          string `json:"title,omitempty"`
-	ScriptFilename string `json:"script_filename"`
-	BgImgFilename  string `json:"bg_img_filename"`
-	TargetPlatform string `json:"target_platform,omitempty"`
-	AspectRatio    string `json:"aspect_ratio,omitempty"`
-	Resolution     string `json:"resolution,omitempty"`
-	DesignStyle    int    `json:"design_style,omitempty"`
+	ProjectID      string   `json:"project_id"`
+	Lang           string   `json:"lang"`
+	ContentProfile string   `json:"content_profile"`
+	RunMode        int      `json:"run_mode,omitempty"`
+	Title          string   `json:"title,omitempty"`
+	ScriptFilename string   `json:"script_filename"`
+	BgImgFilenames []string `json:"bg_img_filenames,omitempty"`
+	TargetPlatform string   `json:"target_platform,omitempty"`
+	AspectRatio    string   `json:"aspect_ratio,omitempty"`
+	Resolution     string   `json:"resolution,omitempty"`
+	DesignStyle    int      `json:"design_style,omitempty"`
 }
 
 type PodcastComposePayload struct {
-	ProjectID      string `json:"project_id"`
-	Lang           string `json:"lang"`
-	Title          string `json:"title,omitempty"`
-	BgImgFilename  string `json:"bg_img_filename"`
-	TargetPlatform string `json:"target_platform,omitempty"`
-	AspectRatio    string `json:"aspect_ratio,omitempty"`
-	Resolution     string `json:"resolution,omitempty"`
-	DesignStyle    int    `json:"design_style,omitempty"`
+	ProjectID      string   `json:"project_id"`
+	Lang           string   `json:"lang"`
+	Title          string   `json:"title,omitempty"`
+	BgImgFilenames []string `json:"bg_img_filenames,omitempty"`
+	TargetPlatform string   `json:"target_platform,omitempty"`
+	AspectRatio    string   `json:"aspect_ratio,omitempty"`
+	Resolution     string   `json:"resolution,omitempty"`
+	DesignStyle    int      `json:"design_style,omitempty"`
 }
 
 type PodcastScript struct {

@@ -2,6 +2,7 @@ package podcast_audio_service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -35,6 +36,19 @@ type blockSynthesisResult struct {
 	DurationMS   int
 	AlignedBlock dto.PodcastBlock
 }
+
+type blockBatch struct {
+	BatchIndex int
+	Start      int
+	End        int
+}
+
+type blockTimingWindow struct {
+	StartMS int
+	EndMS   int
+}
+
+const googleTTSInputFieldLimitBytes = 4000
 
 func Generate(input GenerateInput) (GenerateResult, error) {
 	if strings.TrimSpace(input.ProjectID) == "" {
@@ -79,28 +93,73 @@ func Generate(input GenerateInput) (GenerateResult, error) {
 		}
 	}
 	results := make([]blockSynthesisResult, len(script.Blocks))
-	for i, block := range script.Blocks {
-		result, err := synthesizeOrResumeBlock(context.Background(), client, aligner, language, artifacts, i, block)
+	targetBatchCount := podcastTTSBatchCount()
+	batches := buildBalancedBlockBatches(len(script.Blocks), targetBatchCount)
+	if err := enforceBatchingHardLimit(language, script.Blocks, batches, targetBatchCount); err != nil {
+		return GenerateResult{}, err
+	}
+	log.Printf("🎛️ podcast tts batching target_batches=%d actual_batches=%d blocks=%d",
+		targetBatchCount,
+		len(batches),
+		len(script.Blocks),
+	)
+	totalBatches := len(batches)
+	for _, batch := range batches {
+		estimatedBytes := estimateConversationBytesForBlocks(language, script.Blocks[batch.Start:batch.End])
+		mergedBlock := mergeBlocksForSynthesis(script.Blocks[batch.Start:batch.End], fmt.Sprintf("batch_%03d", batch.BatchIndex+1))
+		request := buildConversationRequest(language, mergedBlock)
+		log.Printf("🎛️ podcast tts batch start batch=%d/%d blocks=%d range=%03d-%03d turns=%d text_bytes=%d",
+			batch.BatchIndex+1,
+			totalBatches,
+			batch.End-batch.Start,
+			batch.Start+1,
+			batch.End,
+			len(request.Turns),
+			estimatedBytes,
+		)
+		batchResults, err := synthesizeOrResumeBatch(
+			context.Background(),
+			client,
+			aligner,
+			language,
+			artifacts,
+			script.Blocks[batch.Start:batch.End],
+			batch,
+			totalBatches,
+		)
 		if err != nil {
 			return GenerateResult{}, err
 		}
-		results[i] = result
-		script.Blocks[i] = result.AlignedBlock
+		for localIdx, result := range batchResults {
+			globalIdx := batch.Start + localIdx
+			results[globalIdx] = result
+			script.Blocks[globalIdx] = result.AlignedBlock
 
-		partialScript, _, _, err := assembleDialogue(
-			dto.PodcastScript{
-				Language: script.Language,
-				Title:    script.Title,
-				YouTube:  script.YouTube,
-				Blocks:   append([]dto.PodcastBlock(nil), script.Blocks[:i+1]...),
-			},
-			results[:i+1],
-			artifacts.blockGapPath,
-			blockGapMS,
-		)
-		if err == nil {
-			_ = writeJSON(filepath.Join(projectDir, "script_partial.json"), partialScript)
+			partialScript, _, _, err := assembleDialogue(
+				dto.PodcastScript{
+					Language: script.Language,
+					Title:    script.Title,
+					YouTube:  script.YouTube,
+					Blocks:   append([]dto.PodcastBlock(nil), script.Blocks[:globalIdx+1]...),
+				},
+				results[:globalIdx+1],
+				artifacts.blockGapPath,
+				blockGapMS,
+			)
+			if err == nil {
+				_ = writeJSON(filepath.Join(projectDir, "script_partial.json"), partialScript)
+			}
 		}
+		lastResult := batchResults[len(batchResults)-1]
+		log.Printf("✅ podcast tts batch done batch=%d/%d blocks=%d range=%03d-%03d audio=%s duration_ms=%d",
+			batch.BatchIndex+1,
+			totalBatches,
+			batch.End-batch.Start,
+			batch.Start+1,
+			batch.End,
+			lastResult.AudioPath,
+			lastResult.DurationMS,
+		)
 	}
 
 	finalScript, concatPaths, _, err := assembleDialogue(script, results, artifacts.blockGapPath, blockGapMS)
@@ -145,23 +204,47 @@ func loadScriptForGeneration(projectDir, language, scriptFilename string) (dto.P
 func loadScriptFromPath(language, scriptPath string) (dto.PodcastScript, error) {
 	var script dto.PodcastScript
 	if err := readJSON(scriptPath, &script); err != nil {
-		return dto.PodcastScript{}, err
+		return dto.PodcastScript{}, markScriptLoadNonRetryable(scriptPath, err)
 	}
 	if err := validateScriptLanguage(script.Language, language); err != nil {
 		return dto.PodcastScript{}, err
 	}
 	script.Language = language
+	script = sanitizeScriptTokens(script)
 	if isJapaneseLanguage(language) {
 		if err := validateJapaneseScriptInput(script); err != nil {
-			return dto.PodcastScript{}, err
+			return dto.PodcastScript{}, markScriptInputNonRetryable(err)
 		}
 	} else {
 		if err := validateChineseScriptInput(script); err != nil {
-			return dto.PodcastScript{}, err
+			return dto.PodcastScript{}, markScriptInputNonRetryable(err)
 		}
 	}
 	script.RefreshSegmentsFromBlocks()
 	return normalizeScriptForSpeech(script), nil
+}
+
+func markScriptLoadNonRetryable(scriptPath string, err error) error {
+	if err == nil {
+		return nil
+	}
+	if os.IsNotExist(err) {
+		return services.NonRetryableError{
+			Err: fmt.Errorf("script file not found: %s", strings.TrimSpace(scriptPath)),
+		}
+	}
+	return err
+}
+
+func markScriptInputNonRetryable(err error) error {
+	if err == nil {
+		return nil
+	}
+	var nonRetryable services.NonRetryableError
+	if errors.As(err, &nonRetryable) {
+		return err
+	}
+	return services.NonRetryableError{Err: err}
 }
 
 func normalizeScriptForSpeech(script dto.PodcastScript) dto.PodcastScript {
@@ -183,76 +266,354 @@ func normalizeScriptForSpeech(script dto.PodcastScript) dto.PodcastScript {
 	return script
 }
 
-func synthesizeOrResumeBlock(ctx context.Context, client *googlecloud.Client, aligner *blockAligner, language string, artifacts audioArtifacts, index int, block dto.PodcastBlock) (blockSynthesisResult, error) {
+func buildBalancedBlockBatches(totalBlocks int, batchCount int) []blockBatch {
+	if totalBlocks <= 0 {
+		return nil
+	}
+	if batchCount <= 0 {
+		batchCount = 1
+	}
+	if batchCount > totalBlocks {
+		batchCount = totalBlocks
+	}
+
+	base := totalBlocks / batchCount
+	remainder := totalBlocks % batchCount
+	out := make([]blockBatch, 0, batchCount)
+	start := 0
+	for i := 0; i < batchCount; i++ {
+		size := base
+		if i < remainder {
+			size++
+		}
+		if size <= 0 {
+			continue
+		}
+		end := start + size
+		out = append(out, blockBatch{
+			BatchIndex: i,
+			Start:      start,
+			End:        end,
+		})
+		start = end
+	}
+	return out
+}
+
+func enforceBatchingHardLimit(
+	language string,
+	blocks []dto.PodcastBlock,
+	batches []blockBatch,
+	maxBatches int,
+) error {
+	if len(batches) == 0 {
+		return services.NonRetryableError{
+			Err: fmt.Errorf("tts batching produced no batches"),
+		}
+	}
+	if maxBatches > 0 && len(batches) > maxBatches {
+		return services.NonRetryableError{
+			Err: fmt.Errorf(
+				"tts batching exceeded max batches: actual=%d max=%d; please shorten script json",
+				len(batches),
+				maxBatches,
+			),
+		}
+	}
+	promptBytes := len([]byte(strings.TrimSpace(buildGeminiBlockPrompt(language))))
+	if promptBytes > googleTTSInputFieldLimitBytes {
+		return services.NonRetryableError{
+			Err: fmt.Errorf(
+				"tts prompt exceeds google 4000-byte limit: prompt_bytes=%d limit=%d",
+				promptBytes,
+				googleTTSInputFieldLimitBytes,
+			),
+		}
+	}
+	for _, batch := range batches {
+		if batch.Start < 0 || batch.End > len(blocks) || batch.Start >= batch.End {
+			return services.NonRetryableError{
+				Err: fmt.Errorf("invalid tts batch range: start=%d end=%d blocks=%d", batch.Start, batch.End, len(blocks)),
+			}
+		}
+	}
+	for blockIndex, block := range blocks {
+		for segIndex, seg := range block.Segments {
+			text := strings.TrimSpace(spokenTextForSynthesis(language, seg))
+			if text == "" {
+				continue
+			}
+			textBytes := len([]byte(text))
+			if textBytes <= googleTTSInputFieldLimitBytes {
+				continue
+			}
+			segID := strings.TrimSpace(seg.SegmentID)
+			if segID == "" {
+				segID = fmt.Sprintf("segment_%03d", segIndex+1)
+			}
+			return services.NonRetryableError{
+				Err: fmt.Errorf(
+					"segment text exceeds google 4000-byte limit: block=%s block_index=%d segment=%s segment_index=%d text_bytes=%d limit=%d",
+					strings.TrimSpace(block.BlockID),
+					blockIndex+1,
+					segID,
+					segIndex+1,
+					textBytes,
+					googleTTSInputFieldLimitBytes,
+				),
+			}
+		}
+	}
+	return nil
+}
+
+func estimateConversationBytesForBlocks(language string, blocks []dto.PodcastBlock) int {
+	merged := mergeBlocksForSynthesis(blocks, "estimate")
+	request := buildConversationRequest(language, merged)
+	total := 0
+	for _, turn := range request.Turns {
+		total += len([]byte(strings.TrimSpace(turn.Text)))
+	}
+	return total
+}
+
+func mergeBlocksForSynthesis(blocks []dto.PodcastBlock, syntheticID string) dto.PodcastBlock {
+	merged := dto.PodcastBlock{BlockID: syntheticID}
+	for _, block := range blocks {
+		for _, seg := range block.Segments {
+			merged.Segments = append(merged.Segments, clonePodcastSegment(seg))
+		}
+	}
+	return merged
+}
+
+func buildBatchTimingWindows(bounds []blockTimingWindow, totalDurationMS int) []blockTimingWindow {
+	if len(bounds) == 0 {
+		return nil
+	}
+	if totalDurationMS <= 0 {
+		totalDurationMS = bounds[len(bounds)-1].EndMS
+	}
+	if totalDurationMS <= 0 {
+		totalDurationMS = len(bounds)
+	}
+
+	windows := make([]blockTimingWindow, len(bounds))
+	prevBoundary := 0
+	for i := range bounds {
+		start := prevBoundary
+		var end int
+		if i == len(bounds)-1 {
+			end = totalDurationMS
+		} else {
+			leftEnd := maxInt(bounds[i].StartMS+1, bounds[i].EndMS)
+			rightStart := maxInt(leftEnd+1, bounds[i+1].StartMS)
+			end = (leftEnd + rightStart) / 2
+			if end <= start {
+				end = start + 1
+			}
+		}
+		windows[i] = blockTimingWindow{
+			StartMS: start,
+			EndMS:   end,
+		}
+		prevBoundary = end
+	}
+	if windows[len(windows)-1].EndMS != totalDurationMS {
+		windows[len(windows)-1].EndMS = totalDurationMS
+	}
+	for i := range windows {
+		if windows[i].EndMS <= windows[i].StartMS {
+			windows[i].EndMS = windows[i].StartMS + 1
+		}
+	}
+	return windows
+}
+
+func extractAudioRange(sourcePath string, startMS, endMS int, outputPath string) error {
+	startMS = maxInt(0, startMS)
+	endMS = maxInt(startMS+1, endMS)
+	startSec := fmt.Sprintf("%.3f", float64(startMS)/1000.0)
+	endSec := fmt.Sprintf("%.3f", float64(endMS)/1000.0)
+	return ffmpegcommon.RunFFmpeg(
+		"-y",
+		"-i", sourcePath,
+		"-ss", startSec,
+		"-to", endSec,
+		"-c:a", "libmp3lame",
+		"-q:a", "2",
+		outputPath,
+	)
+}
+
+func synthesizeOrResumeBatch(
+	ctx context.Context,
+	client *googlecloud.Client,
+	aligner *blockAligner,
+	language string,
+	artifacts audioArtifacts,
+	blocks []dto.PodcastBlock,
+	batch blockBatch,
+	totalBatches int,
+) ([]blockSynthesisResult, error) {
+	if len(blocks) == 0 {
+		return nil, nil
+	}
+
+	results := make([]blockSynthesisResult, len(blocks))
+	allReused := true
+	for i, block := range blocks {
+		globalIndex := batch.Start + i
+		reused, ok, err := tryReuseCachedBlock(ctx, aligner, language, artifacts, globalIndex, block)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			allReused = false
+			break
+		}
+		results[i] = reused
+	}
+	if allReused {
+		return results, nil
+	}
+
+	mergedBlock := mergeBlocksForSynthesis(blocks, fmt.Sprintf("batch_%03d", batch.BatchIndex+1))
+	type blockSegmentRange struct {
+		blockIndex int
+		startSeg   int
+		endSeg     int
+	}
+	ranges := make([]blockSegmentRange, len(blocks))
+	cursorSeg := 0
+	for i, block := range blocks {
+		startSeg := cursorSeg
+		endSeg := startSeg + len(block.Segments)
+		ranges[i] = blockSegmentRange{
+			blockIndex: batch.Start + i,
+			startSeg:   startSeg,
+			endSeg:     endSeg,
+		}
+		cursorSeg = endSeg
+	}
+	if len(mergedBlock.Segments) == 0 {
+		return nil, fmt.Errorf("tts batch has no segments batch=%d", batch.BatchIndex+1)
+	}
+	request := buildConversationRequest(language, mergedBlock)
+	ttsResult, err := client.SynthesizeConversation(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	batchExt := strings.TrimPrefix(strings.TrimSpace(ttsResult.Ext), ".")
+	if batchExt == "" {
+		batchExt = "mp3"
+	}
+
+	batchAudioPath := filepath.Join(
+		artifacts.blocksDir,
+		fmt.Sprintf("batch_%03d_%03d_%03d.%s", batch.BatchIndex+1, batch.Start+1, batch.End, batchExt),
+	)
+	if err := os.WriteFile(batchAudioPath, ttsResult.Audio, 0o644); err != nil {
+		return nil, err
+	}
+
+	batchDurationMS, err := audioDurationMS(batchAudioPath)
+	if err != nil {
+		return nil, err
+	}
+
+	alignedBatch, err := aligner.AlignBlock(ctx, language, mergedBlock, batchAudioPath, batchDurationMS)
+	if err != nil {
+		return nil, err
+	}
+	if len(alignedBatch.Segments) != len(mergedBlock.Segments) {
+		return nil, fmt.Errorf("aligned batch segment count mismatch batch=%d expected=%d got=%d", batch.BatchIndex+1, len(mergedBlock.Segments), len(alignedBatch.Segments))
+	}
+
+	bounds := make([]blockTimingWindow, len(ranges))
+	for i, r := range ranges {
+		if r.endSeg <= r.startSeg {
+			return nil, fmt.Errorf("batch=%d block_index=%d has no segments", batch.BatchIndex+1, r.blockIndex)
+		}
+		startMS := alignedBatch.Segments[r.startSeg].StartMS
+		endMS := alignedBatch.Segments[r.endSeg-1].EndMS
+		if endMS <= startMS {
+			return nil, fmt.Errorf("batch=%d block_index=%d has invalid segment timing start_ms=%d end_ms=%d", batch.BatchIndex+1, r.blockIndex, startMS, endMS)
+		}
+		bounds[i] = blockTimingWindow{StartMS: startMS, EndMS: endMS}
+	}
+	windows := buildBatchTimingWindows(bounds, batchDurationMS)
+
+	for i, block := range blocks {
+		globalIndex := batch.Start + i
+		window := windows[i]
+		blockDurationMS := window.EndMS - window.StartMS
+		if blockDurationMS <= 0 {
+			return nil, fmt.Errorf("batch=%d block=%s invalid window start_ms=%d end_ms=%d", batch.BatchIndex+1, block.BlockID, window.StartMS, window.EndMS)
+		}
+
+		blockAudioPath := unitAudioPath(artifacts.blocksDir, globalIndex, block.BlockID, "mp3")
+		if err := extractAudioRange(batchAudioPath, window.StartMS, window.EndMS, blockAudioPath); err != nil {
+			return nil, fmt.Errorf("extract block audio failed block=%s: %w", block.BlockID, err)
+		}
+
+		alignedBlock, err := aligner.AlignBlock(ctx, language, block, blockAudioPath, blockDurationMS)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := persistBlockCheckpoint(artifacts.blockStatesDir, globalIndex, alignedBlock, blockDurationMS); err != nil {
+			return nil, err
+		}
+		results[i] = blockSynthesisResult{
+			AudioPath:    blockAudioPath,
+			DurationMS:   blockDurationMS,
+			AlignedBlock: alignedBlock,
+		}
+	}
+	_ = os.Remove(batchAudioPath)
+	return results, nil
+}
+
+func tryReuseCachedBlock(ctx context.Context, aligner *blockAligner, language string, artifacts audioArtifacts, index int, block dto.PodcastBlock) (blockSynthesisResult, bool, error) {
 	blockID := strings.TrimSpace(block.BlockID)
 	for _, candidate := range reusableBlockAudioCandidates(artifacts, index, blockID) {
 		state, stateOK, err := loadBlockCheckpoint(candidate.stateDir, index, blockID)
 		if err != nil {
-			return blockSynthesisResult{}, err
+			return blockSynthesisResult{}, false, err
 		}
 		if !stateOK || canReuseCachedBlockAudio(language, block, state.Block) {
 			audioPath := candidate.audioPath
 			if candidate.copyToProject {
 				audioPath, err = ensureProjectBlockAudio(artifacts, index, blockID, candidate.audioPath)
 				if err != nil {
-					return blockSynthesisResult{}, err
+					return blockSynthesisResult{}, false, err
 				}
 			}
 			durationMS := state.DurationMS
 			if durationMS <= 0 {
 				durationMS, err = audioDurationMS(candidate.audioPath)
 				if err != nil {
-					return blockSynthesisResult{}, err
+					return blockSynthesisResult{}, false, err
 				}
 			}
 			alignedBlock, err := aligner.AlignBlock(ctx, language, block, audioPath, durationMS)
 			if err != nil {
-				return blockSynthesisResult{}, err
+				return blockSynthesisResult{}, false, err
 			}
 			if err := persistBlockCheckpoint(artifacts.blockStatesDir, index, alignedBlock, durationMS); err != nil {
-				return blockSynthesisResult{}, err
+				return blockSynthesisResult{}, false, err
 			}
 			log.Printf("♻️ podcast block reuse cached tts block=%s source=%s audio=%s duration_ms=%d", blockID, candidate.audioPath, audioPath, durationMS)
 			return blockSynthesisResult{
 				AudioPath:    audioPath,
 				DurationMS:   durationMS,
 				AlignedBlock: alignedBlock,
-			}, nil
+			}, true, nil
 		}
 		log.Printf("🔁 cached tts audio ignored block=%s reason=script_changed source=%s", blockID, candidate.audioPath)
 	}
-
-	// Each block is synthesized independently so a failed run can resume from the
-	// last finished block instead of regenerating the whole episode.
-	request := buildConversationRequest(language, block)
-	log.Printf("🎙️ gemini block synth start block=%s turns=%d", blockID, len(request.Turns))
-	result, err := client.SynthesizeConversation(ctx, request)
-	if err != nil {
-		return blockSynthesisResult{}, err
-	}
-	blockAudioPath := unitAudioPath(artifacts.blocksDir, index, blockID, result.Ext)
-	if err := os.WriteFile(blockAudioPath, result.Audio, 0o644); err != nil {
-		return blockSynthesisResult{}, err
-	}
-
-	durationMS, err := audioDurationMS(blockAudioPath)
-	if err != nil {
-		return blockSynthesisResult{}, err
-	}
-
-	alignedBlock, err := aligner.AlignBlock(ctx, language, block, blockAudioPath, durationMS)
-	if err != nil {
-		return blockSynthesisResult{}, err
-	}
-	if err := persistBlockCheckpoint(artifacts.blockStatesDir, index, alignedBlock, durationMS); err != nil {
-		return blockSynthesisResult{}, err
-	}
-	log.Printf("✅ gemini block synth done block=%s audio=%s duration_ms=%d", blockID, blockAudioPath, durationMS)
-	return blockSynthesisResult{
-		AudioPath:    blockAudioPath,
-		DurationMS:   durationMS,
-		AlignedBlock: alignedBlock,
-	}, nil
+	return blockSynthesisResult{}, false, nil
 }
 
 func canReuseCachedBlockAudio(language string, current, cached dto.PodcastBlock) bool {
@@ -376,16 +737,17 @@ func buildConversationRequest(language string, block dto.PodcastBlock) googleclo
 }
 
 func buildGeminiBlockPrompt(language string) string {
-	// Keep the prompt focused on stable voice traits and avoid storyline/context
-	// framing that a stateless TTS request cannot truly carry across blocks.
-	var base string
+	// Keep the base prompt language-symmetric; only the language keyword differs.
+	languageLabel := "Mandarin Chinese"
 	if isJapaneseLanguage(language) {
-		base = strings.TrimSpace(
-			"Generate a natural two-speaker Japanese learning podcast dialogue. Use stable voice characterization and keep the overall delivery consistent. Male speaker: late-20s to early-30s, calm, grounded, low-to-mid pitch, steady warmth, clear explanatory delivery, natural everyday Japanese, never announcer-like, never theatrical, never overly energetic. Female speaker: mid-to-late-20s, bright but natural, mid pitch, curious and responsive, friendly warmth, everyday spoken Japanese, never childish, never anime-like, never overly cute, never exaggerated. Keep both voices relaxed, emotionally controlled, and easy to follow. Allow subtle warmth, light conversational responsiveness, and small emotional shading when the text supports it, but keep the same voice identity and overall energy level stable. Naturalness must come from timing and clarity, not from stronger acting. Avoid dramatic laughs, audible sighs, breathy performance, exaggerated surprise, performative interjections, or large style shifts.")
-	} else {
-		base = strings.TrimSpace(
-			"Generate a natural two-speaker Mandarin Chinese learning podcast dialogue. Use stable voice characterization and keep the overall delivery consistent. Male speaker: late-20s to early-30s, calm, grounded, low-to-mid pitch, warm, steady, clear explanatory delivery, everyday spoken Mandarin, never news-anchor-like, never presenter-like, never theatrical. Female speaker: mid-to-late-20s, bright but natural, mid pitch, curious and responsive, warm and conversational, everyday spoken Mandarin, never childish, never overly cute, never exaggerated. Keep both voices relaxed, emotionally controlled, and easy to follow. Allow subtle natural warmth, light conversational reactions, and small emotional shading when the text supports it, but keep the same voice identity and overall energy level stable. Naturalness must come from timing, phrasing, and clarity, not from changing character. Avoid dramatic laughs, sighs, gasps, breathy delivery, exaggerated surprise, playful overacting, or large style shifts.")
+		languageLabel = "Japanese"
 	}
+	base := strings.TrimSpace(fmt.Sprintf(
+		"Generate a natural two-speaker %s learning podcast dialogue. Use stable voice characterization and keep the overall delivery consistent. The two speakers are longtime close friends who often chat in a relaxed, easy atmosphere, with light humor, occasional self-deprecating jokes, and natural conversational laughter. Male speaker: late-20s to early-30s, calm, grounded, low-to-mid pitch, warm and steady, clear explanatory delivery, everyday spoken %s, never announcer-like, never presenter-like, never theatrical. Female speaker: mid-to-late-20s, bright but natural, mid pitch, curious and responsive, warm and conversational, everyday spoken %s, never childish, never overly cute, never exaggerated. Keep both voices relaxed, emotionally controlled, and easy to follow. Allow subtle natural warmth, light banter, and small emotional shading when the text supports it, while preserving the same voice identity and overall energy level. Naturalness must come from timing, phrasing, and clarity, not from changing character. Avoid exaggerated or theatrical laughs, sighs, gasps, breathy delivery, exaggerated surprise, performative interjections, playful overacting, or large style shifts. When explicit laughter markers appear (for example 哈哈, 呵呵, はは, ふふ, [笑], (笑), w), render a brief natural chuckle rather than reading the laughter characters literally.",
+		languageLabel,
+		languageLabel,
+		languageLabel,
+	))
 	appendParts := []string{strings.TrimSpace(conf.Get[string]("worker.google_tts_prompt_append"))}
 	if isJapaneseLanguage(language) {
 		appendParts = append(appendParts, strings.TrimSpace(conf.Get[string]("worker.google_tts_ja_prompt_append")))
@@ -400,12 +762,20 @@ func buildGeminiBlockPrompt(language string) string {
 		}
 		extras = append(extras, part)
 	}
-	if len(extras) == 0 {
-		return base
+	prompt := base
+	maxBytes := ttsPromptMaxBytes()
+	for _, part := range extras {
+		next := strings.TrimSpace(prompt + " " + part)
+		if maxBytes > 0 && len([]byte(next)) > maxBytes {
+			log.Printf("⚠️ google tts prompt append truncated lang=%s max_bytes=%d", language, maxBytes)
+			break
+		}
+		prompt = next
 	}
-	// Env-configured prompt additions are appended verbatim so we can tune
-	// delivery without touching code or disturbing the default base direction.
-	return strings.TrimSpace(base + " " + strings.Join(extras, " "))
+	if maxBytes > 0 && len([]byte(prompt)) > maxBytes {
+		return truncateUTF8ByBytes(prompt, maxBytes)
+	}
+	return prompt
 }
 
 func ttsSpeakingRate(language string) float64 {
@@ -416,6 +786,33 @@ func ttsSpeakingRate(language string) float64 {
 		}
 	}
 	return base
+}
+
+func ttsPromptMaxBytes() int {
+	return firstPositive(conf.Get[int]("worker.google_tts_prompt_max_bytes"), 1200)
+}
+
+func podcastTTSBatchCount() int {
+	return firstPositive(conf.Get[int]("worker.podcast_tts_batch_count"), 4)
+}
+
+func truncateUTF8ByBytes(text string, maxBytes int) string {
+	if maxBytes <= 0 {
+		return ""
+	}
+	text = strings.TrimSpace(text)
+	if len([]byte(text)) <= maxBytes {
+		return text
+	}
+	runes := []rune(text)
+	for len(runes) > 0 {
+		runes = runes[:len(runes)-1]
+		candidate := strings.TrimSpace(string(runes))
+		if len([]byte(candidate)) <= maxBytes {
+			return candidate
+		}
+	}
+	return ""
 }
 
 func spokenTextForSynthesis(language string, seg dto.PodcastSegment) string {

@@ -12,7 +12,8 @@ import (
 )
 
 func ComposeVideo(input ComposeInput) error {
-	if strings.TrimSpace(input.BackgroundImagePath) == "" {
+	primaryBackgroundPath := strings.TrimSpace(input.BackgroundImagePath)
+	if primaryBackgroundPath == "" {
 		return fmt.Errorf("background image is required")
 	}
 	if strings.TrimSpace(input.DialogueAudioPath) == "" {
@@ -23,7 +24,8 @@ func ComposeVideo(input ComposeInput) error {
 	}
 
 	projectDir := filepath.Dir(input.OutputPath)
-	wave := waveformPresetFor(input.DesignStyle, input.Resolution)
+	audioInputIndex := 1
+	wave := waveformPresetFor(input.Resolution, audioInputIndex)
 	x264Preset := podcastX264Preset()
 	ffmpegTimeout := podcastComposeFFmpegTimeout(input.DialogueAudioPath)
 
@@ -32,26 +34,26 @@ func ComposeVideo(input ComposeInput) error {
 	if shouldKeepPodcastContentVideo(input) {
 		contentOutput = filepath.Join(projectDir, "podcast_content.mp4")
 	}
-	bgFilter := backgroundGraphFor(input.DesignStyle, input.Resolution)
+	bgFilter := backgroundGraphFor(input.Resolution)
 	if strings.TrimSpace(wave.BackgroundFilter) != "" {
 		bgFilter += "," + wave.BackgroundFilter
 	}
 	complexFilter := fmt.Sprintf("%s;%s;[bg][sw]overlay=%s[v]", bgFilter, wave.AudioGraph, wave.Overlay)
-	if err := common.RunFFmpegWithTimeout(ffmpegTimeout,
-		"-y",
-		"-loop", "1",
-		"-i", input.BackgroundImagePath,
+	args := []string{"-y"}
+	args = append(args, "-loop", "1", "-i", primaryBackgroundPath)
+	args = append(args,
 		"-i", input.DialogueAudioPath,
 		"-filter_complex", complexFilter,
 		"-map", "[v]",
-		"-map", "1:a:0",
+		"-map", fmt.Sprintf("%d:a:0", audioInputIndex),
 		"-c:v", "libx264",
 		"-preset", x264Preset,
 		"-pix_fmt", "yuv420p",
 		"-c:a", "aac",
 		"-shortest",
 		baseOutput,
-	); err != nil {
+	)
+	if err := common.RunFFmpegWithTimeout(ffmpegTimeout, args...); err != nil {
 		return err
 	}
 

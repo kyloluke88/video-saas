@@ -28,6 +28,16 @@ func exportYouTubePublishFiles(projectDir string, script dto.PodcastScript) erro
 	return os.WriteFile(filepath.Join(projectDir, "youtube_publish.txt"), []byte(content), 0o644)
 }
 
+func RefreshYouTubeExportFiles(projectDir string, script dto.PodcastScript) error {
+	if err := exportYouTubePublishFiles(projectDir, script); err != nil {
+		return err
+	}
+	if err := exportYouTubeTranscriptFile(projectDir, script); err != nil {
+		return err
+	}
+	return nil
+}
+
 func buildYouTubePublishText(script dto.PodcastScript) string {
 	return buildYouTubePublishTextWithLeadIn(script, youtubePublishLeadInMS(script.Language))
 }
