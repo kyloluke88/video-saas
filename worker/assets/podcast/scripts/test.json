@@ -1,13 +1,15 @@
 {
-  "language": "ja",
-  "title": "1000日勉強しても話せない？語学アプリの罠と突破口",
+  "language": "zh",
+  "title": "为什么在中国，选专业这么重要？——从张雪峰的离世说起",
+  "target_duration_minutes": 15,
+  "difficulty_level": "HSK3",
   "youtube": {
-    "publish_title": "Why You Still Can't Speak After 1000 Days on Apps | 語学アプリの罠と突破口",
+    "publish_title": "Why is Choosing a Major So Important in China? | 为什么在中国，选专业这么重要？",
     "chapters": [
       {
         "chapter_id": "ch_001",
-        "title_en": "The 1000-Day Streak Illusion",
-        "title": "1000日連続学習の錯覚",
+        "title_en": "The Shocking News of Zhang Xuefeng",
+        "title": "一条让人难过的新闻",
         "block_ids": [
           "block_001",
           "block_002"
@@ -15,8 +17,8 @@
       },
       {
         "chapter_id": "ch_002",
-        "title_en": "Passive vs. Active Vocabulary",
-        "title": "選択肢問題とリアルな会話の違い",
+        "title_en": "The Gaokao and Changing Majors",
+        "title": "激烈的高考与换专业的困难",
         "block_ids": [
           "block_003",
           "block_004"
@@ -24,8 +26,8 @@
       },
       {
         "chapter_id": "ch_003",
-        "title_en": "The Translation Machine Trap",
-        "title": "頭の中の「翻訳機」の罠",
+        "title_en": "Dreams vs. Reality for Ordinary Families",
+        "title": "普通家庭的现实与梦想",
         "block_ids": [
           "block_005",
           "block_006"
@@ -33,8 +35,8 @@
       },
       {
         "chapter_id": "ch_004",
-        "title_en": "Fear of Making Mistakes (The Heart System)",
-        "title": "失敗への恐怖：ライフ制の弊害",
+        "title_en": "Why Zhang Xuefeng Was a Beacon of Hope",
+        "title": "为什么大家都需要张雪峰",
         "block_ids": [
           "block_007",
           "block_008"
@@ -42,127 +44,111 @@
       },
       {
         "chapter_id": "ch_005",
-        "title_en": "How to Start Speaking Real Japanese",
-        "title": "壁を越えて実際に話すための方法",
+        "title_en": "A Global Perspective",
+        "title": "站在全球看年轻人的压力",
         "block_ids": [
-          "block_009",
-          "block_010"
+          "block_009"
         ]
       },
       {
         "chapter_id": "ch_006",
-        "title_en": "Conclusion: Apps are Just the Starting Line",
-        "title": "まとめ：アプリはゴールではなくスタート",
+        "title_en": "Summary & Viewer Question",
+        "title": "总结与留言互动",
         "block_ids": [
-          "block_011",
           "summary_cta"
         ]
       }
     ],
     "in_this_episode_you_will_learn": [
-      "Why maintaining a long streak on language apps doesn't guarantee speaking fluency.",
-      "The critical difference between passive recognition and active speaking.",
-      "How to overcome the fear of making mistakes created by app gamification.",
-      "Practical techniques like shadowing to transition from apps to real conversations.",
-      "Useful N3-N2 Japanese vocabulary for discussing learning methods and psychology."
+      "Learn simple Chinese vocabulary to talk about university majors, exams, and career choices.",
+      "Understand why the Chinese college entrance exam (Gaokao) puts so much pressure on students.",
+      "Discover who Zhang Xuefeng was and why his pragmatic advice changed millions of lives.",
+      "Practice your HSK3 listening skills with a natural, engaging conversation about Chinese society."
     ],
     "hashtags": [
-      "#LearnJapanese",
-      "#JapaneseListening",
-      "#JLPTN3",
-      "#SpeakJapanese",
-      "#JapanesePodcast"
+      "#StudyChinese",
+      "#ChineseListening",
+      "#HSK3",
+      "#LearnMandarin",
+      "#ChineseCulture",
+      "#Gaokao"
     ],
     "video_tags": [
-      "learn japanese podcast",
-      "japanese listening practice",
-      "jlpt n3 listening",
-      "how to speak japanese",
-      "japanese conversation",
-      "language learning tips",
-      "japanese for beginners",
-      "spoken japanese"
+      "learn chinese",
+      "chinese listening practice",
+      "hsk3 chinese",
+      "chinese podcast",
+      "mandarin conversation",
+      "gaokao china",
+      "chinese university",
+      "chinese society",
+      "slow chinese"
     ],
     "description_intro": [
-      "Have you been using language learning apps for months or even years, but still freeze up when trying to have a real conversation in Japanese? You are not alone! In today's episode, Yui and Akira discuss the common traps of app-based language learning.",
-      "We dive into the psychological reasons why gamified apps make us feel like we are progressing, even when our speaking skills remain stagnant. From the illusion of multiple-choice questions to the fear of losing 'hearts' or 'lives', we explore why real life doesn't work like an app.",
-      "Tune in to hear our personal experiences with language learning, and get practical, actionable advice on how to build confidence, stop translating in your head, and finally start speaking Japanese naturally."
+      "Welcome back to our Chinese learning podcast! Recently, the sudden passing of a famous internet educator, Zhang Xuefeng, shocked the Chinese internet. He was known for helping millions of students from ordinary families choose their university majors. But why did so many people need his help? Why is choosing a major considered a 'life-or-death' decision in China?",
+      "Today, Panpan and Laolu explain the reality behind the Chinese Gaokao, the difficulty of changing majors, and the heavy burden of 'changing one's fate' for ordinary families. Join us for a deep but easy-to-understand conversation in HSK3 Chinese!"
     ]
   },
   "blocks": [
     {
       "chapter_id": "ch_001",
       "block_id": "block_001",
-      "purpose": "オープニング。ユイの友人の「1000日連続記録」のエピソードから話題に導入する",
+      "purpose": "开场白，由张雪峰突然去世的新闻自然引入本集主题",
       "segments": [
         {
           "segment_id": "seg_001",
           "speaker": "female",
-          "text": "皆さん、こんにちは。日常の日本語チャンネルへようこそ。ユイです。今日もリラックスして、一緒に日本語の会話を楽しみましょう。",
-          "en": "Hello everyone. Welcome to the Everyday Japanese Channel. I'm Yui. Let's relax and enjoy some Japanese conversation together today.",
+          "text": "大家好，欢迎收听我们的中文播客。我是盼盼。",
+          "speech_text": "",
+          "en": "Hello everyone, welcome to our Chinese podcast. I'm Panpan.",
           "summary": false
         },
         {
           "segment_id": "seg_002",
           "speaker": "male",
-          "text": "こんにちは、アキラです。ユイさん、今日はどんなテーマで話しましょうか？",
-          "en": "Hello, I'm Akira. Yui, what topic should we talk about today?",
+          "text": "大家好，我是老路。欢迎大家和我们一起慢慢学中文。",
+          "speech_text": "",
+          "en": "Hello everyone, I'm Laolu. Welcome to learn Chinese slowly with us.",
           "summary": false
         },
         {
           "segment_id": "seg_003",
           "speaker": "female",
-          "text": "今日はですね、私たちが毎日使っているスマートフォンの「語学学習アプリ」について話したいんです。緑色の鳥のキャラクターとか、すごく有名ですよね。",
-          "en": "Today, I want to talk about the 'language learning apps' on our smartphones that we use every day. Like the famous green bird character.",
+          "text": "路哥，最近有一条新闻，让很多中国人都觉得非常难过。你看到了吗？",
+          "speech_text": "",
+          "en": "Brother Lu, recently there was a piece of news that made many Chinese people feel very sad. Did you see it?",
           "summary": false
         },
         {
           "segment_id": "seg_004",
           "speaker": "male",
-          "text": "ああ、あのアプリですね。世界中で本当にたくさんの人が使っています。",
-          "en": "Ah, that app. A truly huge number of people all over the world use it.",
+          "text": "嗯，我看到了。你说的应该是张雪峰老师因为突发心脏病，突然去世的新闻吧。",
+          "speech_text": "",
+          "en": "Yes, I saw it. You must be talking about the news of Teacher Zhang Xuefeng passing away suddenly due to a heart attack.",
           "summary": false
         },
         {
           "segment_id": "seg_005",
           "speaker": "female",
-          "text": "そうなんです。実は昨日、私の外国人の友人に会ったんですけど、彼のスマホの画面を見たら、なんと日本語の学習記録が「連続1000日」になっていたんです！",
-          "en": "Yes. Actually, I met a foreign friend of mine yesterday, and when I looked at his phone screen, his Japanese learning streak was amazingly at '1000 consecutive days'!",
+          "text": "对，就是他。他才四十岁出头啊，真的太突然了，很多人都不敢相信。",
+          "speech_text": "",
+          "en": "Yes, that's him. He was only in his early forties, it's really too sudden, many people couldn't believe it.",
           "summary": false
         },
         {
           "segment_id": "seg_006",
           "speaker": "male",
-          "text": "連続1000日ですか。それは素晴らしいですね。約3年間、毎日欠かさず勉強しているということですから、きっと日本語がペラペラなんでしょう。",
-          "en": "1000 consecutive days. That's wonderful. That means studying every single day without fail for about three years, so he must be fluent in Japanese.",
+          "text": "是啊。在中国的互联网上，有无数的年轻学生和家长都在发文章悼念他，感谢他。",
+          "speech_text": "",
+          "en": "Yeah. On the Chinese internet, countless young students and parents are posting articles to mourn him and thank him.",
           "summary": false
         },
         {
           "segment_id": "seg_007",
           "speaker": "female",
-          "text": "それが、問題はそこなんですよ。私もすごく感動して、すぐに日本語で「1000日も勉強してるんだね！じゃあ日本語で話そうよ」って言ってみたんです。",
-          "en": "Well, that's exactly the problem. I was so impressed that I immediately tried saying in Japanese, 'You've been studying for 1000 days! Let's talk in Japanese then.'",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_008",
-          "speaker": "female",
-          "text": "そしたら彼、急に顔が真っ赤になって、すごく緊張してしまって。しばらく黙った後、「こんにちは、私はリンゴが好きです」って片言で言って、すぐに英語に戻っちゃったんです。",
-          "en": "Then, his face suddenly turned bright red and he got really nervous. After being silent for a while, he said in broken Japanese, 'Hello, I like apples,' and quickly switched back to English.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_009",
-          "speaker": "male",
-          "text": "なるほど。1000日もアプリで勉強したのに、いざとなると言葉が出てこないわけですね。これは彼だけでなく、アプリで語学を学ぶ多くの人が抱えている悩みかもしれません。",
-          "en": "I see. Even though he studied on the app for 1000 days, when it comes down to it, the words don't come out. This might be a struggle not only for him, but for many people learning languages with apps.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_010",
-          "speaker": "female",
-          "text": "そうなんです。だから今日は、「なぜアプリを長く続けても話せるようにならないのか」、その罠と解決策について、アキラさんと深掘りしてみたいと思います。",
-          "en": "Exactly. So today, I want to dive deep with you, Akira, into 'why we don't become able to speak even after using apps for a long time,' exploring the traps and solutions.",
+          "text": "对于学习中文的外国朋友来说，可能不太认识这个人。但他在中国，真的是一个现象级的人物。",
+          "speech_text": "",
+          "en": "For foreign friends learning Chinese, they might not know this person well. But in China, he truly was a phenomenal figure.",
           "summary": false
         }
       ]
@@ -170,62 +156,62 @@
     {
       "chapter_id": "ch_001",
       "block_id": "block_002",
-      "purpose": "ゲーム感覚の学習がもたらす「上達の錯覚」について議論する",
+      "purpose": "简单介绍张雪峰是谁，以及他所做的事情，引出外国人的疑问",
       "segments": [
         {
-          "segment_id": "seg_011",
+          "segment_id": "seg_008",
           "speaker": "male",
-          "text": "最近の学習アプリは、本当にゲームみたいによく作られていますよね。ポイントがもらえたり、レベルが上がったり。これを「ゲーム化」と言います。",
-          "en": "Recent learning apps are really well-made like games, aren't they? You get points, you level up. We call this 'gamification'.",
+          "text": "没错。简单来说，张雪峰是一位非常有名的老师。他最主要的工作，就是帮高中生选择大学，还有选择大学的专业。",
+          "speech_text": "",
+          "en": "Exactly. Simply put, Zhang Xuefeng was a very famous teacher. His main job was helping high school students choose universities and their university majors.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_009",
+          "speaker": "female",
+          "text": "对。每年高考结束以后，学生们就要决定自己未来四年在大学里学什么。他会告诉大家，什么专业好找工作，什么专业千万不要选。",
+          "speech_text": "",
+          "en": "Right. Every year after the Gaokao, students have to decide what they will study in university for the next four years. He would tell everyone which majors are good for finding jobs, and which majors you absolutely shouldn't choose.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_010",
+          "speaker": "male",
+          "text": "他因为说话非常直接、非常现实，在网上有几千万的粉丝。",
+          "speech_text": "",
+          "en": "Because he spoke very directly and realistically, he had tens of millions of fans online.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_011",
+          "speaker": "female",
+          "text": "其实，这就引出了一个很多外国朋友经常问我的问题。他们觉得很不理解。",
+          "speech_text": "",
+          "en": "Actually, this brings up a question that many foreign friends often ask me. They find it hard to understand.",
           "summary": false
         },
         {
           "segment_id": "seg_012",
-          "speaker": "female",
-          "text": "そうそう！あれって本当に中毒性があるんです。その「連続記録」を途切れさせないために、夜寝る前にどれだけ眠くても、とりあえずスマホを開いて適当にタップしたりして。",
-          "en": "Yes, yes! It's really addictive. Just to avoid breaking that 'streak', no matter how sleepy you are before bed, you just open your phone and tap randomly.",
+          "speaker": "male",
+          "text": "哦？他们不理解什么呢？",
+          "speech_text": "",
+          "en": "Oh? What is it they don't understand?",
           "summary": false
         },
         {
           "segment_id": "seg_013",
           "speaker": "female",
-          "text": "私自身も経験があるんですけど、途中から「語学を学ぶこと」よりも、「ゲームでハイスコアを出すこと」が目的になっちゃうんです。",
-          "en": "I have experience with this myself; halfway through, the goal becomes 'getting a high score in the game' rather than 'learning a language'.",
+          "text": "他们问我：为什么在中国，选专业会这么重要？为什么选个专业，还需要几千万人都去听一个老师的指导？",
+          "speech_text": "",
+          "en": "They ask me: Why is choosing a major so important in China? Why does choosing a major require tens of millions of people to listen to one teacher's guidance?",
           "summary": false
         },
         {
           "segment_id": "seg_014",
           "speaker": "male",
-          "text": "目的がすり替わってしまうんですね。ポイントを稼ぐことや記録を伸ばすことに集中していると、自分は着実に進歩しているという「錯覚」に陥りやすいんです。",
-          "en": "The purpose gets swapped. When you focus on earning points or extending your streak, it's easy to fall into the 'illusion' that you are steadily making progress.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_015",
-          "speaker": "female",
-          "text": "上達の錯覚……たしかに。アプリは毎日「素晴らしい！」とか「上位10パーセントに入りました！」ってすごく褒めてくれますからね。",
-          "en": "The illusion of progress... that's true. The app praises you so much every day, saying things like 'Excellent!' or 'You're in the top 10 percent!'",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_016",
-          "speaker": "female",
-          "text": "でも、現実の世界では、簡単な単語を一つ正解したからといって、誰かが花火を上げてくれるわけじゃありません。",
-          "en": "But in the real world, nobody is going to set off fireworks for you just because you got one simple word right.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_017",
-          "speaker": "male",
-          "text": "その通りです。アプリの中での成功はとても簡単に手に入りますが、実際のカフェで日本語を使ってコーヒーを注文する方が、はるかに難しい挑戦です。",
-          "en": "Exactly. Success inside the app is very easily obtained, but ordering a coffee in an actual cafe using Japanese is a much more difficult challenge.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_018",
-          "speaker": "female",
-          "text": "本当にそうですよね。じゃあアキラさん、なんでアプリで漢字も読めるし、意味もわかっているはずなのに、いざ人と話すとなると、頭がフリーズしてしまうんでしょうか？",
-          "en": "That's so true. So Akira, why is it that even though we can read kanji and understand the meanings on the app, when it comes time to talk to a person, our brains freeze up?",
+          "text": "哈哈，这是一个非常好的问题。今天，我们就来好好聊一聊这个话题。",
+          "speech_text": "",
+          "en": "Haha, that's a very good question. Today, let's have a good chat about this topic.",
           "summary": false
         }
       ]
@@ -233,69 +219,70 @@
     {
       "chapter_id": "ch_002",
       "block_id": "block_003",
-      "purpose": "ユイが自身の経験を共有し、選択肢問題の限界を指摘する",
+      "purpose": "解释高考的激烈竞争背景，说明选专业的压力来源",
       "segments": [
         {
-          "segment_id": "seg_019",
+          "segment_id": "seg_015",
+          "speaker": "female",
+          "text": "其实，我非常能理解外国朋友为什么会觉得奇怪。因为在很多国家，上大学只是一个开始，没那么紧张。",
+          "speech_text": "",
+          "en": "Actually, I can perfectly understand why foreign friends find it strange. Because in many countries, going to university is just a beginning, it's not that tense.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_016",
           "speaker": "male",
-          "text": "それは、アプリでの学習方法そのものに理由があります。ユイさんは、過去に他の言語をアプリで勉強して、同じような経験をしたことはありますか？",
-          "en": "That's because of the learning method itself on the app. Have you ever studied another language with an app in the past and had a similar experience, Yui?",
+          "text": "是的。但是在中国，我们有一个非常特殊的东西，叫做“高考”。也就是大学入学考试。",
+          "speech_text": "",
+          "en": "Yes. But in China, we have something very special called the 'Gaokao'. That is the university entrance exam.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_017",
+          "speaker": "female",
+          "text": "路哥，你给大家报个数吧，每年有多少人参加高考？",
+          "speech_text": "",
+          "en": "Brother Lu, give everyone a number, how many people take the Gaokao every year?",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_018",
+          "speaker": "male",
+          "text": "现在的数字是，每年有超过一千万人同时参加这个考试。",
+          "speech_text": "",
+          "en": "The current number is that every year, over ten million people take this exam at the same time.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_019",
+          "speaker": "female",
+          "text": "哎呀，一千万人！这个数字比世界上很多国家的总人口还要多。大家可以想象一下，竞争有多激烈。",
+          "speech_text": "",
+          "en": "Oh my, ten million people! This number is larger than the total population of many countries in the world. You can imagine how fierce the competition is.",
           "summary": false
         },
         {
           "segment_id": "seg_020",
-          "speaker": "female",
-          "text": "あります、あります！私、以前スペイン語をアプリで少し独学したことがあったんです。その時は毎日満点でクリアしていて、「私って天才かも！」って思ってました。",
-          "en": "Yes, I have! I previously self-studied Spanish a little bit using an app. At that time, I was clearing it with perfect scores every day, thinking 'I might be a genius!'",
+          "speaker": "male",
+          "text": "对。因为人太多了，大家都想去好大学，都想学最容易找工作的热门专业。但是好位置是有限的。",
+          "speech_text": "",
+          "en": "Right. Because there are so many people, everyone wants to go to a good university and study the popular majors that make it easiest to find a job. But good spots are limited.",
           "summary": false
         },
         {
           "segment_id": "seg_021",
           "speaker": "female",
-          "text": "アプリの問題って、上に一つの文章があって、下に4つの選択肢があるような形式が多いですよね。",
-          "en": "App questions often have a format where there's a sentence at the top and four choices below, right?",
+          "text": "所以，如果你的分数差了一点点，你可能就去不了一个好专业，甚至可能要去学一个你完全不喜欢的专业。",
+          "speech_text": "",
+          "en": "So, if your score is just a little bit short, you might not be able to get into a good major, or you might even have to study a major you don't like at all.",
           "summary": false
         },
         {
           "segment_id": "seg_022",
-          "speaker": "female",
-          "text": "私はキーワードさえ見つければ、簡単に正解を推測できました。例えば「食べる」という単語が見えたら、食べ物に関する選択肢を選ぶ、みたいに。",
-          "en": "As long as I found a keyword, I could easily guess the correct answer. For example, if I saw the word for 'eat', I would just choose the option related to food.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_023",
           "speaker": "male",
-          "text": "つまり、文章を作る練習ではなく、一種の「キーワード探しパズル」を解いていただけ、ということですね。",
-          "en": "In other words, you weren't practicing making sentences, but just solving a kind of 'keyword search puzzle', right?",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_024",
-          "speaker": "female",
-          "text": "まさにパズルです！その後、実際にスペインへ旅行に行って、レストランで注文しようとしたんです。でも、店員さんが私の前に立ってこっちを見た瞬間、頭が真っ白になりました。",
-          "en": "Exactly a puzzle! After that, I actually traveled to Spain and tried to order at a restaurant. But the moment the waiter stood in front of me and looked at me, my mind went completely blank.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_025",
-          "speaker": "female",
-          "text": "だって、現実の店員さんは、私に4つの選択肢を用意してくれないじゃないですか！",
-          "en": "Because real-life waiters don't prepare four multiple-choice options for me!",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_026",
-          "speaker": "male",
-          "text": "ふふっ、たしかに。現実の生活に選択肢のボタンはありませんからね。今ユイさんが話してくれた経験が、「受動的な語彙」と「能動的な語彙」の違いを完璧に説明しています。",
-          "en": "Hehe, that's true. There are no multiple-choice buttons in real life. The experience you just shared perfectly explains the difference between 'passive vocabulary' and 'active vocabulary'.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_027",
-          "speaker": "female",
-          "text": "受動的と能動的？それはどういう意味ですか？",
-          "en": "Passive and active? What does that mean?",
+          "text": "这就引出了中国大学的第二个特点：换专业非常困难。",
+          "speech_text": "",
+          "en": "This leads to the second characteristic of Chinese universities: changing majors is very difficult.",
           "summary": false
         }
       ]
@@ -303,69 +290,70 @@
     {
       "chapter_id": "ch_002",
       "block_id": "block_004",
-      "purpose": "インプットとアウトプットの違いを説明し、現実の会話の予測不可能性について語る",
+      "purpose": "对比中外差异，解释在中国大学里换专业为什么很难",
       "segments": [
+        {
+          "segment_id": "seg_023",
+          "speaker": "female",
+          "text": "对，这是一个巨大的差别！我有很多外国朋友，他们在大学里换过两三次专业，非常自由。",
+          "speech_text": "",
+          "en": "Yes, this is a huge difference! I have many foreign friends who changed their majors two or three times in university, very freely.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_024",
+          "speaker": "male",
+          "text": "嗯，在很多西方国家，大学的第一年甚至是用来体验的，你可以慢慢想清楚自己喜欢什么。",
+          "speech_text": "",
+          "en": "Yeah, in many Western countries, the first year of university is even for experiencing things, you can take your time to figure out what you like.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_025",
+          "speaker": "female",
+          "text": "但在中国，绝大多数学生在十八岁进入大学之前，就要把专业定下来。",
+          "speech_text": "",
+          "en": "But in China, the vast majority of students have to decide on their major before entering university at eighteen.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_026",
+          "speaker": "male",
+          "text": "是的，一旦你进去了，想要换专业，通常需要你在第一年的考试成绩非常非常好，比如要在全班排名前百分之十。",
+          "speech_text": "",
+          "en": "Yes, once you are in, if you want to change your major, you usually need your exam scores in the first year to be very, very good, like ranking in the top ten percent of the class.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_027",
+          "speaker": "female",
+          "text": "而且学校的名额也很少。所以很多人就算不喜欢，也只能硬着头皮学完四年。",
+          "speech_text": "",
+          "en": "And the school has very few quotas. So many people, even if they don't like it, can only force themselves to finish the four years.",
+          "summary": false
+        },
         {
           "segment_id": "seg_028",
           "speaker": "male",
-          "text": "「受動的な語彙」というのは、見たり聞いたりした時に、意味がわかる言葉のことです。いわゆるインプットですね。",
-          "en": "'Passive vocabulary' refers to words whose meanings you understand when you see or hear them. It's so-called input.",
+          "text": "更重要的是，在中国，你大学学的专业，很大程度上决定了你毕业后的第一份工作。",
+          "speech_text": "",
+          "en": "More importantly, in China, the major you study in university largely determines your first job after graduation.",
           "summary": false
         },
         {
           "segment_id": "seg_029",
-          "speaker": "male",
-          "text": "多くの語学アプリで私たちがやっていることの9割は、この「受動的な文字の認識」にすぎません。",
-          "en": "Ninety percent of what we do on many language apps is nothing more than this 'passive recognition of letters'.",
+          "speaker": "female",
+          "text": "也就是说，如果你在十八岁时选错了专业，你以后找工作就会处处碰壁，非常的麻烦。",
+          "speech_text": "",
+          "en": "In other words, if you chose the wrong major at eighteen, you will hit walls everywhere when looking for a job later, which is very troublesome.",
           "summary": false
         },
         {
           "segment_id": "seg_030",
-          "speaker": "female",
-          "text": "なるほど。聞いてわかる、見てわかる状態ですね。",
-          "en": "I see. It's a state where you understand by listening or reading.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_031",
           "speaker": "male",
-          "text": "一方で「能動的な語彙」というのは、頭の中に伝えたい考えが浮かんだ時に、自分自身の力でその言葉を思い出し、口に出して言える言葉のことです。これがアウトプットです。",
-          "en": "On the other hand, 'active vocabulary' refers to words that you can recall on your own and speak out loud when a thought you want to convey pops into your head. This is output.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_032",
-          "speaker": "female",
-          "text": "つまり、私の友人は1000日間、「目で見て理解する能力」だけを鍛えていて、「自分の口で文を作る能力」の練習は足りていなかったんですね。",
-          "en": "In other words, for 1000 days my friend was only training his 'ability to understand by seeing', and lacked practice in his 'ability to create sentences with his own mouth'.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_033",
-          "speaker": "male",
-          "text": "その通りです。アプリの中では、文章もシチュエーションもあらかじめ固定されています。でも、リアルな会話は予測不可能です。",
-          "en": "Exactly. Inside the app, both sentences and situations are fixed in advance. But real conversation is unpredictable.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_034",
-          "speaker": "male",
-          "text": "例えば、アプリで「このコーヒーはいくらですか？」というフレーズを覚えたとします。でも実際のカフェでは、店員さんに「サイズはどうしますか？」「店内でお召し上がりですか？」と突然聞かれるかもしれません。",
-          "en": "For example, let's say you learned the phrase 'How much is this coffee?' on the app. But in an actual cafe, the staff might suddenly ask you, 'What size would you like?' or 'Will you be having this here?'",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_035",
-          "speaker": "female",
-          "text": "あー、たしかに！もし「いくらですか」しか覚えていなかったら、予想外の質問が来た瞬間にフリーズしちゃいますね。相手が何を言っているか全くわからないし、どう答えていいかもわかりませんから。",
-          "en": "Ah, that's so true! If you only memorized 'how much is it', you would freeze the moment an unexpected question comes. You wouldn't understand what the other person is saying at all, nor would you know how to answer.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_036",
-          "speaker": "male",
-          "text": "ええ。本当の言語能力とは、単語をどれだけ知っているかではなく、予測できない状況にどう対応するか、という柔軟性にあるんです。",
-          "en": "Yes. True language ability lies not in how many words you know, but in your flexibility—how you handle unpredictable situations.",
+          "text": "这就是为什么中国家长和学生在选专业的时候，会那么紧张，那么小心翼翼。",
+          "speech_text": "",
+          "en": "That's why Chinese parents and students are so nervous and so careful when choosing a major.",
           "summary": false
         }
       ]
@@ -373,76 +361,70 @@
     {
       "chapter_id": "ch_003",
       "block_id": "block_005",
-      "purpose": "頭の中で母語に翻訳してしまう癖が会話のテンポを遅らせることを議論する",
+      "purpose": "引入“改变命运”的概念，解释普通家庭对选专业的极高期望",
       "segments": [
         {
-          "segment_id": "seg_037",
+          "segment_id": "seg_031",
           "speaker": "female",
-          "text": "選択肢問題に慣れてしまうこと以外にも、私が個人的にすごく大きな罠だと思っていることがあります。それは、頭の中の「翻訳機」です。",
-          "en": "Besides getting too used to multiple-choice questions, there's something else I personally think is a huge trap. That is the 'translation machine' inside our heads.",
+          "text": "我觉得，除了找工作，这背后还有一个很深刻的原因。那就是上大学对很多中国家庭来说，是为了“改变命运”。",
+          "speech_text": "",
+          "en": "I think, besides finding a job, there is a deeper reason behind this. That is, going to university for many Chinese families is for 'changing fate'.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_032",
+          "speaker": "male",
+          "text": "嗯，“改变命运”，这个词用得非常好。中国在过去几十年发展得非常快，社会变化很大。",
+          "speech_text": "",
+          "en": "Hmm, 'changing fate', this phrase is used very well. China has developed very quickly in the past few decades, and society has changed a lot.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_033",
+          "speaker": "male",
+          "text": "很多大学生的父母，可能只是普通的工人，或者是农民，他们一辈子干着非常辛苦的体力活。",
+          "speech_text": "",
+          "en": "The parents of many university students might just be ordinary workers or farmers, doing very hard physical labor all their lives.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_034",
+          "speaker": "female",
+          "text": "是啊。父母拼命赚钱，就是希望孩子能考上大学，以后能在舒服的办公室里工作，不用再吃苦了。",
+          "speech_text": "",
+          "en": "Yeah. Parents work desperately to make money, just hoping their kids can get into university and work in a comfortable office later, without having to suffer anymore.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_035",
+          "speaker": "male",
+          "text": "对于这些普通家庭来说，他们没有很多钱，也没有什么社会关系，没法直接帮孩子安排一份好工作。",
+          "speech_text": "",
+          "en": "For these ordinary families, they don't have a lot of money or social connections, so they can't directly arrange a good job for their children.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_036",
+          "speaker": "female",
+          "text": "所以，大学文凭和选对一个专业，就是他们唯一的武器了。",
+          "speech_text": "",
+          "en": "So, a university diploma and choosing the right major is their only weapon.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_037",
+          "speaker": "male",
+          "text": "对。如果孩子选了一个很难找工作的专业，毕业后失业了，那整个家庭的希望可能就破灭了。",
+          "speech_text": "",
+          "en": "Right. If the child chooses a major where it's hard to find a job, and becomes unemployed after graduation, then the hope of the whole family might be shattered.",
           "summary": false
         },
         {
           "segment_id": "seg_038",
-          "speaker": "male",
-          "text": "頭の中の翻訳機、ですか。面白い表現ですね。詳しく教えてもらえますか？",
-          "en": "A translation machine inside your head? That's an interesting expression. Could you explain in detail?",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_039",
           "speaker": "female",
-          "text": "私を含めて多くの学習者がやってしまいがちなんですが、話す前に、まず自分の母語で完璧な文を考えるんです。",
-          "en": "Many learners, including myself, tend to do this: before speaking, we first think of a perfect sentence in our native language.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_040",
-          "speaker": "female",
-          "text": "例えば、「明日、スーパーに行きます」と言いたい時、まず頭の中で英語で 'I will go to the supermarket tomorrow' と組み立てます。",
-          "en": "For example, when I want to say 'I will go to the supermarket tomorrow', I first construct it in English in my head as 'I will go to the supermarket tomorrow'.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_041",
-          "speaker": "female",
-          "text": "それから、「'I' は『私』で、'will' は未来だからどう表現するんだっけ？ 'supermarket' は『スーパー』で…」と、単語を一つずつ日本語に変換しようとするんです。",
-          "en": "And then, 'I is watashi, will is future tense so how do I express that? Supermarket is supa...' and I try to convert each word into Japanese one by one.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_042",
-          "speaker": "male",
-          "text": "なるほど。文法的に正しく並べ替えようとするわけですね。",
-          "en": "I see. You are trying to rearrange them grammatically correctly.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_043",
-          "speaker": "female",
-          "text": "そうなんです。でも、すべての単語を変換して、正しい順番に並べ替えているうちに、軽く1分くらい経ってしまうんですよ。実際の会話でそんなに待たせたら、相手は話す気をなくしちゃいますよね。",
-          "en": "Exactly. But while you are converting all the words and rearranging them in the correct order, a whole minute can easily pass by. If you make the other person wait that long in a real conversation, they will lose interest in talking.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_044",
-          "speaker": "male",
-          "text": "ええ、それは非常に典型的なプロセスです。そして皮肉なことに、多くの語学アプリがこの翻訳の癖を強化してしまっています。",
-          "en": "Yes, that is a very typical process. And ironically, many language apps end up reinforcing this translation habit.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_045",
-          "speaker": "male",
-          "text": "アプリの練習問題の大部分は、英語の文を日本語に訳すか、日本語の文を英語に訳す作業ですからね。",
-          "en": "Because the vast majority of app exercises are tasks of translating English sentences into Japanese, or Japanese sentences into English.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_046",
-          "speaker": "female",
-          "text": "ああ、確かに！いつも母語を橋渡しにして考えているから、実際の会話のスピードに全然ついていけないんですよね。翻訳が終わる頃には、話題が次に進んじゃってますし。",
-          "en": "Ah, that's true! Because we are always thinking using our native language as a bridge, we can't keep up with the speed of real conversation at all. By the time the translation is done, the topic has already moved on.",
+          "text": "听到这里，真的觉得压力好大。这也是为什么选专业不仅仅是个人的爱好，更是一个家庭的生存问题。",
+          "speech_text": "",
+          "en": "Hearing this, I really feel the pressure is huge. This is also why choosing a major is not just about personal hobbies, but a matter of survival for a family.",
           "summary": false
         }
       ]
@@ -450,62 +432,70 @@
     {
       "chapter_id": "ch_003",
       "block_id": "block_006",
-      "purpose": "フレーズの塊（チャンク）で覚えることの重要性を説く",
+      "purpose": "通过盼盼的个人经历，讨论“梦想”与“现实”的冲突",
       "segments": [
         {
-          "segment_id": "seg_047",
-          "speaker": "male",
-          "text": "この「翻訳機」の罠から抜け出すためには、日本語のまま考える、いわゆる「日本語脳」を育てる必要があります。単語を一つずつ覚えるのではなく、「フレーズの塊」で覚えるのが効果的です。",
-          "en": "To break out of this 'translation machine' trap, we need to cultivate a 'Japanese brain', where you think in Japanese. Instead of memorizing words one by one, it's effective to memorize them as 'phrase chunks'.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_048",
+          "segment_id": "seg_039",
           "speaker": "female",
-          "text": "フレーズの塊、ですか。いくつか言葉がまとまった短い文章のことですね？",
-          "en": "Phrase chunks? You mean short sentences where a few words are grouped together?",
+          "text": "说到这里，我想起我自己十八岁的时候。当时我特别喜欢看小说，所以我想报文学专业。",
+          "speech_text": "",
+          "en": "Speaking of this, it reminds me of when I was eighteen. At that time, I loved reading novels, so I wanted to apply for a literature major.",
           "summary": false
         },
         {
-          "segment_id": "seg_049",
+          "segment_id": "seg_040",
           "speaker": "male",
-          "text": "はい、決まり文句のことです。例えば、しばらく会っていなかった友人に会った時、単語をパズルのように組み立てるとしたら、「長い時間」と「会っていない」をどう繋げるか悩んでしまいます。",
-          "en": "Yes, set phrases. For example, when you meet a friend you haven't seen for a while, if you try to assemble words like a puzzle, you would struggle with how to connect 'long time' and 'haven't met'.",
+          "text": "文学是一个非常美好的专业。不过我猜，你的父母当时肯定不同意吧？",
+          "speech_text": "",
+          "en": "Literature is a very beautiful major. But I guess your parents definitely didn't agree at that time, right?",
           "summary": false
         },
         {
-          "segment_id": "seg_050",
+          "segment_id": "seg_041",
+          "speaker": "female",
+          "text": "哈哈，路哥你太了解中国父母了。我妈当时急坏了，她说：“学文学以后能干什么？能当饭吃吗？”",
+          "speech_text": "",
+          "en": "Haha, Brother Lu, you know Chinese parents too well. My mom was so anxious at the time, she said: 'What can you do after studying literature? Can you eat it for a meal?'",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_042",
+          "speaker": "female",
+          "text": "她非要我学学会计或者金融，说这样以后才能养活自己。",
+          "speech_text": "",
+          "en": "She insisted that I study accounting or finance, saying that this is the only way I could support myself in the future.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_043",
           "speaker": "male",
-          "text": "でも、最初から「お久しぶりです」という一つの塊として記憶しておけば、次に友人に会った時、母語に翻訳しなくても条件反射のようにその言葉がパッと口から出てきます。",
-          "en": "But if you memorize it as one single chunk 'ohisashiburi desu' (long time no see) from the beginning, the next time you meet a friend, the words will pop out of your mouth like a conditioned reflex without translating into your native language.",
+          "text": "家长们总是喜欢会计、计算机、或者是医学。因为在他们眼里，这些是比较稳定的工作，是“铁饭碗”。",
+          "speech_text": "",
+          "en": "Parents always like accounting, computer science, or medicine. Because in their eyes, these are relatively stable jobs, they are 'iron rice bowls'.",
           "summary": false
         },
         {
-          "segment_id": "seg_051",
+          "segment_id": "seg_044",
           "speaker": "female",
-          "text": "なるほど、すごく腑に落ちました。私たちが「こんにちは」と言う時、誰も頭の中で「こん」と「にちは」の意味を分析したりしませんもんね。ただ本能的にポロッと言葉が出てくるだけで。",
-          "en": "I see, that makes a lot of sense. When we say 'konnichiwa' (hello), nobody analyzes the meanings of 'kon' and 'nichiwa' in their head. The words just come out instinctively.",
+          "text": "我当时真的很生气，觉得大人一点都不懂我的梦想，太庸俗了，只知道谈钱。",
+          "speech_text": "",
+          "en": "I was really angry at the time, feeling that adults didn't understand my dreams at all, that they were too vulgar and only knew how to talk about money.",
           "summary": false
         },
         {
-          "segment_id": "seg_052",
-          "speaker": "female",
-          "text": "実はこれ、私も英語を勉強していた時にやってしまった失敗なんです。すべての助詞や前置詞のルールを完璧に理解しようとしすぎて、すごく遠回りをしてしまいました。",
-          "en": "Actually, this is a mistake I also made when I was studying English. I tried too hard to perfectly understand the rules of all particles and prepositions, and ended up taking a huge detour.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_053",
-          "speaker": "female",
-          "text": "よく使う自然な言い回しは、そのまま丸暗記してしまった方が、結局は会話で役に立つんですよね。",
-          "en": "In the end, it's much more useful in conversation to just memorize natural, commonly used phrases as they are.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_054",
+          "segment_id": "seg_045",
           "speaker": "male",
-          "text": "その通りです。言葉の本来の目的は、文法の分析をすることではなく、自分の気持ちや考えを相手に伝えることですからね。",
-          "en": "Exactly. Because the original purpose of language is not to analyze grammar, but to convey your feelings and thoughts to the other person.",
+          "text": "很多年轻人都有这种冲突。年轻人想追求艺术、历史、或者哲学。但是现实生活是非常残酷的。",
+          "speech_text": "",
+          "en": "Many young people have this kind of conflict. Young people want to pursue art, history, or philosophy. But real life is very cruel.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_046",
+          "speaker": "female",
+          "text": "是啊，等我自己毕业出来工作了，我才慢慢理解了当时父母的担心。",
+          "speech_text": "",
+          "en": "Yeah, it was only after I graduated and started working that I slowly understood my parents' worries back then.",
           "summary": false
         }
       ]
@@ -513,69 +503,70 @@
     {
       "chapter_id": "ch_004",
       "block_id": "block_007",
-      "purpose": "アプリの「ライフ（ハート）制」が完璧主義と失敗への恐怖を生むことをユイが指摘する",
+      "purpose": "回到张雪峰，解释他的建议内容以及引起的争议",
       "segments": [
         {
-          "segment_id": "seg_055",
+          "segment_id": "seg_047",
           "speaker": "female",
-          "text": "文法といえば、これもすごく大きな心理的なブロックになっていると思うんですが、「失敗を恐れる気持ち」について話したいです。アキラさん、ここでまたアプリのシステムに文句を言ってもいいですか？",
-          "en": "Speaking of grammar, I think this is also a huge psychological block, but I want to talk about 'the fear of making mistakes'. Akira, can I complain about the app's system again here?",
+          "text": "这也正是为什么张雪峰老师会那么火的原因。他永远都在对学生说最残酷的大实话。",
+          "speech_text": "",
+          "en": "This is exactly the reason why Teacher Zhang Xuefeng was so popular. He was always telling students the most cruel and honest truth.",
           "summary": false
         },
         {
-          "segment_id": "seg_056",
+          "segment_id": "seg_048",
           "speaker": "male",
-          "text": "ふふ、どうぞ。ぜひ聞かせてください。",
-          "en": "Hehe, go ahead. Please let me hear it.",
+          "text": "没错。比如，如果一个穷困家庭的孩子问他，能不能学哲学，他会直接说：“千万别学，你首先要考虑的是生存。”",
+          "speech_text": "",
+          "en": "Exactly. For example, if a child from a poor family asked him if they could study philosophy, he would directly say: 'Absolutely do not study it, the first thing you need to consider is survival.'",
           "summary": false
         },
         {
-          "segment_id": "seg_057",
+          "segment_id": "seg_049",
           "speaker": "female",
-          "text": "多くの語学アプリには、「ハート」とか「ライフ」と呼ばれるシステムがありますよね。ゲームのヒットポイントみたいなものです。",
-          "en": "Many language apps have a system called 'hearts' or 'lives', right? It's like hit points in a game.",
+          "text": "他总是建议普通家庭的孩子，去选计算机、工程这些有实际技能的专业，毕业就能赚钱，能帮家里减轻负担。",
+          "speech_text": "",
+          "en": "He always advised children from ordinary families to choose majors with practical skills like computer science or engineering, so they could make money right after graduation and help reduce the family's burden.",
           "summary": false
         },
         {
-          "segment_id": "seg_058",
-          "speaker": "female",
-          "text": "問題を一問間違えるたびに、そのハートが一つ減って、ブブーッていう嫌な音が鳴るんです。",
-          "en": "Every time you get a question wrong, you lose one of those hearts, and it makes an unpleasant 'bzzzt' sound.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_059",
-          "speaker": "female",
-          "text": "そして、ハートが全部なくなると、ペナルティとして数時間勉強できなくなるか、課金してハートを買わなきゃいけない仕組みになっていて。",
-          "en": "And when you run out of all your hearts, as a penalty, the system stops you from studying for a few hours, or makes you pay money to buy hearts.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_060",
+          "segment_id": "seg_050",
           "speaker": "male",
-          "text": "ええ、ありますね。それは要するに、間違えることを罰している仕組みですよね。",
-          "en": "Yes, they have that. That is essentially a system that punishes making mistakes.",
+          "text": "但是，他的这些话，在网上也引起了很大的争议。有人觉得他太现实了，甚至有点冷酷无情。",
+          "speech_text": "",
+          "en": "However, his words also caused great controversy online. Some people felt he was too realistic, even a bit ruthless.",
           "summary": false
         },
         {
-          "segment_id": "seg_061",
-          "speaker": "female",
-          "text": "そうなんです！その仕組みが、無意識のうちに「間違えるのは悪いことだ」「失敗すると痛い目にあう」という完璧主義を植え付けていると思うんです。だからみんな、ハートを守るために、ものすごく慎重に答えるようになります。",
-          "en": "Exactly! I think that system unconsciously implants a perfectionism that says 'making mistakes is bad' and 'if you fail, you will suffer'. So everyone becomes incredibly cautious in answering just to protect their hearts.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_062",
-          "speaker": "female",
-          "text": "でも、その慎重すぎる癖を現実の世界に持ち込むと大変です。私の友人も、一言発するごとに「文法は合っているか」「助詞は正しいか」を考えすぎていて、減点されるのを極端に恐れているように見えました。",
-          "en": "But if you bring that overly cautious habit into the real world, it's a disaster. My friend also seemed to overthink 'is the grammar right?' or 'is the particle correct?' with every word he uttered, looking extremely terrified of having points deducted.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_063",
+          "segment_id": "seg_051",
           "speaker": "male",
-          "text": "現実の生活には、間違えたら減るハートなんて存在しないのに、ですね。",
-          "en": "Even though in real life, there are no hearts that decrease when you make a mistake.",
+          "text": "批评他的人说，他在扼杀年轻人的梦想，让大学变成了一个只看重钱的职业培训班。",
+          "speech_text": "",
+          "en": "People who criticized him said he was killing young people's dreams, turning universities into vocational training classes that only value money.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_052",
+          "speaker": "female",
+          "text": "坦白说，我以前也是这么看他的。我觉得他把选专业这件事情，说得太功利了，好像人生只有赚钱一样。",
+          "speech_text": "",
+          "en": "Frankly speaking, I used to see him that way too. I thought he made choosing a major sound too utilitarian, as if life was only about making money.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_053",
+          "speaker": "female",
+          "text": "但是后来，当我在社会上经历得多了，我对他的看法完全改变了。",
+          "speech_text": "",
+          "en": "But later, as I experienced more in society, my view of him completely changed.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_054",
+          "speaker": "male",
+          "text": "哦？盼盼，是什么让你改变了想法呢？",
+          "speech_text": "",
+          "en": "Oh? Panpan, what made you change your mind?",
           "summary": false
         }
       ]
@@ -583,62 +574,70 @@
     {
       "chapter_id": "ch_004",
       "block_id": "block_008",
-      "purpose": "現実の会話では「恥をかく」ことを恐れずに発話することが大切だと説く",
+      "purpose": "盼盼表达自己的顿悟，解释为什么张雪峰是普通人的保护伞",
       "segments": [
         {
-          "segment_id": "seg_064",
-          "speaker": "male",
-          "text": "日本には「恥をかく」という言葉がありますが、語学学習においてはこの「恥をかくことを恐れない姿勢」が一番大切です。",
-          "en": "In Japan, there is a phrase 'haji wo kaku' (to embarrass oneself / lose face), but in language learning, this 'attitude of not fearing embarrassment' is the most important thing.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_065",
+          "segment_id": "seg_055",
           "speaker": "female",
-          "text": "本当にその通りだと思います。少し視点を変えて、小さな子供がどうやって言葉を覚えるかを想像してみてください。",
-          "en": "I totally agree. Change your perspective a little and imagine how small children learn to speak.",
+          "text": "因为我终于明白了一件事：“拥有梦想”其实是一件非常奢侈的事情。",
+          "speech_text": "",
+          "en": "Because I finally understood one thing: 'having a dream' is actually a very luxurious thing.",
           "summary": false
         },
         {
-          "segment_id": "seg_066",
+          "segment_id": "seg_056",
           "speaker": "female",
-          "text": "子供って、言い間違いをしても絶対に恥ずかしがったり落ち込んだりしませんよね。ただひたすら、たくさん話しかけます。",
-          "en": "Children never get embarrassed or depressed even if they say something wrong. They just talk endlessly to people.",
+          "text": "如果你的家庭很穷，你一旦追梦失败了，你的背后是没有安全网可以保护你的。",
+          "speech_text": "",
+          "en": "If your family is poor, once you fail to pursue your dream, there is no safety net behind you to protect you.",
           "summary": false
         },
         {
-          "segment_id": "seg_067",
+          "segment_id": "seg_057",
           "speaker": "male",
-          "text": "ええ、そして周りの大人がそれを聞いて自然に直してあげることで、少しずつ正しい言葉を吸収していきます。これが、言語を習得する最も自然で理にかなったプロセスです。",
-          "en": "Yes, and by the adults around them listening and naturally correcting them, they gradually absorb the correct words. This is the most natural and logical process of acquiring a language.",
+          "text": "你观察得很深刻。对于有钱家庭的孩子来说，选错专业只是多走了一段弯路；但对于穷孩子来说，这可能是一场灾难。",
+          "speech_text": "",
+          "en": "Your observation is very profound. For children from rich families, choosing the wrong major is just taking a detour; but for poor children, it could be a disaster.",
           "summary": false
         },
         {
-          "segment_id": "seg_068",
-          "speaker": "male",
-          "text": "文法が間違っているかもしれないからと口を閉ざしてしまったら、その自然なフィードバックを得るチャンスを自ら捨ててしまうことになります。",
-          "en": "If you keep your mouth shut because your grammar might be wrong, you are willingly throwing away the chance to get that natural feedback.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_069",
+          "segment_id": "seg_058",
           "speaker": "female",
-          "text": "ですよね。たとえ助詞の「てにをは」を間違えたり、少し変な言い回しになっても、相手は人間ですから、文脈から何を言いたいのかちゃんと推測してくれます。",
-          "en": "Right. Even if you mess up the particles like 'te-ni-o-ha' or use slightly weird phrasing, the other person is a human, so they will properly guess what you want to say from the context.",
+          "text": "对啊！张雪峰老师自己就是从一个小城市的普通家庭走出来的。他太懂得底层老百姓的辛苦和脆弱了。",
+          "speech_text": "",
+          "en": "Exactly! Teacher Zhang Xuefeng himself came from an ordinary family in a small city. He understood the hardships and fragility of the people at the bottom too well.",
           "summary": false
         },
         {
-          "segment_id": "seg_070",
+          "segment_id": "seg_059",
           "speaker": "male",
-          "text": "間違えたからといって、会話の相手が罰を与えてくることなんて絶対にありませんからね。むしろ、一生懸命日本語で伝えようとする姿勢は、好感を持たれることの方が多いです。",
-          "en": "Because it's never going to happen that your conversation partner will punish you just for making a mistake. In fact, the attitude of trying hard to communicate in Japanese is more often viewed favorably.",
+          "text": "所以，他其实不是在扼杀梦想。他是在保护那些普通学生，不让他们犯下承担不起的错误。",
+          "speech_text": "",
+          "en": "So, he wasn't actually killing dreams. He was protecting those ordinary students from making mistakes they couldn't afford.",
           "summary": false
         },
         {
-          "segment_id": "seg_071",
+          "segment_id": "seg_060",
           "speaker": "female",
-          "text": "間違っても大丈夫だっていう安心感を持つことが、会話の第一歩ですね。",
-          "en": "Having the sense of security that it's okay to make mistakes is the first step to conversation.",
+          "text": "这就是为什么他去世的新闻出来后，网上有那么多学生在哭。大家都觉得，他就像是为穷苦孩子撑伞的人。",
+          "speech_text": "",
+          "en": "That's why when the news of his passing came out, so many students were crying online. Everyone felt he was like someone holding an umbrella for poor children.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_061",
+          "speaker": "male",
+          "text": "在一个竞争极其激烈的社会里，他给那些迷茫的普通家庭指了一条最安全、最实在的路。",
+          "speech_text": "",
+          "en": "In a highly competitive society, he pointed out the safest and most practical path for those lost, ordinary families.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_062",
+          "speaker": "female",
+          "text": "是的，他用自己的方式，给了无数普通人希望。",
+          "speech_text": "",
+          "en": "Yes, in his own way, he gave hope to countless ordinary people.",
           "summary": false
         }
       ]
@@ -646,188 +645,70 @@
     {
       "chapter_id": "ch_005",
       "block_id": "block_009",
-      "purpose": "具体的な解決策として、ユイが「シャドーイング」の効果について語る",
+      "purpose": "拔高视野，说明生存压力不仅在中国有，全球年轻人也面临相似挑战",
       "segments": [
         {
-          "segment_id": "seg_072",
-          "speaker": "male",
-          "text": "ここまで、話せない原因や心理的な罠について分析してきましたが、ここからはリスナーの皆さんに、より実践的なアドバイスをいくつか提案してみましょうか。",
-          "en": "Up to this point, we've analyzed the causes of not being able to speak and the psychological traps. From here on, shall we suggest some more practical advice to our listeners?",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_073",
+          "segment_id": "seg_063",
           "speaker": "female",
-          "text": "はい！じゃあ、まずは私から、一人でもすぐに始められてすごく効果的な方法を紹介します。それは「シャドーイング」です。",
-          "en": "Yes! Then, I'll start by introducing a very effective method that you can start right away, even by yourself. That is 'shadowing'.",
+          "text": "其实，我们跳出中国来看，我觉得现在全世界的年轻人都面临着越来越大的就业压力。",
+          "speech_text": "",
+          "en": "Actually, looking beyond China, I think young people all over the world are now facing increasing employment pressure.",
           "summary": false
         },
         {
-          "segment_id": "seg_074",
+          "segment_id": "seg_064",
           "speaker": "male",
-          "text": "シャドーイング。お手本となる音声を聞きながら、少し遅れて影のように口に出して真似る練習法ですね。",
-          "en": "Shadowing. It's a practice method where you listen to model audio and mimic it out loud slightly delayed, like a shadow, right?",
+          "text": "的确如此，全球的经济都在发生变化。即使在那些换专业很自由的国家，大学生毕业后也会担心失业的问题。",
+          "speech_text": "",
+          "en": "That is indeed the case, the global economy is changing. Even in countries where it's very free to change majors, university students still worry about unemployment after graduation.",
           "summary": false
         },
         {
-          "segment_id": "seg_075",
+          "segment_id": "seg_065",
           "speaker": "female",
-          "text": "その通りです。ポッドキャストを聞いたり、動画を見たりする時、ただ黙って頭の中で翻訳しながら聞いている人が多いと思うんです。でも、そこをぐっとこらえて、実際に自分の唇を動かして、ネイティブの発音やリズム、感情までそっくりそのまま真似してみてください。",
-          "en": "Exactly. When listening to podcasts or watching videos, I think many people just listen silently while translating in their heads. But I urge you to resist that, actually move your lips, and mimic the native speaker's pronunciation, rhythm, and even emotion exactly as it is.",
+          "text": "只不过，因为中国有十四亿人口，竞争被放大了。每个人都必须在人生的十字路口非常非常小心。",
+          "speech_text": "",
+          "en": "It's just that, because China has 1.4 billion people, the competition is magnified. Everyone has to be very, very careful at the crossroads of life.",
           "summary": false
         },
         {
-          "segment_id": "seg_076",
+          "segment_id": "seg_066",
+          "speaker": "male",
+          "text": "是的，我们并不是在说中国的这套系统就是完美的，这只是庞大人口和快速发展所带来的现实。",
+          "speech_text": "",
+          "en": "Yes, we are not saying this Chinese system is perfect, it is just a reality brought about by a massive population and rapid development.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_067",
           "speaker": "female",
-          "text": "例えば今、一人で散歩しながらこのポッドキャストを聞いているなら、私が今話している言葉を、小さな声でぶつぶつとリピートしてみるんです。",
-          "en": "For example, if you are listening to this podcast while taking a walk alone right now, try muttering and repeating the words I am saying right now in a quiet voice.",
+          "text": "我真心希望在未来，当社会变得越来越好，年轻的一代能有更多的自由。",
+          "speech_text": "",
+          "en": "I sincerely hope that in the future, as society gets better and better, the younger generation can have more freedom.",
           "summary": false
         },
         {
-          "segment_id": "seg_077",
-          "speaker": "male",
-          "text": "それは理にかなっていますね。話すことというのは、ある意味でスポーツのような「筋肉の記憶」です。",
-          "en": "That makes logical sense. Speaking is, in a way, a 'muscle memory' like sports.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_078",
-          "speaker": "male",
-          "text": "長い間、目で文字を追うだけの学習をしていると、口や舌の筋肉が日本語の動きに慣れていないので、いざという時にスムーズに動きません。",
-          "en": "If you study just by following letters with your eyes for a long time, the muscles in your mouth and tongue are not accustomed to the movements of Japanese, so they won't move smoothly when the time comes.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_079",
+          "segment_id": "seg_068",
           "speaker": "female",
-          "text": "本当にそう思います。頭では単語を分かっているのに、口に出すとすごくつっかえちゃうことってありますよね。それは単純に、口がその動きを記憶していないからなんです。",
-          "en": "I completely agree. There are times when you know the word in your head, but when you try to say it out loud, you stumble a lot, right? That's simply because your mouth hasn't memorized the movement.",
+          "text": "去选择他们真正热爱的东西，而不用再天天担心生存的问题。",
+          "speech_text": "",
+          "en": "To choose what they truly love, without having to worry about survival issues every single day.",
           "summary": false
         },
         {
-          "segment_id": "seg_080",
+          "segment_id": "seg_069",
+          "speaker": "male",
+          "text": "我相信那一天一定会到来的。但是在当下，我们依然要尊重那些为了过上好日子而努力拼搏的普通人。",
+          "speech_text": "",
+          "en": "I believe that day will definitely come. But right now, we still have to respect those ordinary people who strive hard to live a better life.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_070",
           "speaker": "female",
-          "text": "だから、アプリの補助としてシャドーイングを取り入れて口の筋肉のウォーミングアップをしておけば、本番の会話でも少しリラックスして話せるようになるはずです。",
-          "en": "Therefore, if you incorporate shadowing as a supplement to apps to warm up your mouth muscles, you should be able to speak a bit more relaxedly in actual conversations.",
-          "summary": false
-        }
-      ]
-    },
-    {
-      "chapter_id": "ch_005",
-      "block_id": "block_010",
-      "purpose": "アキラが実際の対話の機会（ランゲージエクスチェンジ等）を作ることの重要性を語る",
-      "segments": [
-        {
-          "segment_id": "seg_081",
-          "speaker": "male",
-          "text": "自分一人でできるシャドーイングに加えて、もう一つのアドバイスは、やはり「本物の人間と対話する環境」に意図的に飛び込むことです。",
-          "en": "In addition to shadowing, which you can do by yourself, another piece of advice is to intentionally jump into an 'environment where you converse with real humans'.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_082",
-          "speaker": "female",
-          "text": "リアルな会話ですね。でも、日本に住んでいない学習者の場合、「周りに日本語を話す人がいない」と悩むことも多いんじゃないでしょうか？",
-          "en": "Real conversations, right? But for learners not living in Japan, wouldn't they often worry that 'there is no one around who speaks Japanese'?",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_083",
-          "speaker": "male",
-          "text": "今はインターネットが発達しているので、環境は作りやすくなりました。ランゲージエクスチェンジのアプリを使って、自分の母語を教える代わりに日本語を教えてくれる言語交換のパートナーを見つけることもできます。",
-          "en": "Now that the internet is developed, it's easier to create that environment. You can use language exchange apps to find a language exchange partner who will teach you Japanese in exchange for you teaching your native language.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_084",
-          "speaker": "male",
-          "text": "あるいは、オンラインで日本語のチューターを見つけて、週に30分だけでもいいので、フリートークの時間を予約してしまうのも良い方法です。",
-          "en": "Or, finding an online Japanese tutor and booking even just 30 minutes a week of free talk time is also a good method.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_085",
-          "speaker": "male",
-          "text": "字幕もない、選択肢もない、自分から言葉を絞り出さなければいけない状況に身を置くことが重要なんです。",
-          "en": "It is important to put yourself in a situation where there are no subtitles, no multiple-choice options, and you have to squeeze the words out yourself.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_086",
-          "speaker": "female",
-          "text": "例えるなら、水泳の練習みたいですね。陸の上で泳ぎ方のビデオを何度見ても、アプリで泳ぎ方のクイズに全問正解しても、実際にプールに飛び込んでみないと、絶対に泳げるようにはなりませんから。",
-          "en": "To use an analogy, it's like practicing swimming. No matter how many times you watch videos on how to swim while on land, or get a perfect score on a swimming quiz on an app, you'll never be able to swim unless you actually jump into the pool.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_087",
-          "speaker": "male",
-          "text": "素晴らしい例えですね。最初は水を飲んで苦しい思いをするかもしれませんが、何度かバタバタと手足を動かしているうちに、必ず浮く感覚を掴めるようになります。",
-          "en": "That's a wonderful analogy. At first, you might swallow water and struggle, but after flailing your arms and legs a few times, you will definitely grasp the sensation of floating.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_088",
-          "speaker": "female",
-          "text": "それに、リアルな人間同士の会話には「感情のやり取り」という最高の喜びがあります。自分がつっかえながら言った日本語で、相手が笑ってくれたり、深く共感してくれたりした時の達成感は、アプリのスコアなんかとは比べ物にならないくらい感動的ですよ。",
-          "en": "Besides, conversations between real humans have the greatest joy of 'emotional exchange'. The sense of achievement when the other person laughs or deeply empathizes with the Japanese you stumbled through is so moving that it can't even be compared to an app score.",
-          "summary": false
-        }
-      ]
-    },
-    {
-      "chapter_id": "ch_006",
-      "block_id": "block_011",
-      "purpose": "アプリの価値を再評価し、補助輪としての役割をまとめる",
-      "segments": [
-        {
-          "segment_id": "seg_089",
-          "speaker": "male",
-          "text": "さて、色々とアプリの弱点について話してきましたが、語学アプリ自体が無意味だと言っているわけではありませんよね。",
-          "en": "Well, we've talked a lot about the weaknesses of apps, but we are not saying that language apps themselves are meaningless, are we.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_090",
-          "speaker": "female",
-          "text": "もちろんです！特に学習の初期段階では、本当に素晴らしいツールだと思います。基礎的な語彙や文字の形を覚えるのには最適ですし、何より「毎日少しでも勉強する」という習慣を作ってくれます。",
-          "en": "Of course not! Especially in the early stages of learning, I think they are truly wonderful tools. They are perfect for memorizing basic vocabulary and letter shapes, and above all, they help create the habit of 'studying even a little bit every day'.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_091",
-          "speaker": "male",
-          "text": "そうですね。自転車の「補助輪」のような存在だと考えるといいかもしれません。最初は転ばないようにアプリという補助輪を使って、日本語の世界に安全に入る。",
-          "en": "That's right. It might be good to think of them as 'training wheels' on a bicycle. At first, you use the training wheels of an app to safely enter the world of Japanese without falling over.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_092",
-          "speaker": "male",
-          "text": "しかし、ある程度の基礎知識が身についたら、いつまでも補助輪に頼っているわけにはいきません。",
-          "en": "However, once you have acquired a certain level of basic knowledge, you can't rely on training wheels forever.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_093",
-          "speaker": "female",
-          "text": "アプリはあくまでスタートラインであって、ゴールではないということですね。",
-          "en": "It means the app is strictly the starting line, not the finish line.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_094",
-          "speaker": "female",
-          "text": "快適で安全な「選択肢の城」から勇気を出して一歩外に踏み出して、覚えた単語を現実の世界で実際に使ってみる。それが、次のステージに進むために一番必要なことなんですね。",
-          "en": "Mustering up the courage to step outside the comfortable and safe 'castle of multiple choices' and actually use the words you've learned in the real world. That is what is most necessary to advance to the next stage.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_095",
-          "speaker": "male",
-          "text": "ええ。失敗を恐れずにたくさん恥をかいて、相手のフィードバックから学んでいく。その繰り返しで、皆さんの日本語はより自然で、生きた言葉になっていくはずです。",
-          "en": "Yes. Losing face many times without fearing failure, and learning from the other person's feedback. Through that repetition, your Japanese is sure to become more natural, living language.",
+          "text": "是的，每一个努力生活的人，都值得被尊重。",
+          "speech_text": "",
+          "en": "Yes, everyone who works hard at living deserves to be respected.",
           "summary": false
         }
       ]
@@ -835,62 +716,78 @@
     {
       "chapter_id": "ch_006",
       "block_id": "summary_cta",
-      "purpose": "トピックの最終的な締めくくりと、リスナーへのアクションを促す",
+      "purpose": "总结本集话题，向听众提问并呼吁点赞订阅",
       "segments": [
         {
-          "segment_id": "seg_096",
+          "segment_id": "seg_071",
           "speaker": "female",
-          "text": "ということで、今日は「語学アプリの罠と、実際に話せるようになるための突破口」について、アキラさんとじっくり話してきました。",
-          "en": "So today, Akira and I had an in-depth talk about 'the traps of language apps and the breakthrough to actually being able to speak'.",
+          "text": "好了，今天我们聊了一个稍微有些沉重，但非常真实的话题：为什么在中国选专业这么重要。",
+          "speech_text": "",
+          "en": "Alright, today we talked about a slightly heavy but very real topic: why choosing a major is so important in China.",
           "summary": false
         },
         {
-          "segment_id": "seg_097",
+          "segment_id": "seg_072",
           "speaker": "male",
-          "text": "今、アプリで毎日頑張って連続記録を更新している方にとって、少しでも勇気やヒントになる内容だったなら嬉しいです。",
-          "en": "If the content was even a little bit encouraging or provided hints for those of you who are currently working hard every day to update your streak on an app, we would be happy.",
+          "text": "我们从张雪峰老师的新闻说起，聊到了激烈的高考、换专业的困难，还有普通家庭的希望与压力。",
+          "speech_text": "",
+          "en": "We started from the news of Teacher Zhang Xuefeng, and talked about the fierce Gaokao, the difficulty of changing majors, as well as the hopes and pressures of ordinary families.",
           "summary": false
         },
         {
-          "segment_id": "seg_098",
+          "segment_id": "seg_073",
           "speaker": "female",
-          "text": "リスナーの皆さんは、語学アプリを使ったことがありますか？「こんなアプリにハマっていた」とか、「いざ話そうとしたら言葉が出なくて困った！」というエピソードがあれば、ぜひコメント欄でシェアしてくださいね。",
-          "en": "Listeners, have you ever used a language app? If you have episodes like 'I was hooked on this app' or 'I had trouble because the words wouldn't come out when I tried to speak!', please be sure to share them in the comments section.",
+          "text": "希望今天的内容，能帮助正在学习中文的你们，更深入地了解真实的中国社会。它不仅仅是关于考试，更是关于生活的。",
+          "speech_text": "",
+          "en": "I hope today's content can help you who are learning Chinese to understand the real Chinese society more deeply. It's not just about exams, it's about life.",
           "summary": false
         },
         {
-          "segment_id": "seg_099",
+          "segment_id": "seg_074",
           "speaker": "male",
-          "text": "文法が少し間違っていても全然構いません。まずはコメント欄で、日本語のアウトプットを試してみてください。",
-          "en": "It doesn't matter at all if the grammar is slightly incorrect. First, try practicing your Japanese output in the comments section.",
+          "text": "是的。我们也很想听听你们的故事。在你们的国家，大学换专业容易吗？大学专业会决定你未来的工作吗？",
+          "speech_text": "",
+          "en": "Yes. We would also love to hear your stories. In your country, is it easy to change university majors? Does your university major decide your future job?",
           "summary": false
         },
         {
-          "segment_id": "seg_100",
+          "segment_id": "seg_075",
           "speaker": "female",
-          "text": "今日のポッドキャストが面白かった、役に立ったという方は、ぜひ「いいね」ボタンを押して、チャンネル登録も忘れずにお願いします！",
-          "en": "If you found today's podcast interesting or helpful, please press the 'like' button and don't forget to subscribe to the channel!",
+          "text": "欢迎大家在视频下面用中文留言！和我们分享你的看法，这也是非常好的中文练习哦。",
+          "speech_text": "",
+          "en": "Everyone is welcome to leave a comment in Chinese below the video! Sharing your views with us is also a very good Chinese practice.",
           "summary": false
         },
         {
-          "segment_id": "seg_101",
-          "speaker": "female",
-          "text": "皆さんの温かい応援が、私たちのポッドキャスト作りの一番のモチベーションになっています。",
-          "en": "Your warm support is our biggest motivation for making these podcasts.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_102",
+          "segment_id": "seg_076",
           "speaker": "male",
-          "text": "それでは、今日も最後までお付き合いいただき、ありがとうございました。また次回の会話で、のんびりお会いしましょう。",
-          "en": "Well then, thank you for keeping us company until the end today as well. Let's meet again for a relaxing chat next time.",
+          "text": "如果你喜欢我们今天的播客，觉得对你有帮助，请一定记得点击点赞、订阅我们的频道。",
+          "speech_text": "",
+          "en": "If you liked our podcast today and feel it was helpful to you, please definitely remember to hit like and subscribe to our channel.",
           "summary": false
         },
         {
-          "segment_id": "seg_103",
+          "segment_id": "seg_077",
           "speaker": "female",
-          "text": "また次回お会いしましょう！バイバーイ！",
-          "en": "See you next time! Bye-bye!",
+          "text": "也欢迎分享给你身边同样在学中文的朋友们！",
+          "speech_text": "",
+          "en": "Also welcome to share it with your friends who are also learning Chinese around you!",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_078",
+          "speaker": "male",
+          "text": "最后，让我们也祝愿张雪峰老师一路走好。感谢大家今天的陪伴，我们下期节目再见啦！",
+          "speech_text": "",
+          "en": "Finally, let us also wish Teacher Zhang Xuefeng a peaceful journey. Thank you everyone for your company today, we'll see you in the next episode!",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_079",
+          "speaker": "female",
+          "text": "谢谢大家，下期再见！",
+          "speech_text": "",
+          "en": "Thank you everyone, see you next time!",
           "summary": true
         }
       ]

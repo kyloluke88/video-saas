@@ -15,7 +15,30 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func HandleMessage(ch *amqp.Channel, msg amqp.Delivery, scheduler map[string]TaskHandler) error {
+type Dispatcher struct {
+	scheduler     map[string]TaskHandler
+	projectLocker ProjectLocker
+}
+
+func NewDispatcher(scheduler map[string]TaskHandler, projectLocker ProjectLocker) Dispatcher {
+	if projectLocker == nil {
+		projectLocker = NoopProjectLocker{}
+	}
+	return Dispatcher{
+		scheduler:     scheduler,
+		projectLocker: projectLocker,
+	}
+}
+
+func (d Dispatcher) HandleMessage(ch *amqp.Channel, msg amqp.Delivery) error {
+	return HandleMessage(ch, msg, d.scheduler, d.projectLocker)
+}
+
+func HandleMessage(ch *amqp.Channel, msg amqp.Delivery, scheduler map[string]TaskHandler, projectLocker ProjectLocker) error {
+	if projectLocker == nil {
+		projectLocker = NoopProjectLocker{}
+	}
+
 	retries := helpers.HeaderRetry(msg.Headers)
 
 	var task dto.VideoTaskMessage
@@ -24,35 +47,37 @@ func HandleMessage(ch *amqp.Channel, msg amqp.Delivery, scheduler map[string]Tas
 		return msg.Ack(false)
 	}
 
-	log.Printf("🎬 收到任务 task_id=%s type=%s retries=%d", task.TaskID, task.TaskType, retries)
-	if err := processTask(ch, task, scheduler); err != nil {
-		log.Printf("❌ 任务处理失败 task_id=%s: %v", task.TaskID, err)
-		if isNonRetryable(err) {
-			log.Printf("⛔ 不可重试错误，任务终止且不再重试 task_id=%s", task.TaskID)
-			if dlqErr := publishToDLQ(ch, msg.Body, retries); dlqErr != nil {
-				_ = msg.Nack(false, true)
-				return dlqErr
+	return projectLocker.WithProject(taskProjectID(task), func() error {
+		log.Printf("🎬 收到任务 task_id=%s type=%s retries=%d", task.TaskID, task.TaskType, retries)
+		if err := processTask(ch, task, scheduler); err != nil {
+			log.Printf("❌ 任务处理失败 task_id=%s: %v", task.TaskID, err)
+			if isNonRetryable(err) {
+				log.Printf("⛔ 不可重试错误，任务终止且不再重试 task_id=%s", task.TaskID)
+				if dlqErr := publishToDLQ(ch, msg.Body, retries); dlqErr != nil {
+					_ = msg.Nack(false, true)
+					return dlqErr
+				}
+				return msg.Ack(false)
 			}
+			if retries >= conf.Get[int]("worker.task_max_retries") {
+				if dlqErr := publishToDLQ(ch, msg.Body, retries+1); dlqErr != nil {
+					_ = msg.Nack(false, true)
+					return dlqErr
+				}
+				return msg.Ack(false)
+			}
+			if retryErr := publishToRetry(ch, msg.Body, retries+1); retryErr != nil {
+				_ = msg.Nack(false, true)
+				return retryErr
+			}
+			log.Printf("🔁 任务进入延迟重试 task_id=%s next_retry=%d delay=%s", task.TaskID, retries+1, TaskRetryDelay(retries+1).String())
 			return msg.Ack(false)
 		}
-		if retries >= conf.Get[int]("worker.task_max_retries") {
-			if dlqErr := publishToDLQ(ch, msg.Body, retries+1); dlqErr != nil {
-				_ = msg.Nack(false, true)
-				return dlqErr
-			}
-			return msg.Ack(false)
-		}
-		if retryErr := publishToRetry(ch, msg.Body, retries+1); retryErr != nil {
-			_ = msg.Nack(false, true)
-			return retryErr
-		}
-		log.Printf("🔁 任务进入延迟重试 task_id=%s next_retry=%d delay=%s", task.TaskID, retries+1, TaskRetryDelay(retries+1).String())
+
+		log.Printf("✅ 当前任务节点处理完成 task_id=%s type=%s project_id=%s", task.TaskID, task.TaskType, taskProjectID(task))
+
 		return msg.Ack(false)
-	}
-
-	log.Printf("✅ 当前任务节点处理完成 task_id=%s type=%s project_id=%s", task.TaskID, task.TaskType, taskProjectID(task))
-
-	return msg.Ack(false)
+	})
 }
 
 func processTask(ch *amqp.Channel, task dto.VideoTaskMessage, scheduler map[string]TaskHandler) error {

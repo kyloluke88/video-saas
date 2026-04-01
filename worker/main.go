@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"worker/bootstrap"
+	"worker/internal/consumer"
 	"worker/internal/pipeline"
 	idiompipeline "worker/internal/pipeline/idiom"
 	podcastaudiopipeline "worker/internal/pipeline/podcast_audio"
@@ -21,7 +22,7 @@ func main() {
 	if err := bootstrap.Initialize(""); err != nil {
 		log.Fatalf("bootstrap init failed: %v", err)
 	}
-	log.Printf("⚙️ FFMPEG_POSTPROCESS_ENABLED=%t FFMPEG_WORK_DIR=%s", conf.Get[bool]("worker.ffmpeg_postprocess_enabled"), conf.Get[string]("worker.ffmpeg_work_dir"))
+	log.Printf("⚙️ FFMPEG_WORK_DIR=%s", conf.Get[string]("worker.ffmpeg_work_dir"))
 	log.Printf("⚙️ BGM_ENABLED=%t", conf.Get[bool]("worker.bgm_enabled"))
 	log.Printf("⚙️ S3_ENABLED=%t", conf.Get[bool]("worker.s3_enabled"))
 	log.Printf("⚙️ SEEDANCE_ENABLED=%t", conf.Get[bool]("worker.seedance_enabled"))
@@ -29,36 +30,40 @@ func main() {
 		conf.Get[bool]("worker.google_tts_enabled"),
 		conf.Get[string]("worker.google_tts_model"),
 	)
+	log.Printf("⚙️ ELEVENLABS_TTS_ENABLED=%t ELEVENLABS_TTS_MODEL=%s",
+		conf.Get[bool]("worker.elevenlabs_tts_enabled"),
+		conf.Get[string]("worker.elevenlabs_tts_model"),
+	)
+	log.Printf("⚙️ WORKER_CONCURRENCY=%d RABBITMQ_PREFETCH=%d",
+		conf.Get[int]("worker.worker_concurrency"),
+		conf.Get[int]("worker.rabbitmq_prefetch"),
+	)
 
 	amqpURL := buildAMQPURL()
-	scheduler := newTaskScheduler()
+	dispatcher := pipeline.NewDispatcher(newTaskScheduler(), pipeline.NewProjectLocker())
 	for {
-		conn, ch, err := connectAndPrepare(amqpURL)
+		conn, err := connectAndPrepare(amqpURL)
 		if err != nil {
 			log.Printf("❌ RabbitMQ 初始化失败，3s 后重试: %v", err)
 			time.Sleep(3 * time.Second)
 			continue
 		}
 
-		msgs, err := ch.Consume(conf.Get[string]("worker.rabbitmq_queue"), "", false, false, false, false, nil)
-		if err != nil {
-			_ = ch.Close()
+		pool := consumer.Pool{
+			Connection:  conn,
+			Queue:       conf.Get[string]("worker.rabbitmq_queue"),
+			Prefetch:    conf.Get[int]("worker.rabbitmq_prefetch"),
+			Concurrency: conf.Get[int]("worker.worker_concurrency"),
+			Handler:     dispatcher.HandleMessage,
+		}
+		if err := pool.Run(); err != nil {
 			_ = conn.Close()
-			log.Printf("❌ RabbitMQ 消费注册失败，3s 后重试: %v", err)
-			time.Sleep(3 * time.Second)
+			log.Printf("⚠️ RabbitMQ 消费连接关闭，准备重连: %v", err)
+			time.Sleep(2 * time.Second)
 			continue
 		}
 
-		log.Printf("🟡 Worker 启动，监听队列: %s", conf.Get[string]("worker.rabbitmq_queue"))
-		for msg := range msgs {
-			if err := pipeline.HandleMessage(ch, msg, scheduler); err != nil {
-				log.Printf("❌ 处理消息失败: %v", err)
-			}
-		}
-
-		_ = ch.Close()
 		_ = conn.Close()
-		log.Println("⚠️ RabbitMQ 消费通道关闭，准备重连...")
 		time.Sleep(2 * time.Second)
 	}
 
@@ -152,29 +157,23 @@ func setupTopology(ch *amqp.Channel) error {
 	return nil
 }
 
-func connectAndPrepare(amqpURL string) (*amqp.Connection, *amqp.Channel, error) {
+func connectAndPrepare(amqpURL string) (*amqp.Connection, error) {
 	conn, err := amqp.Dial(amqpURL)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	ch, err := conn.Channel()
 	if err != nil {
 		_ = conn.Close()
-		return nil, nil, err
+		return nil, err
 	}
+	defer ch.Close()
 
 	if err := setupTopology(ch); err != nil {
-		_ = ch.Close()
 		_ = conn.Close()
-		return nil, nil, err
+		return nil, err
 	}
 
-	if err := ch.Qos(conf.Get[int]("worker.rabbitmq_prefetch"), 0, false); err != nil {
-		_ = ch.Close()
-		_ = conn.Close()
-		return nil, nil, err
-	}
-
-	return conn, ch, nil
+	return conn, nil
 }

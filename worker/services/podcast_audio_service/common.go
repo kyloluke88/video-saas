@@ -33,11 +33,7 @@ func sanitizeSegmentID(segmentID string) string {
 }
 
 func defaultSpeaker(value string) string {
-	value = strings.TrimSpace(strings.ToLower(value))
-	if value == "" {
-		return "male"
-	}
-	return value
+	return normalizeSpeakerRole(value)
 }
 
 func writeJSON(path string, data interface{}) error {

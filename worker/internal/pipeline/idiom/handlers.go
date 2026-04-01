@@ -128,12 +128,8 @@ func HandleSceneGenerate(ch *amqp.Channel, task dto.VideoTaskMessage) error {
 	}
 
 	normalizedPath := filepath.Join(scenesDir, fmt.Sprintf("%02d_norm.mp4", sceneIndex))
-	if conf.Get[bool]("worker.ffmpeg_postprocess_enabled") {
-		if err := ffmpegservice.NormalizeSceneVideo(rawPath, normalizedPath); err != nil {
-			return err
-		}
-	} else {
-		normalizedPath = rawPath
+	if err := ffmpegservice.NormalizeSceneVideo(rawPath, normalizedPath); err != nil {
+		return err
 	}
 
 	targetDurationSec := helpers.GetInt(task.Payload, "target_duration_sec", 0)

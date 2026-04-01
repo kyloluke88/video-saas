@@ -1,0 +1,3855 @@
+{
+  "language": "ja",
+  "title": "給料は上がったのに、なぜ生活は楽にならないの？",
+  "youtube": {
+    "publish_title": "Why Your Wallet Still Feels Empty Despite a Pay Raise | 給料が上がっても生活が苦しいのはなぜ？",
+    "chapters": [
+      {
+        "chapter_id": "ch_001",
+        "title_en": "Why Doesn't Life Feel Easier?",
+        "title": "給料は上がったのに？",
+        "block_ids": [
+          "block_001",
+          "block_002"
+        ]
+      },
+      {
+        "chapter_id": "ch_002",
+        "title_en": "The Impact of Inflation & Weak Yen",
+        "title": "物価高と円安の影響",
+        "block_ids": [
+          "block_003",
+          "block_004"
+        ]
+      },
+      {
+        "chapter_id": "ch_003",
+        "title_en": "Taxes & Social Insurance Deductions",
+        "title": "税金と社会保険料の負担",
+        "block_ids": [
+          "block_005"
+        ]
+      },
+      {
+        "chapter_id": "ch_004",
+        "title_en": "Lifestyle Creep & Money Anxiety",
+        "title": "無意識の出費と将来への不安",
+        "block_ids": [
+          "block_006",
+          "block_007"
+        ]
+      },
+      {
+        "chapter_id": "ch_005",
+        "title_en": "How to Protect Your Finances",
+        "title": "お金を守るための対策",
+        "block_ids": [
+          "block_008",
+          "block_009"
+        ]
+      },
+      {
+        "chapter_id": "ch_006",
+        "title_en": "Summary & Viewer Question",
+        "title": "まとめと皆さんへの質問",
+        "block_ids": [
+          "summary_cta"
+        ]
+      }
+    ],
+    "in_this_episode_you_will_learn": [
+      "Learn natural Japanese vocabulary related to income, taxes, and daily expenses.",
+      "Understand the crucial difference between 'nominal wages' (額面) and 'take-home pay' (手取り).",
+      "Hear real-life perspectives on how inflation and the weak yen affect living in Japan.",
+      "Practice N3-N2 listening skills through a relaxed, natural conversation between friends."
+    ],
+    "description_intro": [
+      "Welcome back to our Japanese learning podcast! In this episode, Yui and Akira tackle a very real issue that many people in Japan are feeling right now: why doesn't life feel any easier even though news programs report that salaries are going up?",
+      "We discuss the reality of grocery shopping, the heavy burden of social insurance, and even the psychological 'lifestyle creep' that makes our money disappear. Grab a cup of tea, relax, and practice your listening skills with our slow and natural Japanese conversation!"
+    ],
+    "hashtags": [
+      "#日本語学習",
+      "#JapanesePodcast",
+      "#日本語リスニング",
+      "#日本の生活",
+      "#物価高",
+      "#手取り"
+    ],
+    "video_tags": [
+      "Japanese learning",
+      "learn Japanese",
+      "Japanese podcast",
+      "listening practice",
+      "JLPT N2",
+      "JLPT N3",
+      "living in Japan",
+      "inflation in Japan",
+      "Japanese economy",
+      "daily Japanese"
+    ]
+  },
+  "blocks": [
+    {
+      "chapter_id": "ch_001",
+      "block_id": "block_001",
+      "purpose": "自己紹介とあいさつのあと、自然に今日の話題（賃上げのニュースと実感のズレ）へ入る",
+      "segments": [
+        {
+          "segment_id": "seg_001",
+          "speaker": "female",
+          "text": "皆さん、こんにちは。日常の日本語をゆっくり話すポッドキャストへようこそ。ユイです。",
+          "en": "Hello everyone, and welcome to our podcast where we speak everyday Japanese slowly. I'm Yui.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "皆",
+              "reading": "みな"
+            },
+            {
+              "char": "日常",
+              "reading": "にちじょう"
+            },
+            {
+              "char": "日本語",
+              "reading": "にほんご"
+            },
+            {
+              "char": "話",
+              "reading": "はな"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_002",
+          "speaker": "male",
+          "text": "こんにちは、アキラです。最近、少しずつ暖かくなってきましたね。",
+          "en": "Hello, I'm Akira. It's been getting a little warmer lately, hasn't it?",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "最近",
+              "reading": "さいきん"
+            },
+            {
+              "char": "少",
+              "reading": "すこ"
+            },
+            {
+              "char": "暖",
+              "reading": "あたた"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_003",
+          "speaker": "female",
+          "text": "そうですね。でも、暖かくなってきたのと同じくらい、最近ニュースでよく「上がった」って聞く言葉があるんです。",
+          "en": "Yes, it has. But just as much as the temperature going up, there's another word I keep hearing going 'up' in the news recently.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "暖",
+              "reading": "あたた"
+            },
+            {
+              "char": "同",
+              "reading": "おな"
+            },
+            {
+              "char": "最近",
+              "reading": "さいきん"
+            },
+            {
+              "char": "上",
+              "reading": "あ"
+            },
+            {
+              "char": "聞",
+              "reading": "き"
+            },
+            {
+              "char": "言葉",
+              "reading": "ことば"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_004",
+          "speaker": "male",
+          "text": "ああ、もしかして「給料」の話ですか？春闘、つまり春の給与交渉で、大企業を中心に賃上げのニュースが多かったですよね。",
+          "en": "Ah, are you talking about 'salaries'? With the shunto, or spring wage negotiations, there was a lot of news about pay raises, especially at large companies.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "給料",
+              "reading": "きゅうりょう"
+            },
+            {
+              "char": "話",
+              "reading": "はなし"
+            },
+            {
+              "char": "春闘",
+              "reading": "しゅんとう"
+            },
+            {
+              "char": "春",
+              "reading": "はる"
+            },
+            {
+              "char": "給与",
+              "reading": "きゅうよ"
+            },
+            {
+              "char": "交渉",
+              "reading": "こうしょう"
+            },
+            {
+              "char": "大",
+              "reading": "だい"
+            },
+            {
+              "char": "企業",
+              "reading": "きぎょう"
+            },
+            {
+              "char": "中心",
+              "reading": "ちゅうしん"
+            },
+            {
+              "char": "賃上",
+              "reading": "ちんあ"
+            },
+            {
+              "char": "多",
+              "reading": "おお"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_005",
+          "speaker": "female",
+          "text": "まさにそれです。ニュースでは「過去最高の賃上げ！」なんて言ってますけど、私の周りでは「生活が楽になった」って喜んでる人、全然いないんですよ。",
+          "en": "Exactly that. The news says things like 'Record high wage increases!', but around me, there's absolutely no one rejoicing that 'life has gotten easier.'",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "過去",
+              "reading": "かこ"
+            },
+            {
+              "char": "最高",
+              "reading": "さいこう"
+            },
+            {
+              "char": "賃上",
+              "reading": "ちんあ"
+            },
+            {
+              "char": "言",
+              "reading": "い"
+            },
+            {
+              "char": "私",
+              "reading": "わたし"
+            },
+            {
+              "char": "周",
+              "reading": "まわ"
+            },
+            {
+              "char": "生活",
+              "reading": "せいかつ"
+            },
+            {
+              "char": "楽",
+              "reading": "らく"
+            },
+            {
+              "char": "喜",
+              "reading": "よろこ"
+            },
+            {
+              "char": "人",
+              "reading": "ひと"
+            },
+            {
+              "char": "全然",
+              "reading": "ぜんぜん"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_006",
+          "speaker": "male",
+          "text": "確かに、ニュースの華やかな印象と、私たちの毎日の生活の感覚には、かなりギャップがありますよね。",
+          "en": "It's true, there's quite a gap between the glamorous impression of the news and the feeling of our everyday lives.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "確",
+              "reading": "たし"
+            },
+            {
+              "char": "華",
+              "reading": "はな"
+            },
+            {
+              "char": "印象",
+              "reading": "いんしょう"
+            },
+            {
+              "char": "私",
+              "reading": "わたし"
+            },
+            {
+              "char": "毎日",
+              "reading": "まいにち"
+            },
+            {
+              "char": "生活",
+              "reading": "せいかつ"
+            },
+            {
+              "char": "感覚",
+              "reading": "かんかく"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_007",
+          "speaker": "female",
+          "text": "ええ。私も会社員なので給料は少しだけ上がったんですが、お財布に余裕ができたとは全く思えなくて。なんだか不思議なんです。",
+          "en": "Yeah. I'm a company employee too, so my salary went up a tiny bit, but I don't feel like I have any more room in my wallet at all. It's kind of strange.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "私",
+              "reading": "わたし"
+            },
+            {
+              "char": "会社",
+              "reading": "かいしゃ"
+            },
+            {
+              "char": "員",
+              "reading": "いん"
+            },
+            {
+              "char": "給料",
+              "reading": "きゅうりょう"
+            },
+            {
+              "char": "少",
+              "reading": "すこ"
+            },
+            {
+              "char": "上",
+              "reading": "あ"
+            },
+            {
+              "char": "財布",
+              "reading": "さいふ"
+            },
+            {
+              "char": "余裕",
+              "reading": "よゆう"
+            },
+            {
+              "char": "全",
+              "reading": "まった"
+            },
+            {
+              "char": "思",
+              "reading": "おも"
+            },
+            {
+              "char": "不思議",
+              "reading": "ふしぎ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_008",
+          "speaker": "male",
+          "text": "給料は上がったはずなのに、なぜ生活は楽にならないのか。今日はその理由について、一緒にゆっくり考えてみましょう。",
+          "en": "Why doesn't life get easier even though salaries are supposed to have gone up? Today, let's take our time and think about the reasons together.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "給料",
+              "reading": "きゅうりょう"
+            },
+            {
+              "char": "上",
+              "reading": "あ"
+            },
+            {
+              "char": "生活",
+              "reading": "せいかつ"
+            },
+            {
+              "char": "楽",
+              "reading": "らく"
+            },
+            {
+              "char": "今日",
+              "reading": "きょう"
+            },
+            {
+              "char": "理由",
+              "reading": "りゆう"
+            },
+            {
+              "char": "一緒",
+              "reading": "いっしょ"
+            },
+            {
+              "char": "考",
+              "reading": "かんが"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "chapter_id": "ch_001",
+      "block_id": "block_002",
+      "purpose": "「名目賃金」と「実質賃金」という基本概念を日常会話のレベルで説明する",
+      "segments": [
+        {
+          "segment_id": "seg_009",
+          "speaker": "male",
+          "text": "この話題を考えるとき、経済のニュースでよく使われる二つの言葉があるんです。「名目賃金」と「実質賃金」という言葉です。",
+          "en": "When thinking about this topic, there are two words often used in economic news. They are 'nominal wages' and 'real wages'.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "話題",
+              "reading": "わだい"
+            },
+            {
+              "char": "考",
+              "reading": "かんが"
+            },
+            {
+              "char": "経済",
+              "reading": "けいざい"
+            },
+            {
+              "char": "使",
+              "reading": "つか"
+            },
+            {
+              "char": "二",
+              "reading": "ふた"
+            },
+            {
+              "char": "言葉",
+              "reading": "ことば"
+            },
+            {
+              "char": "名目",
+              "reading": "めいもく"
+            },
+            {
+              "char": "賃金",
+              "reading": "ちんぎん"
+            },
+            {
+              "char": "実質",
+              "reading": "じっしつ"
+            },
+            {
+              "char": "賃金",
+              "reading": "ちんぎん"
+            },
+            {
+              "char": "言葉",
+              "reading": "ことば"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_010",
+          "speaker": "female",
+          "text": "出ましたね、難しい言葉。名目賃金というのは、単純に会社から支払われるお金の金額のことですよね？",
+          "en": "There they are, the difficult words. Nominal wages simply refer to the amount of money paid by the company, right?",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "出",
+              "reading": "で"
+            },
+            {
+              "char": "難",
+              "reading": "むずか"
+            },
+            {
+              "char": "言葉",
+              "reading": "ことば"
+            },
+            {
+              "char": "名目",
+              "reading": "めいもく"
+            },
+            {
+              "char": "賃金",
+              "reading": "ちんぎん"
+            },
+            {
+              "char": "単純",
+              "reading": "たんじゅん"
+            },
+            {
+              "char": "会社",
+              "reading": "かいしゃ"
+            },
+            {
+              "char": "支払",
+              "reading": "しはら"
+            },
+            {
+              "char": "金",
+              "reading": "かね"
+            },
+            {
+              "char": "金額",
+              "reading": "きんがく"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_011",
+          "speaker": "male",
+          "text": "その通りです。金額そのものの数字ですね。じゃあ、「実質賃金」は何だと思いますか？",
+          "en": "That's right. It's the numerical value of the amount itself. So, what do you think 'real wages' are?",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "通",
+              "reading": "とお"
+            },
+            {
+              "char": "金額",
+              "reading": "きんがく"
+            },
+            {
+              "char": "数字",
+              "reading": "すうじ"
+            },
+            {
+              "char": "実質",
+              "reading": "じっしつ"
+            },
+            {
+              "char": "賃金",
+              "reading": "ちんぎん"
+            },
+            {
+              "char": "何",
+              "reading": "なに"
+            },
+            {
+              "char": "思",
+              "reading": "おも"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_012",
+          "speaker": "female",
+          "text": "うーん、買い物をするときの「お金の本当の価値」みたいなことでしょうか？物価が上がると、同じ金額でも買えるものが減っちゃいますよね。",
+          "en": "Hmm, is it something like the 'true value of money' when we go shopping? If prices go up, the amount of things we can buy decreases even with the same amount of money, right?",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "買",
+              "reading": "か"
+            },
+            {
+              "char": "物",
+              "reading": "もの"
+            },
+            {
+              "char": "金",
+              "reading": "かね"
+            },
+            {
+              "char": "本当",
+              "reading": "ほんとう"
+            },
+            {
+              "char": "価値",
+              "reading": "かち"
+            },
+            {
+              "char": "物価",
+              "reading": "ぶっか"
+            },
+            {
+              "char": "上",
+              "reading": "あ"
+            },
+            {
+              "char": "同",
+              "reading": "おな"
+            },
+            {
+              "char": "金額",
+              "reading": "きんがく"
+            },
+            {
+              "char": "買",
+              "reading": "か"
+            },
+            {
+              "char": "減",
+              "reading": "へ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_013",
+          "speaker": "male",
+          "text": "まさにそれです。実質賃金は、物価の変動を計算に入れた給料の価値なんです。",
+          "en": "That's exactly it. Real wages are the value of your salary taking price fluctuations into account.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "実質",
+              "reading": "じっしつ"
+            },
+            {
+              "char": "賃金",
+              "reading": "ちんぎん"
+            },
+            {
+              "char": "物価",
+              "reading": "ぶっか"
+            },
+            {
+              "char": "変動",
+              "reading": "へんどう"
+            },
+            {
+              "char": "計算",
+              "reading": "けいさん"
+            },
+            {
+              "char": "入",
+              "reading": "い"
+            },
+            {
+              "char": "給料",
+              "reading": "きゅうりょう"
+            },
+            {
+              "char": "価値",
+              "reading": "かち"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_014",
+          "speaker": "male",
+          "text": "つまり、給料が５パーセント上がっても、物の値段が７パーセント上がっていたら、生活は苦しくなりますよね。",
+          "en": "In other words, even if your salary goes up by 5 percent, if the prices of goods have gone up by 7 percent, life becomes harder.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "給料",
+              "reading": "きゅうりょう"
+            },
+            {
+              "char": "上",
+              "reading": "あ"
+            },
+            {
+              "char": "物",
+              "reading": "もの"
+            },
+            {
+              "char": "値段",
+              "reading": "ねだん"
+            },
+            {
+              "char": "上",
+              "reading": "あ"
+            },
+            {
+              "char": "生活",
+              "reading": "せいかつ"
+            },
+            {
+              "char": "苦",
+              "reading": "くる"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_015",
+          "speaker": "female",
+          "text": "なるほど。計算上はマイナス２パーセントの赤字ってことですね。私の生活が楽にならない理由は、間違いなくそれだと思います。",
+          "en": "I see. Mathematically, that means a deficit of minus 2 percent. I'm pretty sure that's the reason why my life isn't getting easier.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "計算",
+              "reading": "けいさん"
+            },
+            {
+              "char": "上",
+              "reading": "じょう"
+            },
+            {
+              "char": "赤字",
+              "reading": "あかじ"
+            },
+            {
+              "char": "私",
+              "reading": "わたし"
+            },
+            {
+              "char": "生活",
+              "reading": "せいかつ"
+            },
+            {
+              "char": "楽",
+              "reading": "らく"
+            },
+            {
+              "char": "理由",
+              "reading": "りゆう"
+            },
+            {
+              "char": "間違",
+              "reading": "まちが"
+            },
+            {
+              "char": "思",
+              "reading": "おも"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_016",
+          "speaker": "female",
+          "text": "給料が上がるスピードより、スーパーのレジで払うお金が増えるスピードのほうが、ずっと速く感じますから。",
+          "en": "Because the speed at which the money I pay at the supermarket register increases feels much faster than the speed at which my salary goes up.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "給料",
+              "reading": "きゅうりょう"
+            },
+            {
+              "char": "上",
+              "reading": "あ"
+            },
+            {
+              "char": "払",
+              "reading": "はら"
+            },
+            {
+              "char": "金",
+              "reading": "かね"
+            },
+            {
+              "char": "増",
+              "reading": "ふ"
+            },
+            {
+              "char": "速",
+              "reading": "はや"
+            },
+            {
+              "char": "感",
+              "reading": "かん"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "chapter_id": "ch_002",
+      "block_id": "block_003",
+      "purpose": "スーパーでの買い物など、物価高を実感する身近なエピソードを共有する",
+      "segments": [
+        {
+          "segment_id": "seg_017",
+          "speaker": "male",
+          "text": "スーパーでの買い物は、物価の高さを一番直接的に感じますよね。ユイさんは最近、何が高くなったと感じますか？",
+          "en": "Grocery shopping at the supermarket is where we feel the high prices most directly, isn't it? Yui, what have you felt has become expensive lately?",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "買",
+              "reading": "か"
+            },
+            {
+              "char": "物",
+              "reading": "もの"
+            },
+            {
+              "char": "物価",
+              "reading": "ぶっか"
+            },
+            {
+              "char": "高",
+              "reading": "たか"
+            },
+            {
+              "char": "一番",
+              "reading": "いちばん"
+            },
+            {
+              "char": "直接的",
+              "reading": "ちょくせつてき"
+            },
+            {
+              "char": "感",
+              "reading": "かん"
+            },
+            {
+              "char": "最近",
+              "reading": "さいきん"
+            },
+            {
+              "char": "何",
+              "reading": "なに"
+            },
+            {
+              "char": "高",
+              "reading": "たか"
+            },
+            {
+              "char": "感",
+              "reading": "かん"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_018",
+          "speaker": "female",
+          "text": "もう、全部です！特に野菜と卵ですね。少し前なら、キャベツが１玉１５０円くらいで買えたのに、今は平気で３００円を超えたりしますから。",
+          "en": "Seriously, everything! Especially vegetables and eggs. A little while ago, I could buy a head of cabbage for about 150 yen, but now it easily goes over 300 yen.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "全部",
+              "reading": "ぜんぶ"
+            },
+            {
+              "char": "特",
+              "reading": "とく"
+            },
+            {
+              "char": "野菜",
+              "reading": "やさい"
+            },
+            {
+              "char": "卵",
+              "reading": "たまご"
+            },
+            {
+              "char": "少",
+              "reading": "すこ"
+            },
+            {
+              "char": "前",
+              "reading": "まえ"
+            },
+            {
+              "char": "玉",
+              "reading": "たま"
+            },
+            {
+              "char": "円",
+              "reading": "えん"
+            },
+            {
+              "char": "買",
+              "reading": "か"
+            },
+            {
+              "char": "今",
+              "reading": "いま"
+            },
+            {
+              "char": "平気",
+              "reading": "へいき"
+            },
+            {
+              "char": "円",
+              "reading": "えん"
+            },
+            {
+              "char": "超",
+              "reading": "こ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_019",
+          "speaker": "male",
+          "text": "３００円は高いですね。私はよく料理にオリーブオイルを使うんですが、油の値段もすごく上がっていて驚きました。",
+          "en": "300 yen is expensive. I often use olive oil for cooking, and I was surprised by how much the price of oil has gone up too.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "円",
+              "reading": "えん"
+            },
+            {
+              "char": "高",
+              "reading": "たか"
+            },
+            {
+              "char": "私",
+              "reading": "わたし"
+            },
+            {
+              "char": "料理",
+              "reading": "りょうり"
+            },
+            {
+              "char": "使",
+              "reading": "つか"
+            },
+            {
+              "char": "油",
+              "reading": "あぶら"
+            },
+            {
+              "char": "値段",
+              "reading": "ねだん"
+            },
+            {
+              "char": "上",
+              "reading": "あ"
+            },
+            {
+              "char": "驚",
+              "reading": "おどろ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_020",
+          "speaker": "female",
+          "text": "分かります。調味料も軒並み値上がりしていますよね。私は節約のために自炊をしているんですけど、最近は自炊してもあまり節約になっていない気がします。",
+          "en": "I totally get it. Condiments have all gone up in price across the board too. I cook at home to save money, but lately I feel like cooking at home isn't saving me much.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "分",
+              "reading": "わ"
+            },
+            {
+              "char": "調味",
+              "reading": "ちょうみ"
+            },
+            {
+              "char": "料",
+              "reading": "りょう"
+            },
+            {
+              "char": "軒並",
+              "reading": "のきな"
+            },
+            {
+              "char": "値上",
+              "reading": "ねあ"
+            },
+            {
+              "char": "私",
+              "reading": "わたし"
+            },
+            {
+              "char": "節約",
+              "reading": "せつやく"
+            },
+            {
+              "char": "自炊",
+              "reading": "じすい"
+            },
+            {
+              "char": "最近",
+              "reading": "さいきん"
+            },
+            {
+              "char": "自炊",
+              "reading": "じすい"
+            },
+            {
+              "char": "節約",
+              "reading": "せつやく"
+            },
+            {
+              "char": "気",
+              "reading": "き"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_021",
+          "speaker": "male",
+          "text": "一つ一つの値上げは数十円でも、カゴいっぱいに買うと、合計金額が以前より千円、二千円と高くなっていますよね。",
+          "en": "Even if each individual price increase is just a few dozen yen, when you buy a basket full of groceries, the total amount ends up being a thousand or two thousand yen higher than before.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "一",
+              "reading": "ひと"
+            },
+            {
+              "char": "一",
+              "reading": "ひと"
+            },
+            {
+              "char": "値上",
+              "reading": "ねあ"
+            },
+            {
+              "char": "数",
+              "reading": "すう"
+            },
+            {
+              "char": "十",
+              "reading": "じゅう"
+            },
+            {
+              "char": "円",
+              "reading": "えん"
+            },
+            {
+              "char": "買",
+              "reading": "か"
+            },
+            {
+              "char": "合計",
+              "reading": "ごうけい"
+            },
+            {
+              "char": "金額",
+              "reading": "きんがく"
+            },
+            {
+              "char": "以前",
+              "reading": "いぜん"
+            },
+            {
+              "char": "千",
+              "reading": "せん"
+            },
+            {
+              "char": "円",
+              "reading": "えん"
+            },
+            {
+              "char": "二",
+              "reading": "に"
+            },
+            {
+              "char": "千",
+              "reading": "せん"
+            },
+            {
+              "char": "円",
+              "reading": "えん"
+            },
+            {
+              "char": "高",
+              "reading": "たか"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_022",
+          "speaker": "female",
+          "text": "そうなんです。月に換算すると、食費だけで１万円くらい増えている月もあって。これじゃあ、お給料が数千円上がったくらいでは、完全に追いつきません。",
+          "en": "Exactly. When calculated over a month, there are months where my food expenses alone have increased by about 10,000 yen. With this, a salary increase of a few thousand yen completely fails to keep up.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "月",
+              "reading": "つき"
+            },
+            {
+              "char": "換算",
+              "reading": "かんさん"
+            },
+            {
+              "char": "食費",
+              "reading": "しょくひ"
+            },
+            {
+              "char": "万",
+              "reading": "まん"
+            },
+            {
+              "char": "円",
+              "reading": "えん"
+            },
+            {
+              "char": "増",
+              "reading": "ふ"
+            },
+            {
+              "char": "月",
+              "reading": "つき"
+            },
+            {
+              "char": "給料",
+              "reading": "きゅうりょう"
+            },
+            {
+              "char": "数",
+              "reading": "すう"
+            },
+            {
+              "char": "千",
+              "reading": "せん"
+            },
+            {
+              "char": "円",
+              "reading": "えん"
+            },
+            {
+              "char": "上",
+              "reading": "あ"
+            },
+            {
+              "char": "完全",
+              "reading": "かんぜん"
+            },
+            {
+              "char": "追",
+              "reading": "お"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_023",
+          "speaker": "female",
+          "text": "だから、スーパーに行くたびに「あれ？私、無駄遣いしてるのかな？」って自分を責めそうになるんです。",
+          "en": "So, every time I go to the supermarket, I almost blame myself thinking, 'Huh? Am I wasting money?'",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "行",
+              "reading": "い"
+            },
+            {
+              "char": "私",
+              "reading": "わたし"
+            },
+            {
+              "char": "無駄遣",
+              "reading": "むだづか"
+            },
+            {
+              "char": "自分",
+              "reading": "じぶん"
+            },
+            {
+              "char": "責",
+              "reading": "せ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_024",
+          "speaker": "male",
+          "text": "それはユイさんのせいじゃないですよ。生活に必要なものを買っているだけなのに、出ていくお金が増えてしまうのは、本当にストレスですよね。",
+          "en": "That's not your fault, Yui. It's really stressful that the money going out is increasing even though you are just buying what you need for daily life.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "生活",
+              "reading": "せいかつ"
+            },
+            {
+              "char": "必要",
+              "reading": "ひつよう"
+            },
+            {
+              "char": "買",
+              "reading": "か"
+            },
+            {
+              "char": "出",
+              "reading": "で"
+            },
+            {
+              "char": "金",
+              "reading": "かね"
+            },
+            {
+              "char": "増",
+              "reading": "ふ"
+            },
+            {
+              "char": "本当",
+              "reading": "ほんとう"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "chapter_id": "ch_002",
+      "block_id": "block_004",
+      "purpose": "光熱費の高騰と、その背景にある円安のメカニズムを補足する",
+      "segments": [
+        {
+          "segment_id": "seg_025",
+          "speaker": "female",
+          "text": "食費だけじゃなくて、家で生活しているだけでかかるお金も増えましたよね。電気代とかガス代とか。",
+          "en": "It's not just food costs; the money it takes just to live at home has increased too. Like the electricity bill and gas bill.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "食費",
+              "reading": "しょくひ"
+            },
+            {
+              "char": "家",
+              "reading": "いえ"
+            },
+            {
+              "char": "生活",
+              "reading": "せいかつ"
+            },
+            {
+              "char": "金",
+              "reading": "かね"
+            },
+            {
+              "char": "増",
+              "reading": "ふ"
+            },
+            {
+              "char": "電気",
+              "reading": "でんき"
+            },
+            {
+              "char": "代",
+              "reading": "だい"
+            },
+            {
+              "char": "代",
+              "reading": "だい"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_026",
+          "speaker": "male",
+          "text": "光熱費の高騰も深刻ですね。今年の冬は、電気代の請求書を見てため息をついた人が多いんじゃないでしょうか。",
+          "en": "The soaring cost of utility bills is serious too. I imagine many people sighed looking at their electricity bills this winter.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "光熱",
+              "reading": "こうねつ"
+            },
+            {
+              "char": "費",
+              "reading": "ひ"
+            },
+            {
+              "char": "高騰",
+              "reading": "こうとう"
+            },
+            {
+              "char": "深刻",
+              "reading": "しんこく"
+            },
+            {
+              "char": "今年",
+              "reading": "ことし"
+            },
+            {
+              "char": "冬",
+              "reading": "ふゆ"
+            },
+            {
+              "char": "電気",
+              "reading": "でんき"
+            },
+            {
+              "char": "代",
+              "reading": "だい"
+            },
+            {
+              "char": "請求",
+              "reading": "せいきゅう"
+            },
+            {
+              "char": "書",
+              "reading": "しょ"
+            },
+            {
+              "char": "見",
+              "reading": "み"
+            },
+            {
+              "char": "息",
+              "reading": "いき"
+            },
+            {
+              "char": "人",
+              "reading": "ひと"
+            },
+            {
+              "char": "多",
+              "reading": "おお"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_027",
+          "speaker": "female",
+          "text": "私もその一人です。こまめに電気を消したりして気をつけているのに、去年の同じ月より高くなっていて、ショックでした。",
+          "en": "I'm one of those people. Even though I'm careful to turn off the lights frequently, it was higher than the same month last year, which was a shock.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "私",
+              "reading": "わたし"
+            },
+            {
+              "char": "一",
+              "reading": "いち"
+            },
+            {
+              "char": "人",
+              "reading": "にん"
+            },
+            {
+              "char": "電気",
+              "reading": "でんき"
+            },
+            {
+              "char": "消",
+              "reading": "け"
+            },
+            {
+              "char": "気",
+              "reading": "き"
+            },
+            {
+              "char": "去年",
+              "reading": "きょねん"
+            },
+            {
+              "char": "同",
+              "reading": "おな"
+            },
+            {
+              "char": "月",
+              "reading": "つき"
+            },
+            {
+              "char": "高",
+              "reading": "たか"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_028",
+          "speaker": "male",
+          "text": "こうしたエネルギー価格の値上がりの背景には、「円安」という大きな問題があります。",
+          "en": "Behind these energy price increases, there is the major problem of the 'weak yen'.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "価格",
+              "reading": "かかく"
+            },
+            {
+              "char": "値上",
+              "reading": "ねあ"
+            },
+            {
+              "char": "背景",
+              "reading": "はいけい"
+            },
+            {
+              "char": "円",
+              "reading": "えん"
+            },
+            {
+              "char": "安",
+              "reading": "やす"
+            },
+            {
+              "char": "大",
+              "reading": "おお"
+            },
+            {
+              "char": "問題",
+              "reading": "もんだい"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_029",
+          "speaker": "female",
+          "text": "円安ですね。日本はエネルギー資源や食べ物をたくさん海外から輸入しているから、円の価値が下がると、輸入するコストが高くなるんですよね。",
+          "en": "The weak yen, right. Since Japan imports a lot of energy resources and food from overseas, when the value of the yen goes down, the cost to import goes up, doesn't it?",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "円",
+              "reading": "えん"
+            },
+            {
+              "char": "安",
+              "reading": "やす"
+            },
+            {
+              "char": "日本",
+              "reading": "にっぽん"
+            },
+            {
+              "char": "資源",
+              "reading": "しげん"
+            },
+            {
+              "char": "食",
+              "reading": "た"
+            },
+            {
+              "char": "物",
+              "reading": "もの"
+            },
+            {
+              "char": "海外",
+              "reading": "かいがい"
+            },
+            {
+              "char": "輸入",
+              "reading": "ゆにゅう"
+            },
+            {
+              "char": "円",
+              "reading": "えん"
+            },
+            {
+              "char": "価値",
+              "reading": "かち"
+            },
+            {
+              "char": "下",
+              "reading": "さ"
+            },
+            {
+              "char": "輸入",
+              "reading": "ゆにゅう"
+            },
+            {
+              "char": "高",
+              "reading": "たか"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_030",
+          "speaker": "male",
+          "text": "よく知っていますね。その通りです。だから、私たちがどんなに家で節約を頑張っても、世界的な要因で価格が上がってしまうんです。",
+          "en": "You know your stuff. That's exactly right. Therefore, no matter how much we try to save at home, prices go up due to global factors.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "知",
+              "reading": "し"
+            },
+            {
+              "char": "通",
+              "reading": "とお"
+            },
+            {
+              "char": "私",
+              "reading": "わたし"
+            },
+            {
+              "char": "家",
+              "reading": "いえ"
+            },
+            {
+              "char": "節約",
+              "reading": "せつやく"
+            },
+            {
+              "char": "頑張",
+              "reading": "がんば"
+            },
+            {
+              "char": "世界",
+              "reading": "せかい"
+            },
+            {
+              "char": "的",
+              "reading": "てき"
+            },
+            {
+              "char": "要因",
+              "reading": "よういん"
+            },
+            {
+              "char": "価格",
+              "reading": "かかく"
+            },
+            {
+              "char": "上",
+              "reading": "あ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_031",
+          "speaker": "female",
+          "text": "個人の努力だけではどうにもならない壁がある気がして、なんだか疲れてしまいますね。",
+          "en": "It feels like there's a wall that personal effort alone can't overcome, which makes me kind of tired.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "個人",
+              "reading": "こじん"
+            },
+            {
+              "char": "努力",
+              "reading": "どりょく"
+            },
+            {
+              "char": "壁",
+              "reading": "かべ"
+            },
+            {
+              "char": "気",
+              "reading": "き"
+            },
+            {
+              "char": "疲",
+              "reading": "つか"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_032",
+          "speaker": "male",
+          "text": "そうですね。自分ではコントロールできない要因でお金が減っていくので、生活が楽にならないという「不満」が溜まりやすいんだと思います。",
+          "en": "Yes. Because money decreases due to factors beyond our control, I think 'frustration' about life not getting easier tends to build up.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "自分",
+              "reading": "じぶん"
+            },
+            {
+              "char": "要因",
+              "reading": "よういん"
+            },
+            {
+              "char": "金",
+              "reading": "かね"
+            },
+            {
+              "char": "減",
+              "reading": "へ"
+            },
+            {
+              "char": "生活",
+              "reading": "せいかつ"
+            },
+            {
+              "char": "楽",
+              "reading": "らく"
+            },
+            {
+              "char": "不満",
+              "reading": "ふまん"
+            },
+            {
+              "char": "溜",
+              "reading": "た"
+            },
+            {
+              "char": "思",
+              "reading": "おも"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "chapter_id": "ch_003",
+      "block_id": "block_005",
+      "purpose": "額面と手取りの違い、および税金や社会保険料の負担増について話し合う",
+      "segments": [
+        {
+          "segment_id": "seg_033",
+          "speaker": "female",
+          "text": "でも、物価の話を抜きにしても、もう一つ納得いかないことがあるんです。それは「給与明細」を見たときです。",
+          "en": "But even leaving the topic of prices aside, there's another thing I just can't accept. That's when I look at my 'pay slip'.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "物価",
+              "reading": "ぶっか"
+            },
+            {
+              "char": "話",
+              "reading": "はなし"
+            },
+            {
+              "char": "抜",
+              "reading": "ぬ"
+            },
+            {
+              "char": "一",
+              "reading": "ひと"
+            },
+            {
+              "char": "納得",
+              "reading": "なっとく"
+            },
+            {
+              "char": "給与",
+              "reading": "きゅうよ"
+            },
+            {
+              "char": "明細",
+              "reading": "めいさい"
+            },
+            {
+              "char": "見",
+              "reading": "み"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_034",
+          "speaker": "male",
+          "text": "ああ、それは「額面」と「手取り」の違いの話ですね。",
+          "en": "Ah, that's the discussion about the difference between 'gross pay' and 'take-home pay'.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "額面",
+              "reading": "がくめん"
+            },
+            {
+              "char": "手取",
+              "reading": "てど"
+            },
+            {
+              "char": "違",
+              "reading": "ちが"
+            },
+            {
+              "char": "話",
+              "reading": "はなし"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_035",
+          "speaker": "female",
+          "text": "そうです。会社が決めた基本給、つまり「額面」は確かに増えたんです。でも、実際に銀行に振り込まれる「手取り」の金額を見ると、全然増えていないように見えて。",
+          "en": "Right. The base salary decided by the company, meaning the 'gross pay', certainly increased. But when I look at the 'take-home' amount actually transferred to my bank, it looks like it hasn't increased at all.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "会社",
+              "reading": "かいしゃ"
+            },
+            {
+              "char": "決",
+              "reading": "き"
+            },
+            {
+              "char": "基本給",
+              "reading": "きほんきゅう"
+            },
+            {
+              "char": "額面",
+              "reading": "がくめん"
+            },
+            {
+              "char": "確",
+              "reading": "たし"
+            },
+            {
+              "char": "増",
+              "reading": "ふ"
+            },
+            {
+              "char": "実際",
+              "reading": "じっさい"
+            },
+            {
+              "char": "銀行",
+              "reading": "ぎんこう"
+            },
+            {
+              "char": "振",
+              "reading": "ふ"
+            },
+            {
+              "char": "込",
+              "reading": "こ"
+            },
+            {
+              "char": "手取",
+              "reading": "てど"
+            },
+            {
+              "char": "金額",
+              "reading": "きんがく"
+            },
+            {
+              "char": "見",
+              "reading": "み"
+            },
+            {
+              "char": "全然",
+              "reading": "ぜんぜん"
+            },
+            {
+              "char": "増",
+              "reading": "ふ"
+            },
+            {
+              "char": "見",
+              "reading": "み"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_036",
+          "speaker": "male",
+          "text": "給料が上がると、そこから引かれる税金や、健康保険、厚生年金などの「社会保険料」も増えますからね。",
+          "en": "Because when your salary goes up, the taxes and 'social insurance premiums' like health insurance and welfare pension deducted from it also increase.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "給料",
+              "reading": "きゅうりょう"
+            },
+            {
+              "char": "上",
+              "reading": "あ"
+            },
+            {
+              "char": "引",
+              "reading": "ひ"
+            },
+            {
+              "char": "税金",
+              "reading": "ぜいきん"
+            },
+            {
+              "char": "健康",
+              "reading": "けんこう"
+            },
+            {
+              "char": "保険",
+              "reading": "ほけん"
+            },
+            {
+              "char": "厚生",
+              "reading": "こうせい"
+            },
+            {
+              "char": "年金",
+              "reading": "ねんきん"
+            },
+            {
+              "char": "社会",
+              "reading": "しゃかい"
+            },
+            {
+              "char": "保険",
+              "reading": "ほけん"
+            },
+            {
+              "char": "料",
+              "reading": "りょう"
+            },
+            {
+              "char": "増",
+              "reading": "ふ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_037",
+          "speaker": "female",
+          "text": "引かれる金額が多すぎませんか？頑張って働いてお給料が上がったのに、罰金を取られているような気分になっちゃいます。",
+          "en": "Don't you think the amount deducted is too high? Even though I worked hard and my salary went up, it makes me feel like I'm being fined.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "引",
+              "reading": "ひ"
+            },
+            {
+              "char": "金額",
+              "reading": "きんがく"
+            },
+            {
+              "char": "多",
+              "reading": "おお"
+            },
+            {
+              "char": "頑張",
+              "reading": "がんば"
+            },
+            {
+              "char": "働",
+              "reading": "はたら"
+            },
+            {
+              "char": "給料",
+              "reading": "きゅうりょう"
+            },
+            {
+              "char": "上",
+              "reading": "あ"
+            },
+            {
+              "char": "罰金",
+              "reading": "ばっきん"
+            },
+            {
+              "char": "取",
+              "reading": "と"
+            },
+            {
+              "char": "気分",
+              "reading": "きぶん"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_038",
+          "speaker": "male",
+          "text": "罰金という表現は少し極端かもしれませんが、その気持ちは痛いほど分かります。日本では近年、この社会保険料の負担割合が少しずつ引き上げられているんです。",
+          "en": "Calling it a fine might be a bit extreme, but I understand that feeling painfully well. In Japan in recent years, the burden ratio of these social insurance premiums has been gradually raised.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "罰金",
+              "reading": "ばっきん"
+            },
+            {
+              "char": "表現",
+              "reading": "ひょうげん"
+            },
+            {
+              "char": "少",
+              "reading": "すこ"
+            },
+            {
+              "char": "極端",
+              "reading": "きょくたん"
+            },
+            {
+              "char": "気持",
+              "reading": "きも"
+            },
+            {
+              "char": "痛",
+              "reading": ""
+            },
+            {
+              "char": "分",
+              "reading": "わ"
+            },
+            {
+              "char": "日本",
+              "reading": "にっぽん"
+            },
+            {
+              "char": "近年",
+              "reading": "きんねん"
+            },
+            {
+              "char": "社会",
+              "reading": "しゃかい"
+            },
+            {
+              "char": "保険",
+              "reading": "ほけん"
+            },
+            {
+              "char": "料",
+              "reading": "りょう"
+            },
+            {
+              "char": "負担",
+              "reading": "ふたん"
+            },
+            {
+              "char": "割合",
+              "reading": "わりあい"
+            },
+            {
+              "char": "少",
+              "reading": "すこ"
+            },
+            {
+              "char": "引",
+              "reading": "ひ"
+            },
+            {
+              "char": "上",
+              "reading": "あ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_039",
+          "speaker": "female",
+          "text": "つまり、会社が払うお金が増えても、国に持っていく割合が増えているから、私たちの手元には残らないってことですよね。",
+          "en": "In other words, even if the money the company pays increases, the percentage taken by the government is increasing, so it doesn't stay in our hands, right?",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "会社",
+              "reading": "かいしゃ"
+            },
+            {
+              "char": "払",
+              "reading": "はら"
+            },
+            {
+              "char": "金",
+              "reading": "かね"
+            },
+            {
+              "char": "増",
+              "reading": "ふ"
+            },
+            {
+              "char": "国",
+              "reading": "くに"
+            },
+            {
+              "char": "持",
+              "reading": "も"
+            },
+            {
+              "char": "割合",
+              "reading": "わりあい"
+            },
+            {
+              "char": "増",
+              "reading": "ふ"
+            },
+            {
+              "char": "私",
+              "reading": "わたし"
+            },
+            {
+              "char": "手元",
+              "reading": "てもと"
+            },
+            {
+              "char": "残",
+              "reading": "のこ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_040",
+          "speaker": "male",
+          "text": "悲しいですが、構造的にはそうなっています。少子高齢化を支えるための制度とはいえ、働く世代にとっては今の生活を圧迫する要因になっていますね。",
+          "en": "It's sad, but structurally that's how it is. Even though it's a system to support an aging population with a low birthrate, for the working generation, it has become a factor squeezing our current lives.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "悲",
+              "reading": "かな"
+            },
+            {
+              "char": "構造",
+              "reading": "こうぞう"
+            },
+            {
+              "char": "的",
+              "reading": "てき"
+            },
+            {
+              "char": "少子",
+              "reading": "しょうし"
+            },
+            {
+              "char": "高齢",
+              "reading": "こうれい"
+            },
+            {
+              "char": "化",
+              "reading": "か"
+            },
+            {
+              "char": "支",
+              "reading": "ささ"
+            },
+            {
+              "char": "制度",
+              "reading": "せいど"
+            },
+            {
+              "char": "働",
+              "reading": "はたら"
+            },
+            {
+              "char": "世代",
+              "reading": "せだい"
+            },
+            {
+              "char": "今",
+              "reading": "いま"
+            },
+            {
+              "char": "生活",
+              "reading": "せいかつ"
+            },
+            {
+              "char": "圧迫",
+              "reading": "あっぱく"
+            },
+            {
+              "char": "要因",
+              "reading": "よういん"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_041",
+          "speaker": "female",
+          "text": "将来のお年寄りを支えるのも大事ですけど、まずは今の私たちが元気に生活できないと、本末転倒な気がします。",
+          "en": "It's important to support the elderly in the future, but if we can't live vigorously right now, it feels like putting the cart before the horse.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "将来",
+              "reading": "しょうらい"
+            },
+            {
+              "char": "年寄",
+              "reading": "としよ"
+            },
+            {
+              "char": "支",
+              "reading": "ささ"
+            },
+            {
+              "char": "大事",
+              "reading": "だいじ"
+            },
+            {
+              "char": "今",
+              "reading": "いま"
+            },
+            {
+              "char": "私",
+              "reading": "わたし"
+            },
+            {
+              "char": "元気",
+              "reading": "げんき"
+            },
+            {
+              "char": "生活",
+              "reading": "せいかつ"
+            },
+            {
+              "char": "本末転倒",
+              "reading": "ほんまつてんとう"
+            },
+            {
+              "char": "気",
+              "reading": "き"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "chapter_id": "ch_004",
+      "block_id": "block_006",
+      "purpose": "心理的な落とし穴としての「ライフスタイルクリープ（生活水準の無意識な向上）」を指摘する",
+      "segments": [
+        {
+          "segment_id": "seg_042",
+          "speaker": "male",
+          "text": "ここまで、物価や税金といった「外からの要因」について話してきました。でも実は、私たち自身の「心理的な要因」もあるんです。",
+          "en": "Up until now, we've talked about 'external factors' like prices and taxes. But actually, there are also our own 'psychological factors'.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "物価",
+              "reading": "ぶっか"
+            },
+            {
+              "char": "税金",
+              "reading": "ぜいきん"
+            },
+            {
+              "char": "外",
+              "reading": "そと"
+            },
+            {
+              "char": "要因",
+              "reading": "よういん"
+            },
+            {
+              "char": "話",
+              "reading": "はな"
+            },
+            {
+              "char": "実",
+              "reading": "じつ"
+            },
+            {
+              "char": "私",
+              "reading": "わたし"
+            },
+            {
+              "char": "自身",
+              "reading": "じしん"
+            },
+            {
+              "char": "心理",
+              "reading": "しんり"
+            },
+            {
+              "char": "的",
+              "reading": "てき"
+            },
+            {
+              "char": "要因",
+              "reading": "よういん"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_043",
+          "speaker": "female",
+          "text": "心理的な要因ですか？私がお金を使いすぎているってことでしょうか。",
+          "en": "Psychological factors? Do you mean that I'm spending too much money?",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "心理",
+              "reading": "しんり"
+            },
+            {
+              "char": "的",
+              "reading": "てき"
+            },
+            {
+              "char": "要因",
+              "reading": "よういん"
+            },
+            {
+              "char": "私",
+              "reading": "わたし"
+            },
+            {
+              "char": "金",
+              "reading": "かね"
+            },
+            {
+              "char": "使",
+              "reading": "つか"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_044",
+          "speaker": "male",
+          "text": "「ライフスタイルクリープ」という言葉を聞いたことはありますか？収入が少し上がると、無意識のうちに生活水準も上げてしまう現象のことです。",
+          "en": "Have you ever heard the term 'lifestyle creep'? It's a phenomenon where when your income goes up a little, you unconsciously raise your standard of living as well.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "言葉",
+              "reading": "ことば"
+            },
+            {
+              "char": "聞",
+              "reading": "き"
+            },
+            {
+              "char": "収入",
+              "reading": "しゅうにゅう"
+            },
+            {
+              "char": "少",
+              "reading": "すこ"
+            },
+            {
+              "char": "上",
+              "reading": "あ"
+            },
+            {
+              "char": "無意識",
+              "reading": "むいしき"
+            },
+            {
+              "char": "生活",
+              "reading": "せいかつ"
+            },
+            {
+              "char": "水準",
+              "reading": "すいじゅん"
+            },
+            {
+              "char": "上",
+              "reading": "あ"
+            },
+            {
+              "char": "現象",
+              "reading": "げんしょう"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_045",
+          "speaker": "female",
+          "text": "ああ、それ、すごく心当たりがあります。私、お給料が少し上がった月に、「頑張ったご褒美だ」と思って、ちょっと高いシャンプーを買っちゃいました。",
+          "en": "Ah, that really rings a bell. The month my salary went up a little, I thought 'this is a reward for working hard' and bought a slightly expensive shampoo.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "心当",
+              "reading": "こころあ"
+            },
+            {
+              "char": "私",
+              "reading": "わたし"
+            },
+            {
+              "char": "給料",
+              "reading": "きゅうりょう"
+            },
+            {
+              "char": "少",
+              "reading": "すこ"
+            },
+            {
+              "char": "上",
+              "reading": "あ"
+            },
+            {
+              "char": "月",
+              "reading": "つき"
+            },
+            {
+              "char": "頑張",
+              "reading": "がんば"
+            },
+            {
+              "char": "褒美",
+              "reading": "ほうび"
+            },
+            {
+              "char": "思",
+              "reading": "おも"
+            },
+            {
+              "char": "高",
+              "reading": "たか"
+            },
+            {
+              "char": "買",
+              "reading": "か"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_046",
+          "speaker": "female",
+          "text": "あとは、仕事帰りにカフェに寄る回数が、週に１回から２回に増えたりとか。",
+          "en": "Also, the number of times I stop by a cafe on my way home from work increased from once a week to twice a week.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "仕事",
+              "reading": "しごと"
+            },
+            {
+              "char": "帰",
+              "reading": "がえ"
+            },
+            {
+              "char": "寄",
+              "reading": "よ"
+            },
+            {
+              "char": "回数",
+              "reading": "かいすう"
+            },
+            {
+              "char": "週",
+              "reading": "しゅう"
+            },
+            {
+              "char": "回",
+              "reading": "かい"
+            },
+            {
+              "char": "回",
+              "reading": "かい"
+            },
+            {
+              "char": "増",
+              "reading": "ふ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_047",
+          "speaker": "male",
+          "text": "まさにそれです。一つ一つの出費は小さくても、積み重なると、増えたお給料分をあっという間に使い切ってしまうんですよね。",
+          "en": "That's exactly it. Even if each individual expense is small, when they pile up, you end up spending the increased salary amount in no time.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "一",
+              "reading": "ひと"
+            },
+            {
+              "char": "一",
+              "reading": "ひと"
+            },
+            {
+              "char": "出費",
+              "reading": "しゅっぴ"
+            },
+            {
+              "char": "小",
+              "reading": "ちい"
+            },
+            {
+              "char": "積",
+              "reading": "つ"
+            },
+            {
+              "char": "重",
+              "reading": "かさ"
+            },
+            {
+              "char": "増",
+              "reading": "ふ"
+            },
+            {
+              "char": "給料",
+              "reading": "きゅうりょう"
+            },
+            {
+              "char": "分",
+              "reading": "ぶん"
+            },
+            {
+              "char": "間",
+              "reading": "ま"
+            },
+            {
+              "char": "使",
+              "reading": "つか"
+            },
+            {
+              "char": "切",
+              "reading": "き"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_048",
+          "speaker": "female",
+          "text": "なんだか恥ずかしいです。「物価が高いせいだ！」って怒っていましたけど、自分の小さな贅沢も原因だったんですね。",
+          "en": "I feel kind of embarrassed. I was angry saying 'It's because prices are high!', but my own little luxuries were also a cause.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "恥",
+              "reading": "は"
+            },
+            {
+              "char": "物価",
+              "reading": "ぶっか"
+            },
+            {
+              "char": "高",
+              "reading": "たか"
+            },
+            {
+              "char": "怒",
+              "reading": "おこ"
+            },
+            {
+              "char": "自分",
+              "reading": "じぶん"
+            },
+            {
+              "char": "小",
+              "reading": "ちい"
+            },
+            {
+              "char": "贅沢",
+              "reading": "ぜいたく"
+            },
+            {
+              "char": "原因",
+              "reading": "げんいん"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_049",
+          "speaker": "male",
+          "text": "全然恥ずかしくないですよ。人間の自然な心理です。お給料が上がった分、少し生活を豊かにしたいと思うのは当然のことですから。",
+          "en": "It's not embarrassing at all. It's natural human psychology. It's completely normal to want to enrich your life a little with the extra salary.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "全然",
+              "reading": "ぜんぜん"
+            },
+            {
+              "char": "恥",
+              "reading": "は"
+            },
+            {
+              "char": "人間",
+              "reading": "にんげん"
+            },
+            {
+              "char": "自然",
+              "reading": "しぜん"
+            },
+            {
+              "char": "心理",
+              "reading": "しんり"
+            },
+            {
+              "char": "給料",
+              "reading": "きゅうりょう"
+            },
+            {
+              "char": "上",
+              "reading": "あ"
+            },
+            {
+              "char": "分",
+              "reading": "ぶん"
+            },
+            {
+              "char": "少",
+              "reading": "すこ"
+            },
+            {
+              "char": "生活",
+              "reading": "せいかつ"
+            },
+            {
+              "char": "豊",
+              "reading": "ゆた"
+            },
+            {
+              "char": "思",
+              "reading": "おも"
+            },
+            {
+              "char": "当然",
+              "reading": "とうぜん"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_050",
+          "speaker": "female",
+          "text": "でも、その小さな贅沢のせいで月末に「お金がない」って焦るのは嫌なので、少し気をつけないといけませんね。",
+          "en": "But I hate panicking at the end of the month thinking 'I have no money' because of those little luxuries, so I need to be a little careful.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "小",
+              "reading": "ちい"
+            },
+            {
+              "char": "贅沢",
+              "reading": "ぜいたく"
+            },
+            {
+              "char": "月末",
+              "reading": "げつまつ"
+            },
+            {
+              "char": "金",
+              "reading": "かね"
+            },
+            {
+              "char": "焦",
+              "reading": "あせ"
+            },
+            {
+              "char": "嫌",
+              "reading": "いや"
+            },
+            {
+              "char": "少",
+              "reading": "すこ"
+            },
+            {
+              "char": "気",
+              "reading": "き"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "chapter_id": "ch_004",
+      "block_id": "block_007",
+      "purpose": "将来への不安が「お金を使えない」という心理的閉塞感を生んでいることを共有する",
+      "segments": [
+        {
+          "segment_id": "seg_051",
+          "speaker": "male",
+          "text": "そして、もう一つ大事な心理的要因があります。それは「将来への不安」です。",
+          "en": "And there is another important psychological factor. That is 'anxiety about the future'.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "一",
+              "reading": "ひと"
+            },
+            {
+              "char": "大事",
+              "reading": "だいじ"
+            },
+            {
+              "char": "心理",
+              "reading": "しんり"
+            },
+            {
+              "char": "的",
+              "reading": "てき"
+            },
+            {
+              "char": "要因",
+              "reading": "よういん"
+            },
+            {
+              "char": "将来",
+              "reading": "しょうらい"
+            },
+            {
+              "char": "不安",
+              "reading": "ふあん"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_052",
+          "speaker": "female",
+          "text": "ああ、分かります。老後の資金問題とか、大きな災害が起きたらどうしようとか、いつも心のどこかで心配しています。",
+          "en": "Ah, I understand. I'm always worried somewhere in my heart about retirement funds, or what to do if a major disaster happens.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "分",
+              "reading": "わ"
+            },
+            {
+              "char": "老後",
+              "reading": "ろうご"
+            },
+            {
+              "char": "資金",
+              "reading": "しきん"
+            },
+            {
+              "char": "問題",
+              "reading": "もんだい"
+            },
+            {
+              "char": "大",
+              "reading": "おお"
+            },
+            {
+              "char": "災害",
+              "reading": "さいがい"
+            },
+            {
+              "char": "起",
+              "reading": "お"
+            },
+            {
+              "char": "心",
+              "reading": "こころ"
+            },
+            {
+              "char": "心配",
+              "reading": "しんぱい"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_053",
+          "speaker": "male",
+          "text": "そうですよね。だから、仮にお金に少し余裕ができたとしても、旅行や趣味にパッと使うのではなく、とりあえず貯金に回してしまう人が多いんです。",
+          "en": "Right. That's why, even if people have a little extra money, instead of spending it right away on travel or hobbies, many people just put it into savings for the time being.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "仮",
+              "reading": "かり"
+            },
+            {
+              "char": "金",
+              "reading": "かね"
+            },
+            {
+              "char": "少",
+              "reading": "すこ"
+            },
+            {
+              "char": "余裕",
+              "reading": "よゆう"
+            },
+            {
+              "char": "旅行",
+              "reading": "りょこう"
+            },
+            {
+              "char": "趣味",
+              "reading": "しゅみ"
+            },
+            {
+              "char": "使",
+              "reading": "つか"
+            },
+            {
+              "char": "貯金",
+              "reading": "ちょきん"
+            },
+            {
+              "char": "回",
+              "reading": "まわ"
+            },
+            {
+              "char": "人",
+              "reading": "ひと"
+            },
+            {
+              "char": "多",
+              "reading": "おお"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_054",
+          "speaker": "female",
+          "text": "私もまさにそうです。少しでも余ったら、使わずに銀行の口座に残しておきます。使っちゃうと、後で困るんじゃないかって怖くて。",
+          "en": "That's exactly me. If I have even a little left over, I leave it in my bank account without spending it. I'm scared that if I spend it, I might be in trouble later.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "私",
+              "reading": "わたし"
+            },
+            {
+              "char": "少",
+              "reading": "すこ"
+            },
+            {
+              "char": "余",
+              "reading": "あま"
+            },
+            {
+              "char": "使",
+              "reading": "つか"
+            },
+            {
+              "char": "銀行",
+              "reading": "ぎんこう"
+            },
+            {
+              "char": "口座",
+              "reading": "こうざ"
+            },
+            {
+              "char": "残",
+              "reading": "のこ"
+            },
+            {
+              "char": "使",
+              "reading": "つか"
+            },
+            {
+              "char": "後",
+              "reading": "あと"
+            },
+            {
+              "char": "困",
+              "reading": "こま"
+            },
+            {
+              "char": "怖",
+              "reading": "こわ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_055",
+          "speaker": "male",
+          "text": "堅実で素晴らしいことですが、それだと「今」の生活を楽しむことにお金を使えないので、豊かさを実感するのは難しいですよね。",
+          "en": "It's a solid and wonderful thing, but with that, you can't use money to enjoy life 'now', so it's hard to actually feel a sense of richness.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "堅実",
+              "reading": "けんじつ"
+            },
+            {
+              "char": "素晴",
+              "reading": "すば"
+            },
+            {
+              "char": "今",
+              "reading": "いま"
+            },
+            {
+              "char": "生活",
+              "reading": "せいかつ"
+            },
+            {
+              "char": "楽",
+              "reading": "たの"
+            },
+            {
+              "char": "金",
+              "reading": "かね"
+            },
+            {
+              "char": "使",
+              "reading": "つか"
+            },
+            {
+              "char": "豊",
+              "reading": "ゆた"
+            },
+            {
+              "char": "実感",
+              "reading": "じっかん"
+            },
+            {
+              "char": "難",
+              "reading": "むずか"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_056",
+          "speaker": "female",
+          "text": "そうなんです。お金を将来の安心を買うためだけにキープしている感じで、毎日の生活は全然キラキラしないというか。",
+          "en": "Exactly. It feels like I'm keeping my money just to buy future peace of mind, and my daily life doesn't sparkle at all, so to speak.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "金",
+              "reading": "かね"
+            },
+            {
+              "char": "将来",
+              "reading": "しょうらい"
+            },
+            {
+              "char": "安心",
+              "reading": "あんしん"
+            },
+            {
+              "char": "買",
+              "reading": "か"
+            },
+            {
+              "char": "感",
+              "reading": "かん"
+            },
+            {
+              "char": "毎日",
+              "reading": "まいにち"
+            },
+            {
+              "char": "生活",
+              "reading": "せいかつ"
+            },
+            {
+              "char": "全然",
+              "reading": "ぜんぜん"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_057",
+          "speaker": "male",
+          "text": "日本の多くの人が今、同じような閉塞感を感じているのかもしれません。お金があっても、安心して使えないという空気ですね。",
+          "en": "Many people in Japan right now might be feeling a similar sense of stagnation. It's an atmosphere where even if you have money, you can't spend it with peace of mind.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "日本",
+              "reading": "にっぽん"
+            },
+            {
+              "char": "多",
+              "reading": "おお"
+            },
+            {
+              "char": "人",
+              "reading": "ひと"
+            },
+            {
+              "char": "今",
+              "reading": "いま"
+            },
+            {
+              "char": "同",
+              "reading": "おな"
+            },
+            {
+              "char": "閉塞",
+              "reading": "へいそく"
+            },
+            {
+              "char": "感",
+              "reading": "かん"
+            },
+            {
+              "char": "感",
+              "reading": "かん"
+            },
+            {
+              "char": "金",
+              "reading": "かね"
+            },
+            {
+              "char": "安心",
+              "reading": "あんしん"
+            },
+            {
+              "char": "使",
+              "reading": "つか"
+            },
+            {
+              "char": "空気",
+              "reading": "くうき"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "chapter_id": "ch_005",
+      "block_id": "block_008",
+      "purpose": "不安を減らすための前向きなアクション（投資・NISAなど）について触れる",
+      "segments": [
+        {
+          "segment_id": "seg_058",
+          "speaker": "female",
+          "text": "じゃあ、この苦しい状況の中で、私たちはどうすればいいんでしょうか。ただ我慢するしかないんでしょうか。",
+          "en": "So, in this difficult situation, what should we do? Do we have no choice but to just endure it?",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "苦",
+              "reading": "くる"
+            },
+            {
+              "char": "状況",
+              "reading": "じょうきょう"
+            },
+            {
+              "char": "中",
+              "reading": "なか"
+            },
+            {
+              "char": "私",
+              "reading": "わたし"
+            },
+            {
+              "char": "我慢",
+              "reading": "がまん"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_059",
+          "speaker": "male",
+          "text": "我慢するだけでは疲れてしまいますから、少し視点を変えるのがいいと思います。ユイさんは、お金を守るために何か新しく始めたことはありますか？",
+          "en": "Just enduring it will make you tired, so I think it's good to change our perspective a bit. Yui, have you started anything new to protect your money?",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "我慢",
+              "reading": "がまん"
+            },
+            {
+              "char": "疲",
+              "reading": "つか"
+            },
+            {
+              "char": "少",
+              "reading": "すこ"
+            },
+            {
+              "char": "視点",
+              "reading": "してん"
+            },
+            {
+              "char": "変",
+              "reading": "か"
+            },
+            {
+              "char": "思",
+              "reading": "おも"
+            },
+            {
+              "char": "金",
+              "reading": "かね"
+            },
+            {
+              "char": "守",
+              "reading": "まも"
+            },
+            {
+              "char": "何",
+              "reading": "なに"
+            },
+            {
+              "char": "新",
+              "reading": "あたら"
+            },
+            {
+              "char": "始",
+              "reading": "はじ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_060",
+          "speaker": "female",
+          "text": "実は最近、「NISA（ニーサ）」について本を読んで勉強し始めたんです。",
+          "en": "Actually, I recently started reading books and learning about 'NISA'.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "実",
+              "reading": "じつ"
+            },
+            {
+              "char": "最近",
+              "reading": "さいきん"
+            },
+            {
+              "char": "本",
+              "reading": "ほん"
+            },
+            {
+              "char": "読",
+              "reading": "よ"
+            },
+            {
+              "char": "勉強",
+              "reading": "べんきょう"
+            },
+            {
+              "char": "始",
+              "reading": "はじ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_061",
+          "speaker": "male",
+          "text": "おお、いいですね。NISAは非課税で投資ができる制度で、最近日本でもすごく人気がありますよね。",
+          "en": "Oh, that's great. NISA is a system that allows tax-free investing, and it's become very popular in Japan recently.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "非課税",
+              "reading": "ひかぜい"
+            },
+            {
+              "char": "投資",
+              "reading": "とうし"
+            },
+            {
+              "char": "制度",
+              "reading": "せいど"
+            },
+            {
+              "char": "最近",
+              "reading": "さいきん"
+            },
+            {
+              "char": "日本",
+              "reading": "にっぽん"
+            },
+            {
+              "char": "人気",
+              "reading": "にんき"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_062",
+          "speaker": "female",
+          "text": "はい。さっき物価の話が出ましたけど、銀行にお金を置いているだけだと、物価が上がったときに実質的にお金の価値が減ってしまうって知ったんです。",
+          "en": "Yes. We talked about prices earlier, and I learned that if you just leave your money in a bank, the value of that money essentially decreases when prices go up.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "物価",
+              "reading": "ぶっか"
+            },
+            {
+              "char": "話",
+              "reading": "はなし"
+            },
+            {
+              "char": "出",
+              "reading": "で"
+            },
+            {
+              "char": "銀行",
+              "reading": "ぎんこう"
+            },
+            {
+              "char": "金",
+              "reading": "かね"
+            },
+            {
+              "char": "置",
+              "reading": "お"
+            },
+            {
+              "char": "物価",
+              "reading": "ぶっか"
+            },
+            {
+              "char": "上",
+              "reading": "あ"
+            },
+            {
+              "char": "実質",
+              "reading": "じっしつ"
+            },
+            {
+              "char": "的",
+              "reading": "てき"
+            },
+            {
+              "char": "金",
+              "reading": "かね"
+            },
+            {
+              "char": "価値",
+              "reading": "かち"
+            },
+            {
+              "char": "減",
+              "reading": "へ"
+            },
+            {
+              "char": "知",
+              "reading": "し"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_063",
+          "speaker": "female",
+          "text": "だから、少しでもお金に働いてもらって、自分の資産を守らないといけないなと思って。まだ少額から始めたばかりですけど。",
+          "en": "So, I thought I need to make my money work for me even a little bit to protect my assets. Though I've only just started with a small amount.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "少",
+              "reading": "すこ"
+            },
+            {
+              "char": "金",
+              "reading": "かね"
+            },
+            {
+              "char": "働",
+              "reading": "はたら"
+            },
+            {
+              "char": "自分",
+              "reading": "じぶん"
+            },
+            {
+              "char": "資産",
+              "reading": "しさん"
+            },
+            {
+              "char": "守",
+              "reading": "まも"
+            },
+            {
+              "char": "思",
+              "reading": "おも"
+            },
+            {
+              "char": "少額",
+              "reading": "しょうがく"
+            },
+            {
+              "char": "始",
+              "reading": "はじ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_064",
+          "speaker": "male",
+          "text": "それは素晴らしい第一歩ですね。投資にはもちろんリスクもありますが、正しい知識を持てば、将来への不安を減らす強力な武器になります。",
+          "en": "That's a wonderful first step. There are of course risks to investing, but if you have the right knowledge, it becomes a powerful weapon to reduce anxiety about the future.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "素晴",
+              "reading": "すば"
+            },
+            {
+              "char": "第",
+              "reading": "だい"
+            },
+            {
+              "char": "一",
+              "reading": "いち"
+            },
+            {
+              "char": "歩",
+              "reading": "ほ"
+            },
+            {
+              "char": "投資",
+              "reading": "とうし"
+            },
+            {
+              "char": "正",
+              "reading": "ただ"
+            },
+            {
+              "char": "知識",
+              "reading": "ちしき"
+            },
+            {
+              "char": "持",
+              "reading": "も"
+            },
+            {
+              "char": "将来",
+              "reading": "しょうらい"
+            },
+            {
+              "char": "不安",
+              "reading": "ふあん"
+            },
+            {
+              "char": "減",
+              "reading": "へ"
+            },
+            {
+              "char": "強力",
+              "reading": "きょうりょく"
+            },
+            {
+              "char": "武器",
+              "reading": "ぶき"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_065",
+          "speaker": "female",
+          "text": "何もしないで不安を感じているより、自分で行動を起こしたことで、少しだけ気持ちが前向きになりました。",
+          "en": "Rather than doing nothing and feeling anxious, taking action myself has made my feelings a little more positive.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "何",
+              "reading": "なに"
+            },
+            {
+              "char": "不安",
+              "reading": "ふあん"
+            },
+            {
+              "char": "感",
+              "reading": "かん"
+            },
+            {
+              "char": "自分",
+              "reading": "じぶん"
+            },
+            {
+              "char": "行動",
+              "reading": "こうどう"
+            },
+            {
+              "char": "起",
+              "reading": "お"
+            },
+            {
+              "char": "少",
+              "reading": "すこ"
+            },
+            {
+              "char": "気持",
+              "reading": "きも"
+            },
+            {
+              "char": "前向",
+              "reading": "まえむ"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "chapter_id": "ch_005",
+      "block_id": "block_009",
+      "purpose": "お金の使い方（経験への投資）など、マインドセットの切り替えを提案する",
+      "segments": [
+        {
+          "segment_id": "seg_066",
+          "speaker": "male",
+          "text": "行動を起こすことでコントロール感を取り戻すのは、とても大事なことですね。もう一つ、お金の「使い方」を見直すのもおすすめです。",
+          "en": "Regaining a sense of control by taking action is very important. I also recommend reviewing 'how' you use your money.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "行動",
+              "reading": "こうどう"
+            },
+            {
+              "char": "起",
+              "reading": "お"
+            },
+            {
+              "char": "感",
+              "reading": "かん"
+            },
+            {
+              "char": "取",
+              "reading": "と"
+            },
+            {
+              "char": "戻",
+              "reading": "もど"
+            },
+            {
+              "char": "大事",
+              "reading": "だいじ"
+            },
+            {
+              "char": "一",
+              "reading": "ひと"
+            },
+            {
+              "char": "金",
+              "reading": "かね"
+            },
+            {
+              "char": "使",
+              "reading": "つか"
+            },
+            {
+              "char": "方",
+              "reading": "かた"
+            },
+            {
+              "char": "見直",
+              "reading": "みなお"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_067",
+          "speaker": "female",
+          "text": "使い方、ですか。さっきのカフェ代みたいな無駄遣いを減らすってことでしょうか？",
+          "en": "How I use it? Do you mean reducing wasted money like the cafe expenses from earlier?",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "使",
+              "reading": "つか"
+            },
+            {
+              "char": "方",
+              "reading": "かた"
+            },
+            {
+              "char": "代",
+              "reading": "だい"
+            },
+            {
+              "char": "無駄遣",
+              "reading": "むだづか"
+            },
+            {
+              "char": "減",
+              "reading": "へ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_068",
+          "speaker": "male",
+          "text": "それも一つですが、ただ切り詰めるのではなく、「物」よりも「経験」にお金を使うように意識するんです。",
+          "en": "That's one thing, but rather than just cutting back, you consciously try to spend money on 'experiences' rather than 'things'.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "一",
+              "reading": "ひと"
+            },
+            {
+              "char": "切",
+              "reading": "き"
+            },
+            {
+              "char": "詰",
+              "reading": "つ"
+            },
+            {
+              "char": "物",
+              "reading": "もの"
+            },
+            {
+              "char": "経験",
+              "reading": "けいけん"
+            },
+            {
+              "char": "金",
+              "reading": "かね"
+            },
+            {
+              "char": "使",
+              "reading": "つか"
+            },
+            {
+              "char": "意識",
+              "reading": "いしき"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_069",
+          "speaker": "male",
+          "text": "美味しいものを食べに行くとか、新しいスキルを学ぶとか。経験は後になっても色あせませんし、自分を豊かにしてくれますから。",
+          "en": "Like going out to eat something delicious, or learning a new skill. Experiences don't fade later on, and they enrich you as a person.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "美味",
+              "reading": "おい"
+            },
+            {
+              "char": "食",
+              "reading": "た"
+            },
+            {
+              "char": "行",
+              "reading": "い"
+            },
+            {
+              "char": "新",
+              "reading": "あたら"
+            },
+            {
+              "char": "学",
+              "reading": "まな"
+            },
+            {
+              "char": "経験",
+              "reading": "けいけん"
+            },
+            {
+              "char": "後",
+              "reading": "ご"
+            },
+            {
+              "char": "色",
+              "reading": "いろ"
+            },
+            {
+              "char": "自分",
+              "reading": "じぶん"
+            },
+            {
+              "char": "豊",
+              "reading": "ゆた"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_070",
+          "speaker": "female",
+          "text": "なるほど。確かに、高いシャンプーを買ったときの嬉しさはすぐ忘れてしまいますけど、友達と楽しく旅行した思い出はずっと残っています。",
+          "en": "I see. It's true that I quickly forget the joy of buying an expensive shampoo, but the memories of a fun trip with a friend stay with me forever.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "確",
+              "reading": "たし"
+            },
+            {
+              "char": "高",
+              "reading": "たか"
+            },
+            {
+              "char": "買",
+              "reading": "か"
+            },
+            {
+              "char": "嬉",
+              "reading": "うれ"
+            },
+            {
+              "char": "忘",
+              "reading": "わす"
+            },
+            {
+              "char": "友達",
+              "reading": "ともだち"
+            },
+            {
+              "char": "楽",
+              "reading": "たの"
+            },
+            {
+              "char": "旅行",
+              "reading": "りょこう"
+            },
+            {
+              "char": "思",
+              "reading": "おも"
+            },
+            {
+              "char": "出",
+              "reading": "で"
+            },
+            {
+              "char": "残",
+              "reading": "のこ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_071",
+          "speaker": "female",
+          "text": "限りあるお金だからこそ、自分が本当に幸せを感じることに集中して使うのが大事なんですね。",
+          "en": "Because money is limited, it's important to focus on spending it on things that truly make me feel happy.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "限",
+              "reading": "かぎ"
+            },
+            {
+              "char": "金",
+              "reading": "かね"
+            },
+            {
+              "char": "自分",
+              "reading": "じぶん"
+            },
+            {
+              "char": "本当",
+              "reading": "ほんとう"
+            },
+            {
+              "char": "幸",
+              "reading": "しあわ"
+            },
+            {
+              "char": "感",
+              "reading": "かん"
+            },
+            {
+              "char": "集中",
+              "reading": "しゅうちゅう"
+            },
+            {
+              "char": "使",
+              "reading": "つか"
+            },
+            {
+              "char": "大事",
+              "reading": "だいじ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_072",
+          "speaker": "male",
+          "text": "その通りです。世の中の状況はすぐには変わりませんが、自分のマインドセットは今日からでも変えられますからね。",
+          "en": "Exactly. The situation in the world won't change immediately, but you can change your mindset starting today.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "通",
+              "reading": "とお"
+            },
+            {
+              "char": "世",
+              "reading": "よ"
+            },
+            {
+              "char": "中",
+              "reading": "なか"
+            },
+            {
+              "char": "状況",
+              "reading": "じょうきょう"
+            },
+            {
+              "char": "変",
+              "reading": "か"
+            },
+            {
+              "char": "自分",
+              "reading": "じぶん"
+            },
+            {
+              "char": "今日",
+              "reading": "きょう"
+            },
+            {
+              "char": "変",
+              "reading": "か"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "chapter_id": "ch_006",
+      "block_id": "summary_cta",
+      "purpose": "エピソードの総括と、視聴者への問いかけ、チャンネル登録の促進",
+      "segments": [
+        {
+          "segment_id": "seg_073",
+          "speaker": "female",
+          "text": "今日は「給料は上がったのに、なぜ生活は楽にならないのか」というテーマでお話ししました。",
+          "en": "Today we talked about the theme, 'Why doesn't life get easier even though salaries have gone up?'",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "今日",
+              "reading": "きょう"
+            },
+            {
+              "char": "給料",
+              "reading": "きゅうりょう"
+            },
+            {
+              "char": "上",
+              "reading": "あ"
+            },
+            {
+              "char": "生活",
+              "reading": "せいかつ"
+            },
+            {
+              "char": "楽",
+              "reading": "らく"
+            },
+            {
+              "char": "話",
+              "reading": "はな"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_074",
+          "speaker": "male",
+          "text": "物価高や税金、そして私たちの心理的な要因など、いろんな理由が絡み合っていることが分かりましたね。",
+          "en": "We learned that various reasons are intertwined, such as inflation, taxes, and our own psychological factors.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "物価高",
+              "reading": "ぶっかだか"
+            },
+            {
+              "char": "税金",
+              "reading": "ぜいきん"
+            },
+            {
+              "char": "私",
+              "reading": "わたし"
+            },
+            {
+              "char": "心理",
+              "reading": "しんり"
+            },
+            {
+              "char": "的",
+              "reading": "てき"
+            },
+            {
+              "char": "要因",
+              "reading": "よういん"
+            },
+            {
+              "char": "理由",
+              "reading": "りゆう"
+            },
+            {
+              "char": "絡",
+              "reading": "から"
+            },
+            {
+              "char": "合",
+              "reading": "あ"
+            },
+            {
+              "char": "分",
+              "reading": "わ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_075",
+          "speaker": "female",
+          "text": "理由が分かっただけでも、ただモヤモヤしていた時より、ずっとスッキリしました。聞いてくださっている皆さんはどうですか？",
+          "en": "Just understanding the reasons made me feel much clearer than when I was just feeling vaguely frustrated. How about all of you listening?",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "理由",
+              "reading": "りゆう"
+            },
+            {
+              "char": "分",
+              "reading": "わ"
+            },
+            {
+              "char": "時",
+              "reading": "とき"
+            },
+            {
+              "char": "聞",
+              "reading": "き"
+            },
+            {
+              "char": "皆",
+              "reading": "みな"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_076",
+          "speaker": "male",
+          "text": "皆さんの国でも物価は上がっていますか？生活を守るために工夫していることがあれば、ぜひコメント欄で教えてください。",
+          "en": "Are prices going up in your countries too? If there's anything you are doing to protect your livelihood, please let us know in the comments section.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "皆",
+              "reading": "みな"
+            },
+            {
+              "char": "国",
+              "reading": "くに"
+            },
+            {
+              "char": "物価",
+              "reading": "ぶっか"
+            },
+            {
+              "char": "上",
+              "reading": "あ"
+            },
+            {
+              "char": "生活",
+              "reading": "せいかつ"
+            },
+            {
+              "char": "守",
+              "reading": "まも"
+            },
+            {
+              "char": "工夫",
+              "reading": "くふう"
+            },
+            {
+              "char": "欄",
+              "reading": "らん"
+            },
+            {
+              "char": "教",
+              "reading": "おし"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_077",
+          "speaker": "female",
+          "text": "日本語の勉強の一環として、皆さんの身近なエピソードを日本語で書いてみるのもいい練習になると思います！",
+          "en": "As part of your Japanese studies, trying to write about your personal experiences in Japanese would be good practice too!",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "日本語",
+              "reading": "にほんご"
+            },
+            {
+              "char": "勉強",
+              "reading": "べんきょう"
+            },
+            {
+              "char": "一環",
+              "reading": "いっかん"
+            },
+            {
+              "char": "皆",
+              "reading": "みな"
+            },
+            {
+              "char": "身近",
+              "reading": "みぢか"
+            },
+            {
+              "char": "日本語",
+              "reading": "にほんご"
+            },
+            {
+              "char": "書",
+              "reading": "か"
+            },
+            {
+              "char": "練習",
+              "reading": "れんしゅう"
+            },
+            {
+              "char": "思",
+              "reading": "おも"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_078",
+          "speaker": "male",
+          "text": "このポッドキャストが役に立ったと思ったら、ぜひ「いいね」ボタンとチャンネル登録をお願いします。",
+          "en": "If you found this podcast helpful, please hit the 'like' button and subscribe to our channel.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "役",
+              "reading": "やく"
+            },
+            {
+              "char": "立",
+              "reading": "た"
+            },
+            {
+              "char": "思",
+              "reading": "おも"
+            },
+            {
+              "char": "登録",
+              "reading": "とうろく"
+            },
+            {
+              "char": "願",
+              "reading": "ねが"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_079",
+          "speaker": "female",
+          "text": "これからも、自然な日本語で色々な話題について楽しくおしゃべりしていきます。それでは、また次回のエピソードでお会いしましょう。",
+          "en": "We will continue to enjoy chatting about various topics in natural Japanese. Well then, let's meet again in the next episode.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "自然",
+              "reading": "しぜん"
+            },
+            {
+              "char": "日本語",
+              "reading": "にほんご"
+            },
+            {
+              "char": "色々",
+              "reading": "いろいろ"
+            },
+            {
+              "char": "話題",
+              "reading": "わだい"
+            },
+            {
+              "char": "楽",
+              "reading": "たの"
+            },
+            {
+              "char": "次回",
+              "reading": "じかい"
+            },
+            {
+              "char": "会",
+              "reading": "あ"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_080",
+          "speaker": "male",
+          "text": "今日も最後まで聞いていただき、ありがとうございました！さようなら。",
+          "en": "Thank you for listening to the very end today! Goodbye.",
+          "summary": false,
+          "tokens": [
+            {
+              "char": "今日",
+              "reading": "きょう"
+            },
+            {
+              "char": "最後",
+              "reading": "さいご"
+            },
+            {
+              "char": "聞",
+              "reading": "き"
+            }
+          ]
+        },
+        {
+          "segment_id": "seg_081",
+          "speaker": "female",
+          "text": "ありがとうございました！またねー！",
+          "en": "Thank you very much! See you later!",
+          "summary": true,
+          "tokens": []
+        }
+      ]
+    }
+  ]
+}

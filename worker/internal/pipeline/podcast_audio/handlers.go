@@ -23,7 +23,7 @@ func HandleGenerate(ch *amqp.Channel, task dto.VideoTaskMessage) error {
 	}
 	switch normalizePodcastRunMode(payload.RunMode) {
 	case 1:
-		return handleRunModeReplay(ch, payload.ProjectID)
+		return handleRunModeReplay(ch, payload)
 	case 2:
 		return handleRunModeComposeOnly(ch, payload)
 	default:
@@ -38,6 +38,22 @@ func validPodcastLanguage(value string) bool {
 	default:
 		return false
 	}
+}
+
+func validPodcastTTSType(value int) bool {
+	switch value {
+	case 0, 1, 2:
+		return true
+	default:
+		return false
+	}
+}
+
+func normalizePodcastTTSType(value int) int {
+	if value == 2 {
+		return 2
+	}
+	return 1
 }
 
 func decodePayload(raw map[string]interface{}) (dto.PodcastAudioGeneratePayload, error) {
@@ -91,12 +107,13 @@ func handleRunModeFresh(ch *amqp.Channel, rawPayload map[string]interface{}, pay
 	return generateAndPublishCompose(ch, payload)
 }
 
-func handleRunModeReplay(ch *amqp.Channel, projectID string) error {
-	savedPayload, err := loadPersistedGeneratePayload(projectID)
+func handleRunModeReplay(ch *amqp.Channel, payload dto.PodcastAudioGeneratePayload) error {
+	savedPayload, err := loadPersistedGeneratePayload(payload.ProjectID)
 	if err != nil {
 		return err
 	}
-	log.Printf("♻️ podcast run_mode=1 replay project_id=%s", projectID)
+	savedPayload.BlockNums = compactPositiveInts(payload.BlockNums)
+	log.Printf("♻️ podcast run_mode=1 replay project_id=%s block_nums=%v", savedPayload.ProjectID, savedPayload.BlockNums)
 	savedPayload.RunMode = 0
 	return generateAndPublishCompose(ch, savedPayload)
 }
@@ -140,6 +157,9 @@ func validateFreshGeneratePayload(payload dto.PodcastAudioGeneratePayload) error
 	if !validPodcastLanguage(payload.Lang) {
 		return fmt.Errorf("lang must be zh or ja")
 	}
+	if !validPodcastTTSType(payload.TTSType) {
+		return fmt.Errorf("tts_type must be 1 or 2")
+	}
 	if strings.TrimSpace(payload.ScriptFilename) == "" {
 		return fmt.Errorf("script_filename is required")
 	}
@@ -153,6 +173,9 @@ func generateAndPublishCompose(ch *amqp.Channel, payload dto.PodcastAudioGenerat
 	_, err := podcastaudioservice.Generate(podcastaudioservice.GenerateInput{
 		ProjectID:      payload.ProjectID,
 		Language:       payload.Lang,
+		TTSType:        normalizePodcastTTSType(payload.TTSType),
+		Seed:           payload.Seed,
+		BlockNums:      compactPositiveInts(payload.BlockNums),
 		ScriptFilename: payload.ScriptFilename,
 	})
 	if err != nil {
@@ -191,4 +214,20 @@ func firstBackgroundName(backgrounds []string) string {
 		}
 	}
 	return ""
+}
+
+func compactPositiveInts(values []int) []int {
+	seen := make(map[int]struct{})
+	out := make([]int, 0, len(values))
+	for _, value := range values {
+		if value <= 0 {
+			continue
+		}
+		if _, exists := seen[value]; exists {
+			continue
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
+	}
+	return out
 }

@@ -3,6 +3,7 @@ package client
 import (
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"regexp"
 	"sort"
 	"strings"
@@ -163,10 +164,14 @@ func (ctrl *VideoController) CreatePodcastDialogue(c *gin.Context) {
 	}
 
 	bgImgFilenames := compactStringSlice(req.BgImgFilenames)
+	blockNums := mergePodcastBlockNums(req.BlockNums, req.BlockNum)
+	podcastSeed := buildPodcastSeed(projectID)
 	payload := map[string]interface{}{
 		"project_id":      projectID,
 		"lang":            strings.TrimSpace(req.Lang),
 		"content_profile": strings.TrimSpace(req.ContentProfile),
+		"tts_type":        defaultInt(req.TTSType, 1),
+		"seed":            podcastSeed, // eleven API need this param
 		"run_mode":        runMode,
 		"title":           strings.TrimSpace(req.Title),
 		"script_filename": strings.TrimSpace(req.ScriptFilename),
@@ -178,6 +183,9 @@ func (ctrl *VideoController) CreatePodcastDialogue(c *gin.Context) {
 	if len(bgImgFilenames) > 0 {
 		payload["bg_img_filenames"] = bgImgFilenames
 	}
+	if runMode == 1 && len(blockNums) > 0 {
+		payload["block_nums"] = blockNums
+	}
 
 	taskID, err := queue.PublishVideoTask("podcast.audio.generate.v1", payload)
 	if err != nil {
@@ -188,6 +196,7 @@ func (ctrl *VideoController) CreatePodcastDialogue(c *gin.Context) {
 	response.JSON(c, gin.H{
 		"message":    "podcast dialogue accepted",
 		"project_id": projectID,
+		"seed":       podcastSeed,
 		"task_id":    taskID,
 		"task_type":  "podcast.audio.generate.v1",
 	})
@@ -210,6 +219,16 @@ func buildPodcastProjectID(lang, seed string) string {
 	prefix := normalizePodcastLang(lang) + "_podcast"
 	slug := slugForID(strings.TrimSpace(seed))
 	return fmt.Sprintf("%s_%s_%s", prefix, time.Now().Format("20060102150405"), slug)
+}
+
+func buildPodcastSeed(projectID string) int {
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(strings.TrimSpace(projectID)))
+	seed := int(h.Sum32() & 0x7fffffff)
+	if seed > 0 {
+		return seed
+	}
+	return 1
 }
 
 func normalizePodcastRunMode(value int) int {
@@ -272,6 +291,24 @@ func compactStringSlice(values []string) []string {
 	for _, value := range values {
 		if trimmed := strings.TrimSpace(value); trimmed != "" {
 			out = append(out, trimmed)
+		}
+	}
+	return out
+}
+
+func mergePodcastBlockNums(groups ...[]int) []int {
+	seen := make(map[int]struct{})
+	out := make([]int, 0)
+	for _, group := range groups {
+		for _, value := range group {
+			if value <= 0 {
+				continue
+			}
+			if _, exists := seen[value]; exists {
+				continue
+			}
+			seen[value] = struct{}{}
+			out = append(out, value)
 		}
 	}
 	return out

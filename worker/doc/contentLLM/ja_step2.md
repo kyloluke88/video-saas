@@ -47,6 +47,9 @@
 {
   "language": "ja",
   "title": "日语播客主标题",
+  "target_duration_minutes": 15,
+  "difficulty_level":"N2",
+  "tts_type":"google",
   "youtube": {
     "publish_title": "English Title | 日本語タイトル",
     "chapters": [
@@ -87,6 +90,7 @@
           "segment_id": "seg_001",
           "speaker": "female",
           "text": "この話題、最近ほんとうによく聞きますよね。",
+          "speech_text": "この話題、最近ほんとうによく聞きますよね。",
           "en": "This is something I've been hearing about a lot lately.",
           "summary": false,
           "tokens": [

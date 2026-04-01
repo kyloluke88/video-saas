@@ -11,7 +11,10 @@ type PodcastAudioGeneratePayload struct {
 	ProjectID      string   `json:"project_id"`
 	Lang           string   `json:"lang"`
 	ContentProfile string   `json:"content_profile"`
+	TTSType        int      `json:"tts_type,omitempty"`
+	Seed           int      `json:"seed,omitempty"`
 	RunMode        int      `json:"run_mode,omitempty"`
+	BlockNums      []int    `json:"block_nums,omitempty"`
 	Title          string   `json:"title,omitempty"`
 	ScriptFilename string   `json:"script_filename"`
 	BgImgFilenames []string `json:"bg_img_filenames,omitempty"`
@@ -65,13 +68,14 @@ type PodcastYouTubeChapter struct {
 }
 
 type PodcastSegment struct {
-	SegmentID string `json:"segment_id"`
-	Speaker   string `json:"speaker,omitempty"`
-	Text      string `json:"text,omitempty"`
-	EN        string `json:"en,omitempty"`
-	Summary   bool   `json:"summary,omitempty"`
-	StartMS   int    `json:"start_ms,omitempty"`
-	EndMS     int    `json:"end_ms,omitempty"`
+	SegmentID  string `json:"segment_id"`
+	Speaker    string `json:"speaker,omitempty"`
+	Text       string `json:"text,omitempty"`
+	SpeechText string `json:"speech_text,omitempty"`
+	EN         string `json:"en,omitempty"`
+	Summary    bool   `json:"summary,omitempty"`
+	StartMS    int    `json:"start_ms,omitempty"`
+	EndMS      int    `json:"end_ms,omitempty"`
 
 	Tokens         []PodcastToken         `json:"tokens,omitempty"`
 	HighlightSpans []PodcastHighlightSpan `json:"highlight_spans,omitempty"`
@@ -172,6 +176,8 @@ func (s *PodcastSegment) UnmarshalJSON(data []byte) error {
 		SegmentID      string                 `json:"segment_id"`
 		Speaker        string                 `json:"speaker"`
 		Text           string                 `json:"text"`
+		SpeechText     string                 `json:"speech_text"`
+		TTSText        string                 `json:"tts_text"`
 		DisplayJA      string                 `json:"display_ja"`
 		EN             string                 `json:"en"`
 		Summary        bool                   `json:"summary"`
@@ -188,6 +194,7 @@ func (s *PodcastSegment) UnmarshalJSON(data []byte) error {
 	s.SegmentID = strings.TrimSpace(raw.SegmentID)
 	s.Speaker = strings.TrimSpace(raw.Speaker)
 	s.Text = firstNonEmpty(raw.Text, raw.DisplayJA)
+	s.SpeechText = firstNonEmpty(raw.SpeechText, raw.TTSText)
 	s.EN = strings.TrimSpace(raw.EN)
 	s.Summary = raw.Summary
 	s.StartMS = raw.StartMS
@@ -450,12 +457,6 @@ func normalizeJapaneseSpanRange(runes []rune, span PodcastTokenSpan) (PodcastTok
 	}
 	if firstHan == -1 {
 		return PodcastTokenSpan{}, false
-	}
-	for firstHan > 0 && unicode.In(runes[firstHan-1], unicode.Han) {
-		firstHan--
-	}
-	for lastHan+1 < len(runes) && unicode.In(runes[lastHan+1], unicode.Han) {
-		lastHan++
 	}
 	span.StartIndex = firstHan
 	span.EndIndex = lastHan
