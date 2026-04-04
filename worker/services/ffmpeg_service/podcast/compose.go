@@ -25,7 +25,7 @@ func ComposeVideo(input ComposeInput) error {
 
 	projectDir := filepath.Dir(input.OutputPath)
 	audioInputIndex := 1
-	wave := waveformPresetFor(input.Resolution, audioInputIndex)
+	wave := waveformPresetFor(input.Resolution, input.DesignStyle, audioInputIndex)
 	x264Preset := podcastX264Preset()
 	ffmpegTimeout := podcastComposeFFmpegTimeout(input.DialogueAudioPath)
 

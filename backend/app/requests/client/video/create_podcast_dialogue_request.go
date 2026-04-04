@@ -14,5 +14,5 @@ type CreatePodcastDialogueRequest struct {
 	TargetPlatform string   `json:"target_platform" binding:"omitempty,oneof=youtube tiktok"`
 	AspectRatio    string   `json:"aspect_ratio" binding:"omitempty,oneof=1:1 16:9 9:16 4:3 3:4 21:9 9:21"`
 	Resolution     string   `json:"resolution" binding:"omitempty,oneof=480p 720p 1080p 1440p 2000p"`
-	DesignStyle    int      `json:"design_style" binding:"omitempty,min=1,max=3"`
+	DesignStyle    int      `json:"design_style" binding:"omitempty,oneof=1 2"`
 }

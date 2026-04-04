@@ -1,154 +1,124 @@
 {
-  "language": "zh",
-  "title": "为什么在中国，选专业这么重要？——从张雪峰的离世说起",
+  "language": "ja",
+  "title": "聞き取れるのに話せない理由とは？",
   "target_duration_minutes": 15,
-  "difficulty_level": "HSK3",
+  "difficulty_level": "N3-N2",
+  "tts_type": "google",
   "youtube": {
-    "publish_title": "Why is Choosing a Major So Important in China? | 为什么在中国，选专业这么重要？",
+    "publish_title": "Why You Can Understand Japanese but Can't Speak? | 聞き取れるのに話せない理由とは？",
     "chapters": [
       {
         "chapter_id": "ch_001",
-        "title_en": "The Shocking News of Zhang Xuefeng",
-        "title": "一条让人难过的新闻",
-        "block_ids": [
-          "block_001",
-          "block_002"
-        ]
+        "title_en": "Opening & The Frustration Everyone Knows",
+        "title": "オープニングと誰でも知っているもどかしさ",
+        "block_ids": ["block_001", "block_002"]
       },
       {
         "chapter_id": "ch_002",
-        "title_en": "The Gaokao and Changing Majors",
-        "title": "激烈的高考与换专业的困难",
-        "block_ids": [
-          "block_003",
-          "block_004"
-        ]
+        "title_en": "First Reason: Brain Mechanism Difference Between Listening and Speaking",
+        "title": "一つ目の理由：聞くことと話すことの脳の仕組みの違い",
+        "block_ids": ["block_003", "block_004"]
       },
       {
         "chapter_id": "ch_003",
-        "title_en": "Dreams vs. Reality for Ordinary Families",
-        "title": "普通家庭的现实与梦想",
-        "block_ids": [
-          "block_005",
-          "block_006"
-        ]
+        "title_en": "Second Reason: Psychological Barriers – Fear of Mistakes and Perfectionism",
+        "title": "二つ目の理由：心理的な壁 – 間違いへの恐れと完璧主義",
+        "block_ids": ["block_005", "block_006"]
       },
       {
         "chapter_id": "ch_004",
-        "title_en": "Why Zhang Xuefeng Was a Beacon of Hope",
-        "title": "为什么大家都需要张雪峰",
-        "block_ids": [
-          "block_007",
-          "block_008"
-        ]
+        "title_en": "Third Reason: Lack of Output Practice and 'Speaking Muscle' Training",
+        "title": "三つ目の理由：アウトプット練習と「話す筋肉」トレーニングの不足",
+        "block_ids": ["block_007", "block_008"]
       },
       {
         "chapter_id": "ch_005",
-        "title_en": "A Global Perspective",
-        "title": "站在全球看年轻人的压力",
-        "block_ids": [
-          "block_009"
-        ]
+        "title_en": "Practical Tips: From Understanding to Speaking",
+        "title": "実践的なヒント：理解から話すへ",
+        "block_ids": ["block_009", "block_010", "block_011"]
       },
       {
         "chapter_id": "ch_006",
-        "title_en": "Summary & Viewer Question",
-        "title": "总结与留言互动",
-        "block_ids": [
-          "summary_cta"
-        ]
+        "title_en": "Summary & Call to Action",
+        "title": "まとめとチャンネル登録のお願い",
+        "block_ids": ["block_summary_cta"]
       }
     ],
     "in_this_episode_you_will_learn": [
-      "Learn simple Chinese vocabulary to talk about university majors, exams, and career choices.",
-      "Understand why the Chinese college entrance exam (Gaokao) puts so much pressure on students.",
-      "Discover who Zhang Xuefeng was and why his pragmatic advice changed millions of lives.",
-      "Practice your HSK3 listening skills with a natural, engaging conversation about Chinese society."
-    ],
-    "hashtags": [
-      "#StudyChinese",
-      "#ChineseListening",
-      "#HSK3",
-      "#LearnMandarin",
-      "#ChineseCulture",
-      "#Gaokao"
-    ],
-    "video_tags": [
-      "learn chinese",
-      "chinese listening practice",
-      "hsk3 chinese",
-      "chinese podcast",
-      "mandarin conversation",
-      "gaokao china",
-      "chinese university",
-      "chinese society",
-      "slow chinese"
+      "Why listening comprehension develops faster than speaking ability in language learning",
+      "The psychological and neurological reasons behind 'I understand but I can't speak'",
+      "How to shift from passive understanding to active speaking with small daily habits",
+      "Practical methods like shadowing, self-talk, and output looping",
+      "Why it's okay to make mistakes and how to lower your speaking filter"
     ],
     "description_intro": [
-      "Welcome back to our Chinese learning podcast! Recently, the sudden passing of a famous internet educator, Zhang Xuefeng, shocked the Chinese internet. He was known for helping millions of students from ordinary families choose their university majors. But why did so many people need his help? Why is choosing a major considered a 'life-or-death' decision in China?",
-      "Today, Panpan and Laolu explain the reality behind the Chinese Gaokao, the difficulty of changing majors, and the heavy burden of 'changing one's fate' for ordinary families. Join us for a deep but easy-to-understand conversation in HSK3 Chinese!"
-    ]
+      "Do you understand Japanese podcasts, anime, or conversations but freeze when you try to speak? You're not alone. In this episode of our everyday Japanese podcast, Yui and Akira dive deep into the common frustration of 'I can understand but I can't speak.'",
+      "We explore the real reasons — from brain wiring to psychological blocks — and share practical, easy-to-apply tips to help you bridge the gap between listening and speaking. No textbook drills, just natural conversation between two friends who have been there themselves.",
+      "Whether you're at N3 or N2 level, this slow, friendly chat will give you both comfort and concrete ideas to start speaking more freely. Let's move from passive understanding to active speaking together."
+    ],
+    "hashtags": ["#JapanesePodcast", "#LearnJapanese", "#JapaneseListening", "#JapaneseSpeaking", "#Nihongo", "#LanguageLearning"],
+    "video_tags": ["Japanese", "learning Japanese", "Japanese podcast", "listening comprehension", "speaking practice", "language learning tips", "N3", "N2", "日本語", "にほんご"]
   },
   "blocks": [
     {
       "chapter_id": "ch_001",
       "block_id": "block_001",
-      "purpose": "开场白，由张雪峰突然去世的新闻自然引入本集主题",
+      "purpose": "自己紹介とあいさつ、今日の話題の導入",
       "segments": [
         {
           "segment_id": "seg_001",
           "speaker": "female",
-          "text": "大家好，欢迎收听我们的中文播客。我是盼盼。",
+          "text": "ああ、こんにちは！ユイです。",
           "speech_text": "",
-          "en": "Hello everyone, welcome to our Chinese podcast. I'm Panpan.",
+          "en": "Ah, hello! This is Yui.",
           "summary": false
         },
         {
           "segment_id": "seg_002",
           "speaker": "male",
-          "text": "大家好，我是老路。欢迎大家和我们一起慢慢学中文。",
+          "text": "こんにちは、アキラです。今日もゆっくり話していきましょう。",
           "speech_text": "",
-          "en": "Hello everyone, I'm Laolu. Welcome to learn Chinese slowly with us.",
+          "en": "Hello, Akira here. Let's take it slow again today.",
           "summary": false
         },
         {
           "segment_id": "seg_003",
           "speaker": "female",
-          "text": "路哥，最近有一条新闻，让很多中国人都觉得非常难过。你看到了吗？",
+          "text": "今日のテーマ、すごく楽しみだったんです。『聞き取れるのに話せない理由』ですよね。",
           "speech_text": "",
-          "en": "Brother Lu, recently there was a piece of news that made many Chinese people feel very sad. Did you see it?",
+          "en": "I've really been looking forward to today's topic. 'Why you can understand but can't speak,' right?",
           "summary": false
         },
         {
           "segment_id": "seg_004",
           "speaker": "male",
-          "text": "嗯，我看到了。你说的应该是张雪峰老师因为突发心脏病，突然去世的新闻吧。",
+          "text": "そうそう。これは僕も長い間悩んできたことです。",
           "speech_text": "",
-          "en": "Yes, I saw it. You must be talking about the news of Teacher Zhang Xuefeng passing away suddenly due to a heart attack.",
+          "en": "Exactly. That's something I struggled with for a long time too.",
           "summary": false
         },
         {
           "segment_id": "seg_005",
           "speaker": "female",
-          "text": "对，就是他。他才四十岁出头啊，真的太突然了，很多人都不敢相信。",
+          "text": "うん、私も。例えばアニメはだいたい理解できるのに、いざ自分で話そうとすると言葉が出てこない。",
           "speech_text": "",
-          "en": "Yes, that's him. He was only in his early forties, it's really too sudden, many people couldn't believe it.",
+          "en": "Yeah, me too. Like, I can understand most of an anime, but when I try to speak myself, the words just don't come out.",
           "summary": false
         },
         {
           "segment_id": "seg_006",
           "speaker": "male",
-          "text": "是啊。在中国的互联网上，有无数的年轻学生和家长都在发文章悼念他，感谢他。",
+          "text": "あるあるですね。特に旅行とか、急に話さなきゃいけない場面で固まっちゃう。",
           "speech_text": "",
-          "en": "Yeah. On the Chinese internet, countless young students and parents are posting articles to mourn him and thank him.",
+          "en": "That's so relatable. Especially on trips or in situations where you suddenly have to speak, you just freeze.",
           "summary": false
         },
         {
           "segment_id": "seg_007",
           "speaker": "female",
-          "text": "对于学习中文的外国朋友来说，可能不太认识这个人。但他在中国，真的是一个现象级的人物。",
+          "text": "そう！その気持ち、めっちゃわかります。今日はそのギャップ、どうして起きるのか一緒に考えたいです。",
           "speech_text": "",
-          "en": "For foreign friends learning Chinese, they might not know this person well. But in China, he truly was a phenomenal figure.",
+          "en": "Yes! I totally get that feeling. Today I want to think together about why that gap happens.",
           "summary": false
         }
       ]
@@ -156,62 +126,46 @@
     {
       "chapter_id": "ch_001",
       "block_id": "block_002",
-      "purpose": "简单介绍张雪峰是谁，以及他所做的事情，引出外国人的疑问",
+      "purpose": "聞き取りと話しのギャップを実感している学習者の共感を得る",
       "segments": [
         {
           "segment_id": "seg_008",
-          "speaker": "male",
-          "text": "没错。简单来说，张雪峰是一位非常有名的老师。他最主要的工作，就是帮高中生选择大学，还有选择大学的专业。",
+          "speaker": "female",
+          "text": "ねえ、アキラはこの『聞けるけど話せない』状態、どうやって経験した？",
           "speech_text": "",
-          "en": "Exactly. Simply put, Zhang Xuefeng was a very famous teacher. His main job was helping high school students choose universities and their university majors.",
+          "en": "Hey, Akira, how did you experience this 'can understand but can't speak' state?",
           "summary": false
         },
         {
           "segment_id": "seg_009",
-          "speaker": "female",
-          "text": "对。每年高考结束以后，学生们就要决定自己未来四年在大学里学什么。他会告诉大家，什么专业好找工作，什么专业千万不要选。",
+          "speaker": "male",
+          "text": "うーん、僕は大学で日本語を勉強し始めた時、先生の話はほぼ全部わかるのに、自分の意見を言うときは頭が真っ白になってた。",
           "speech_text": "",
-          "en": "Right. Every year after the Gaokao, students have to decide what they will study in university for the next four years. He would tell everyone which majors are good for finding jobs, and which majors you absolutely shouldn't choose.",
+          "en": "Hmm, when I started studying Japanese in college, I understood almost everything the teacher said, but when I had to give my own opinion, my mind went blank.",
           "summary": false
         },
         {
           "segment_id": "seg_010",
-          "speaker": "male",
-          "text": "他因为说话非常直接、非常现实，在网上有几千万的粉丝。",
+          "speaker": "female",
+          "text": "ああ、それすごくわかる！私も同じ。友達が話してるのは聞けるけど、会話に入ろうとするとタイミングを逃すというか…",
           "speech_text": "",
-          "en": "Because he spoke very directly and realistically, he had tens of millions of fans online.",
+          "en": "Ah, I know that so well! Same here. I can follow what my friends are saying, but when I try to join the conversation, I miss the timing or something...",
           "summary": false
         },
         {
           "segment_id": "seg_011",
-          "speaker": "female",
-          "text": "其实，这就引出了一个很多外国朋友经常问我的问题。他们觉得很不理解。",
+          "speaker": "male",
+          "text": "そうそう。それって実はとても普通のことで、多くの学習者が通る道なんですよ。",
           "speech_text": "",
-          "en": "Actually, this brings up a question that many foreign friends often ask me. They find it hard to understand.",
+          "en": "Exactly. Actually, that's very normal — it's a path most learners go through.",
           "summary": false
         },
         {
           "segment_id": "seg_012",
-          "speaker": "male",
-          "text": "哦？他们不理解什么呢？",
-          "speech_text": "",
-          "en": "Oh? What is it they don't understand?",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_013",
           "speaker": "female",
-          "text": "他们问我：为什么在中国，选专业会这么重要？为什么选个专业，还需要几千万人都去听一个老师的指导？",
+          "text": "えっ、そうなの？じゃあ私だけじゃないんだ。ちょっと安心した。",
           "speech_text": "",
-          "en": "They ask me: Why is choosing a major so important in China? Why does choosing a major require tens of millions of people to listen to one teacher's guidance?",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_014",
-          "speaker": "male",
-          "text": "哈哈，这是一个非常好的问题。今天，我们就来好好聊一聊这个话题。",
-          "speech_text": "",
-          "en": "Haha, that's a very good question. Today, let's have a good chat about this topic.",
+          "en": "Oh really? So it's not just me. That's a bit of a relief.",
           "summary": false
         }
       ]
@@ -219,70 +173,54 @@
     {
       "chapter_id": "ch_002",
       "block_id": "block_003",
-      "purpose": "解释高考的激烈竞争背景，说明选专业的压力来源",
+      "purpose": "一つ目の理由：脳内の処理経路の違い（聞くは受動、話すは能動）を簡単に説明",
       "segments": [
         {
-          "segment_id": "seg_015",
-          "speaker": "female",
-          "text": "其实，我非常能理解外国朋友为什么会觉得奇怪。因为在很多国家，上大学只是一个开始，没那么紧张。",
+          "segment_id": "seg_013",
+          "speaker": "male",
+          "text": "まず大きな理由の一つは、脳の中で『聞く』と『話す』は全然違う作業だってことです。",
           "speech_text": "",
-          "en": "Actually, I can perfectly understand why foreign friends find it strange. Because in many countries, going to university is just a beginning, it's not that tense.",
+          "en": "First, one big reason is that in the brain, 'listening' and 'speaking' are completely different tasks.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_014",
+          "speaker": "female",
+          "text": "へえ、どう違うの？同じ日本語を使うのに？",
+          "speech_text": "",
+          "en": "Oh? How are they different? Even though you're using the same Japanese?",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_015",
+          "speaker": "male",
+          "text": "聞くときは、耳から入ってきた音を理解するだけ。これは『受動的』な処理なんです。",
+          "speech_text": "",
+          "en": "When you listen, you're just understanding sounds that come in through your ears. That's 'passive' processing.",
           "summary": false
         },
         {
           "segment_id": "seg_016",
-          "speaker": "male",
-          "text": "是的。但是在中国，我们有一个非常特殊的东西，叫做“高考”。也就是大学入学考试。",
+          "speaker": "female",
+          "text": "なるほど。受け取るだけなら、まだ簡単ってこと？",
           "speech_text": "",
-          "en": "Yes. But in China, we have something very special called the 'Gaokao'. That is the university entrance exam.",
+          "en": "I see. So if you're just receiving, it's still easier?",
           "summary": false
         },
         {
           "segment_id": "seg_017",
-          "speaker": "female",
-          "text": "路哥，你给大家报个数吧，每年有多少人参加高考？",
+          "speaker": "male",
+          "text": "そう。でも話すときは、自分の頭の中で文を作って、正しい言葉を選んで、口を動かして音を出す。これは『能動的』で、すごくたくさんの作業が同時に必要なんです。",
           "speech_text": "",
-          "en": "Brother Lu, give everyone a number, how many people take the Gaokao every year?",
+          "en": "Right. But when you speak, you have to build sentences in your head, choose the right words, move your mouth and produce sounds. That's 'active' and requires many tasks at the same time.",
           "summary": false
         },
         {
           "segment_id": "seg_018",
-          "speaker": "male",
-          "text": "现在的数字是，每年有超过一千万人同时参加这个考试。",
-          "speech_text": "",
-          "en": "The current number is that every year, over ten million people take this exam at the same time.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_019",
           "speaker": "female",
-          "text": "哎呀，一千万人！这个数字比世界上很多国家的总人口还要多。大家可以想象一下，竞争有多激烈。",
+          "text": "ああ、そういうことか。聞くだけだと脳の負担が少ないけど、話すと急にフル稼働になるんだ。",
           "speech_text": "",
-          "en": "Oh my, ten million people! This number is larger than the total population of many countries in the world. You can imagine how fierce the competition is.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_020",
-          "speaker": "male",
-          "text": "对。因为人太多了，大家都想去好大学，都想学最容易找工作的热门专业。但是好位置是有限的。",
-          "speech_text": "",
-          "en": "Right. Because there are so many people, everyone wants to go to a good university and study the popular majors that make it easiest to find a job. But good spots are limited.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_021",
-          "speaker": "female",
-          "text": "所以，如果你的分数差了一点点，你可能就去不了一个好专业，甚至可能要去学一个你完全不喜欢的专业。",
-          "speech_text": "",
-          "en": "So, if your score is just a little bit short, you might not be able to get into a good major, or you might even have to study a major you don't like at all.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_022",
-          "speaker": "male",
-          "text": "这就引出了中国大学的第二个特点：换专业非常困难。",
-          "speech_text": "",
-          "en": "This leads to the second characteristic of Chinese universities: changing majors is very difficult.",
+          "en": "Ah, so that's it. Listening alone puts less strain on the brain, but speaking suddenly makes it work at full capacity.",
           "summary": false
         }
       ]
@@ -290,70 +228,38 @@
     {
       "chapter_id": "ch_002",
       "block_id": "block_004",
-      "purpose": "对比中外差异，解释在中国大学里换专业为什么很难",
+      "purpose": "具体例で説明：単語を知っていても瞬時に取り出せない理由",
       "segments": [
         {
-          "segment_id": "seg_023",
+          "segment_id": "seg_019",
           "speaker": "female",
-          "text": "对，这是一个巨大的差别！我有很多外国朋友，他们在大学里换过两三次专业，非常自由。",
+          "text": "例えば、『りんご』って単語、聞けばすぐわかる。でも自分で『あの赤い果物…』ってなっちゃうことあるよね。",
           "speech_text": "",
-          "en": "Yes, this is a huge difference! I have many foreign friends who changed their majors two or three times in university, very freely.",
+          "en": "For example, the word 'apple' — if you hear it, you understand immediately. But when you try to say it yourself, you might end up like 'that red fruit...'",
           "summary": false
         },
         {
-          "segment_id": "seg_024",
+          "segment_id": "seg_020",
           "speaker": "male",
-          "text": "嗯，在很多西方国家，大学的第一年甚至是用来体验的，你可以慢慢想清楚自己喜欢什么。",
+          "text": "それ、典型的な『受け身の知識』と『能動の知識』の差です。聞いてわかる語彙はたくさんあっても、話すときにすぐ使える語彙は少ない。",
           "speech_text": "",
-          "en": "Yeah, in many Western countries, the first year of university is even for experiencing things, you can take your time to figure out what you like.",
+          "en": "That's a classic difference between 'passive knowledge' and 'active knowledge'. Even if you have a lot of vocabulary you understand when listening, the vocabulary you can use immediately when speaking is much smaller.",
           "summary": false
         },
         {
-          "segment_id": "seg_025",
+          "segment_id": "seg_021",
           "speaker": "female",
-          "text": "但在中国，绝大多数学生在十八岁进入大学之前，就要把专业定下来。",
+          "text": "そうかあ。じゃあ、話せるようになるためには、その『受け身の言葉』を『能動の言葉』に変える練習が必要なんだね。",
           "speech_text": "",
-          "en": "But in China, the vast majority of students have to decide on their major before entering university at eighteen.",
+          "en": "I see. So to become able to speak, you need practice to turn that 'passive vocabulary' into 'active vocabulary'.",
           "summary": false
         },
         {
-          "segment_id": "seg_026",
+          "segment_id": "seg_022",
           "speaker": "male",
-          "text": "是的，一旦你进去了，想要换专业，通常需要你在第一年的考试成绩非常非常好，比如要在全班排名前百分之十。",
+          "text": "その通りです。これが一つ目の大きな理由です。",
           "speech_text": "",
-          "en": "Yes, once you are in, if you want to change your major, you usually need your exam scores in the first year to be very, very good, like ranking in the top ten percent of the class.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_027",
-          "speaker": "female",
-          "text": "而且学校的名额也很少。所以很多人就算不喜欢，也只能硬着头皮学完四年。",
-          "speech_text": "",
-          "en": "And the school has very few quotas. So many people, even if they don't like it, can only force themselves to finish the four years.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_028",
-          "speaker": "male",
-          "text": "更重要的是，在中国，你大学学的专业，很大程度上决定了你毕业后的第一份工作。",
-          "speech_text": "",
-          "en": "More importantly, in China, the major you study in university largely determines your first job after graduation.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_029",
-          "speaker": "female",
-          "text": "也就是说，如果你在十八岁时选错了专业，你以后找工作就会处处碰壁，非常的麻烦。",
-          "speech_text": "",
-          "en": "In other words, if you chose the wrong major at eighteen, you will hit walls everywhere when looking for a job later, which is very troublesome.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_030",
-          "speaker": "male",
-          "text": "这就是为什么中国家长和学生在选专业的时候，会那么紧张，那么小心翼翼。",
-          "speech_text": "",
-          "en": "That's why Chinese parents and students are so nervous and so careful when choosing a major.",
+          "en": "Exactly. That's the first major reason.",
           "summary": false
         }
       ]
@@ -361,70 +267,46 @@
     {
       "chapter_id": "ch_003",
       "block_id": "block_005",
-      "purpose": "引入“改变命运”的概念，解释普通家庭对选专业的极高期望",
+      "purpose": "二つ目の理由：心理的な壁（恥ずかしさ、間違いへの恐怖）",
       "segments": [
         {
-          "segment_id": "seg_031",
+          "segment_id": "seg_023",
           "speaker": "female",
-          "text": "我觉得，除了找工作，这背后还有一个很深刻的原因。那就是上大学对很多中国家庭来说，是为了“改变命运”。",
+          "text": "じゃあ次、心理的な理由ってやつ。これ、めっちゃあると思う。",
           "speech_text": "",
-          "en": "I think, besides finding a job, there is a deeper reason behind this. That is, going to university for many Chinese families is for 'changing fate'.",
+          "en": "Okay, next, the psychological reasons. I think there are a lot of those.",
           "summary": false
         },
         {
-          "segment_id": "seg_032",
+          "segment_id": "seg_024",
           "speaker": "male",
-          "text": "嗯，“改变命运”，这个词用得非常好。中国在过去几十年发展得非常快，社会变化很大。",
+          "text": "うん。自分が間違えたらどうしよう、とか、変な日本語を話して笑われたらどうしよう、って怖くなっちゃうんですよね。",
           "speech_text": "",
-          "en": "Hmm, 'changing fate', this phrase is used very well. China has developed very quickly in the past few decades, and society has changed a lot.",
+          "en": "Yeah. You get scared thinking, 'What if I make a mistake?' or 'What if people laugh at my weird Japanese?'",
           "summary": false
         },
         {
-          "segment_id": "seg_033",
-          "speaker": "male",
-          "text": "很多大学生的父母，可能只是普通的工人，或者是农民，他们一辈子干着非常辛苦的体力活。",
-          "speech_text": "",
-          "en": "The parents of many university students might just be ordinary workers or farmers, doing very hard physical labor all their lives.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_034",
+          "segment_id": "seg_025",
           "speaker": "female",
-          "text": "是啊。父母拼命赚钱，就是希望孩子能考上大学，以后能在舒服的办公室里工作，不用再吃苦了。",
+          "text": "ああ、わかる。私、特に初めて日本人と話すとき、頭の中で『完璧な文』を作ろうとして、結局何も言えなかった。",
           "speech_text": "",
-          "en": "Yeah. Parents work desperately to make money, just hoping their kids can get into university and work in a comfortable office later, without having to suffer anymore.",
+          "en": "Ah, I know that. Especially when I first talked to Japanese people, I tried to make a 'perfect sentence' in my head and ended up saying nothing.",
           "summary": false
         },
         {
-          "segment_id": "seg_035",
+          "segment_id": "seg_026",
           "speaker": "male",
-          "text": "对于这些普通家庭来说，他们没有很多钱，也没有什么社会关系，没法直接帮孩子安排一份好工作。",
+          "text": "それ、すごくよくあるパターンです。でも、実際は日本人同士でも文法間違えたり、言い直したりしますからね。",
           "speech_text": "",
-          "en": "For these ordinary families, they don't have a lot of money or social connections, so they can't directly arrange a good job for their children.",
+          "en": "That's a very common pattern. But actually, even Japanese people make grammar mistakes or correct themselves as they speak.",
           "summary": false
         },
         {
-          "segment_id": "seg_036",
+          "segment_id": "seg_027",
           "speaker": "female",
-          "text": "所以，大学文凭和选对一个专业，就是他们唯一的武器了。",
+          "text": "ふふ、そう言われるとちょっと気が楽になる。でも、頭ではわかっていても、いざとなると怖いんだよね。",
           "speech_text": "",
-          "en": "So, a university diploma and choosing the right major is their only weapon.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_037",
-          "speaker": "male",
-          "text": "对。如果孩子选了一个很难找工作的专业，毕业后失业了，那整个家庭的希望可能就破灭了。",
-          "speech_text": "",
-          "en": "Right. If the child chooses a major where it's hard to find a job, and becomes unemployed after graduation, then the hope of the whole family might be shattered.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_038",
-          "speaker": "female",
-          "text": "听到这里，真的觉得压力好大。这也是为什么选专业不仅仅是个人的爱好，更是一个家庭的生存问题。",
-          "speech_text": "",
-          "en": "Hearing this, I really feel the pressure is huge. This is also why choosing a major is not just about personal hobbies, but a matter of survival for a family.",
+          "en": "Heh, hearing that makes me feel a bit better. But even though I know it in my head, when it comes down to it, I get scared.",
           "summary": false
         }
       ]
@@ -432,70 +314,46 @@
     {
       "chapter_id": "ch_003",
       "block_id": "block_006",
-      "purpose": "通过盼盼的个人经历，讨论“梦想”与“现实”的冲突",
+      "purpose": "完璧主義が話すことを妨げる、フィルターを下げる大切さ",
       "segments": [
         {
-          "segment_id": "seg_039",
-          "speaker": "female",
-          "text": "说到这里，我想起我自己十八岁的时候。当时我特别喜欢看小说，所以我想报文学专业。",
-          "speech_text": "",
-          "en": "Speaking of this, it reminds me of when I was eighteen. At that time, I loved reading novels, so I wanted to apply for a literature major.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_040",
+          "segment_id": "seg_028",
           "speaker": "male",
-          "text": "文学是一个非常美好的专业。不过我猜，你的父母当时肯定不同意吧？",
+          "text": "そうなんです。『完璧に話さなきゃ』っていうフィルターが強いほど、言葉が出てこなくなります。",
           "speech_text": "",
-          "en": "Literature is a very beautiful major. But I guess your parents definitely didn't agree at that time, right?",
+          "en": "Right. The stronger the filter of 'I have to speak perfectly', the harder it is for words to come out.",
           "summary": false
         },
         {
-          "segment_id": "seg_041",
+          "segment_id": "seg_029",
           "speaker": "female",
-          "text": "哈哈，路哥你太了解中国父母了。我妈当时急坏了，她说：“学文学以后能干什么？能当饭吃吗？”",
+          "text": "うーん、じゃあそのフィルターをわざと下げる練習も必要ってこと？",
           "speech_text": "",
-          "en": "Haha, Brother Lu, you know Chinese parents too well. My mom was so anxious at the time, she said: 'What can you do after studying literature? Can you eat it for a meal?'",
+          "en": "Hmm, so we need to practice deliberately lowering that filter?",
           "summary": false
         },
         {
-          "segment_id": "seg_042",
-          "speaker": "female",
-          "text": "她非要我学学会计或者金融，说这样以后才能养活自己。",
-          "speech_text": "",
-          "en": "She insisted that I study accounting or finance, saying that this is the only way I could support myself in the future.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_043",
+          "segment_id": "seg_030",
           "speaker": "male",
-          "text": "家长们总是喜欢会计、计算机、或者是医学。因为在他们眼里，这些是比较稳定的工作，是“铁饭碗”。",
+          "text": "まさに。『間違えてもいい』『伝わればそれでいい』と思うことが、話すための第一歩です。",
           "speech_text": "",
-          "en": "Parents always like accounting, computer science, or medicine. Because in their eyes, these are relatively stable jobs, they are 'iron rice bowls'.",
+          "en": "Exactly. Thinking 'It's okay to make mistakes' or 'As long as it gets across, that's fine' is the first step to speaking.",
           "summary": false
         },
         {
-          "segment_id": "seg_044",
+          "segment_id": "seg_031",
           "speaker": "female",
-          "text": "我当时真的很生气，觉得大人一点都不懂我的梦想，太庸俗了，只知道谈钱。",
+          "text": "私、最近小さなことから『あ、これ間違ってるかも』って気づいても、そのまま話し続ける練習をしてるんだ。",
           "speech_text": "",
-          "en": "I was really angry at the time, feeling that adults didn't understand my dreams at all, that they were too vulgar and only knew how to talk about money.",
+          "en": "Lately, even when I notice 'oh, this might be wrong', I've been practicing continuing to speak anyway.",
           "summary": false
         },
         {
-          "segment_id": "seg_045",
+          "segment_id": "seg_032",
           "speaker": "male",
-          "text": "很多年轻人都有这种冲突。年轻人想追求艺术、历史、或者哲学。但是现实生活是非常残酷的。",
+          "text": "それはすごくいい練習です。だって、会話はテストじゃないから。",
           "speech_text": "",
-          "en": "Many young people have this kind of conflict. Young people want to pursue art, history, or philosophy. But real life is very cruel.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_046",
-          "speaker": "female",
-          "text": "是啊，等我自己毕业出来工作了，我才慢慢理解了当时父母的担心。",
-          "speech_text": "",
-          "en": "Yeah, it was only after I graduated and started working that I slowly understood my parents' worries back then.",
+          "en": "That's a really good practice. Because conversation isn't a test.",
           "summary": false
         }
       ]
@@ -503,70 +361,46 @@
     {
       "chapter_id": "ch_004",
       "block_id": "block_007",
-      "purpose": "回到张雪峰，解释他的建议内容以及引起的争议",
+      "purpose": "三つ目の理由：アウトプットの練習不足と『話す筋肉』",
       "segments": [
         {
-          "segment_id": "seg_047",
+          "segment_id": "seg_033",
           "speaker": "female",
-          "text": "这也正是为什么张雪峰老师会那么火的原因。他永远都在对学生说最残酷的大实话。",
+          "text": "三つ目の理由は『練習不足』ってこと？でも、聞く練習はたくさんしてるのに。",
           "speech_text": "",
-          "en": "This is exactly the reason why Teacher Zhang Xuefeng was so popular. He was always telling students the most cruel and honest truth.",
+          "en": "The third reason is 'lack of practice'? But I do a lot of listening practice.",
           "summary": false
         },
         {
-          "segment_id": "seg_048",
+          "segment_id": "seg_034",
           "speaker": "male",
-          "text": "没错。比如，如果一个穷困家庭的孩子问他，能不能学哲学，他会直接说：“千万别学，你首先要考虑的是生存。”",
+          "text": "そう、聞く練習と話す練習は別物なんです。話すには口や舌の動き、そして瞬時に文を作る『回路』を鍛えないといけない。",
           "speech_text": "",
-          "en": "Exactly. For example, if a child from a poor family asked him if they could study philosophy, he would directly say: 'Absolutely do not study it, the first thing you need to consider is survival.'",
+          "en": "Right, listening practice and speaking practice are different. To speak, you need to train mouth and tongue movements, and the 'circuit' for making sentences instantly.",
           "summary": false
         },
         {
-          "segment_id": "seg_049",
+          "segment_id": "seg_035",
           "speaker": "female",
-          "text": "他总是建议普通家庭的孩子，去选计算机、工程这些有实际技能的专业，毕业就能赚钱，能帮家里减轻负担。",
+          "text": "ああ、まるでスポーツみたいだね。筋トレみたいな。",
           "speech_text": "",
-          "en": "He always advised children from ordinary families to choose majors with practical skills like computer science or engineering, so they could make money right after graduation and help reduce the family's burden.",
+          "en": "Ah, it's like sports. Like strength training.",
           "summary": false
         },
         {
-          "segment_id": "seg_050",
+          "segment_id": "seg_036",
           "speaker": "male",
-          "text": "但是，他的这些话，在网上也引起了很大的争议。有人觉得他太现实了，甚至有点冷酷无情。",
+          "text": "まさに『話す筋肉』ですね。使わないと衰えるし、毎日ちょっとずつでも動かすことが大事です。",
           "speech_text": "",
-          "en": "However, his words also caused great controversy online. Some people felt he was too realistic, even a bit ruthless.",
+          "en": "Exactly, 'speaking muscles'. If you don't use them, they weaken, and it's important to move them a little bit every day.",
           "summary": false
         },
         {
-          "segment_id": "seg_051",
-          "speaker": "male",
-          "text": "批评他的人说，他在扼杀年轻人的梦想，让大学变成了一个只看重钱的职业培训班。",
-          "speech_text": "",
-          "en": "People who criticized him said he was killing young people's dreams, turning universities into vocational training classes that only value money.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_052",
+          "segment_id": "seg_037",
           "speaker": "female",
-          "text": "坦白说，我以前也是这么看他的。我觉得他把选专业这件事情，说得太功利了，好像人生只有赚钱一样。",
+          "text": "なるほど。じゃあ、毎日少しでも声に出して練習しないと、聞けるだけのままなんだ。",
           "speech_text": "",
-          "en": "Frankly speaking, I used to see him that way too. I thought he made choosing a major sound too utilitarian, as if life was only about making money.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_053",
-          "speaker": "female",
-          "text": "但是后来，当我在社会上经历得多了，我对他的看法完全改变了。",
-          "speech_text": "",
-          "en": "But later, as I experienced more in society, my view of him completely changed.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_054",
-          "speaker": "male",
-          "text": "哦？盼盼，是什么让你改变了想法呢？",
-          "speech_text": "",
-          "en": "Oh? Panpan, what made you change your mind?",
+          "en": "I see. So if I don't practice out loud even a little every day, I'll stay at just being able to understand.",
           "summary": false
         }
       ]
@@ -574,70 +408,46 @@
     {
       "chapter_id": "ch_004",
       "block_id": "block_008",
-      "purpose": "盼盼表达自己的顿悟，解释为什么张雪峰是普通人的保护伞",
+      "purpose": "具体例：シャドーイングや音読の効果を簡単に説明",
       "segments": [
         {
-          "segment_id": "seg_055",
-          "speaker": "female",
-          "text": "因为我终于明白了一件事：“拥有梦想”其实是一件非常奢侈的事情。",
-          "speech_text": "",
-          "en": "Because I finally understood one thing: 'having a dream' is actually a very luxurious thing.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_056",
-          "speaker": "female",
-          "text": "如果你的家庭很穷，你一旦追梦失败了，你的背后是没有安全网可以保护你的。",
-          "speech_text": "",
-          "en": "If your family is poor, once you fail to pursue your dream, there is no safety net behind you to protect you.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_057",
+          "segment_id": "seg_038",
           "speaker": "male",
-          "text": "你观察得很深刻。对于有钱家庭的孩子来说，选错专业只是多走了一段弯路；但对于穷孩子来说，这可能是一场灾难。",
+          "text": "そう。例えばシャドーイング。聞こえた音をすぐに真似して口に出す練習です。",
           "speech_text": "",
-          "en": "Your observation is very profound. For children from rich families, choosing the wrong major is just taking a detour; but for poor children, it could be a disaster.",
+          "en": "Right. For example, shadowing — the practice of immediately mimicking the sounds you hear.",
           "summary": false
         },
         {
-          "segment_id": "seg_058",
+          "segment_id": "seg_039",
           "speaker": "female",
-          "text": "对啊！张雪峰老师自己就是从一个小城市的普通家庭走出来的。他太懂得底层老百姓的辛苦和脆弱了。",
+          "text": "ああ、あの練習、難しくない？聞き取るだけでも大変なのに、すぐに追いかけて話すなんて。",
           "speech_text": "",
-          "en": "Exactly! Teacher Zhang Xuefeng himself came from an ordinary family in a small city. He understood the hardships and fragility of the people at the bottom too well.",
+          "en": "Ah, that practice, isn't it hard? Just understanding is tough enough, but immediately following and speaking?",
           "summary": false
         },
         {
-          "segment_id": "seg_059",
+          "segment_id": "seg_040",
           "speaker": "male",
-          "text": "所以，他其实不是在扼杀梦想。他是在保护那些普通学生，不让他们犯下承担不起的错误。",
+          "text": "最初は確かに難しいです。でも、ゆっくりの音声から始めて、だんだん速くしていくと、脳と口の連携が良くなります。",
           "speech_text": "",
-          "en": "So, he wasn't actually killing dreams. He was protecting those ordinary students from making mistakes they couldn't afford.",
+          "en": "It's definitely hard at first. But if you start with slow audio and gradually speed up, the coordination between your brain and mouth improves.",
           "summary": false
         },
         {
-          "segment_id": "seg_060",
+          "segment_id": "seg_041",
           "speaker": "female",
-          "text": "这就是为什么他去世的新闻出来后，网上有那么多学生在哭。大家都觉得，他就像是为穷苦孩子撑伞的人。",
+          "text": "ふうん。じゃあ、音読も同じ効果があるの？",
           "speech_text": "",
-          "en": "That's why when the news of his passing came out, so many students were crying online. Everyone felt he was like someone holding an umbrella for poor children.",
+          "en": "Hmm. So does reading aloud have the same effect?",
           "summary": false
         },
         {
-          "segment_id": "seg_061",
+          "segment_id": "seg_042",
           "speaker": "male",
-          "text": "在一个竞争极其激烈的社会里，他给那些迷茫的普通家庭指了一条最安全、最实在的路。",
+          "text": "はい。音読もとてもいいです。自分で文字を見て、それを声に出す。それだけで『話す回路』が鍛えられます。",
           "speech_text": "",
-          "en": "In a highly competitive society, he pointed out the safest and most practical path for those lost, ordinary families.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_062",
-          "speaker": "female",
-          "text": "是的，他用自己的方式，给了无数普通人希望。",
-          "speech_text": "",
-          "en": "Yes, in his own way, he gave hope to countless ordinary people.",
+          "en": "Yes, reading aloud is also very good. Just looking at the text and voicing it — that alone trains your 'speaking circuit'.",
           "summary": false
         }
       ]
@@ -645,149 +455,219 @@
     {
       "chapter_id": "ch_005",
       "block_id": "block_009",
-      "purpose": "拔高视野，说明生存压力不仅在中国有，全球年轻人也面临相似挑战",
+      "purpose": "具体的な練習法1：独り言を日本語で話す",
       "segments": [
         {
-          "segment_id": "seg_063",
+          "segment_id": "seg_043",
           "speaker": "female",
-          "text": "其实，我们跳出中国来看，我觉得现在全世界的年轻人都面临着越来越大的就业压力。",
+          "text": "じゃあ、今日からできる具体的なヒントを教えてほしいな。",
           "speech_text": "",
-          "en": "Actually, looking beyond China, I think young people all over the world are now facing increasing employment pressure.",
+          "en": "Then I'd like you to give me some concrete tips I can start today.",
           "summary": false
         },
         {
-          "segment_id": "seg_064",
+          "segment_id": "seg_044",
           "speaker": "male",
-          "text": "的确如此，全球的经济都在发生变化。即使在那些换专业很自由的国家，大学生毕业后也会担心失业的问题。",
+          "text": "もちろん。まず一番簡単なのは『独り言』です。",
           "speech_text": "",
-          "en": "That is indeed the case, the global economy is changing. Even in countries where it's very free to change majors, university students still worry about unemployment after graduation.",
+          "en": "Of course. The easiest one first is 'talking to yourself'.",
           "summary": false
         },
         {
-          "segment_id": "seg_065",
+          "segment_id": "seg_045",
           "speaker": "female",
-          "text": "只不过，因为中国有十四亿人口，竞争被放大了。每个人都必须在人生的十字路口非常非常小心。",
+          "text": "えっ、独り言？それって変じゃない？",
           "speech_text": "",
-          "en": "It's just that, because China has 1.4 billion people, the competition is magnified. Everyone has to be very, very careful at the crossroads of life.",
+          "en": "Huh? Talking to yourself? Isn't that weird?",
           "summary": false
         },
         {
-          "segment_id": "seg_066",
+          "segment_id": "seg_046",
           "speaker": "male",
-          "text": "是的，我们并不是在说中国的这套系统就是完美的，这只是庞大人口和快速发展所带来的现实。",
+          "text": "ふふ、練習中は全然変じゃないですよ。例えば、朝『今日は何を食べようかな』とか、『あ、寒い』とか、ちょっとしたことを日本語で言ってみる。",
           "speech_text": "",
-          "en": "Yes, we are not saying this Chinese system is perfect, it is just a reality brought about by a massive population and rapid development.",
+          "en": "Heh, it's not weird at all during practice. For example, in the morning say 'What should I eat today?' or 'Oh, it's cold', little things in Japanese.",
           "summary": false
         },
         {
-          "segment_id": "seg_067",
+          "segment_id": "seg_047",
           "speaker": "female",
-          "text": "我真心希望在未来，当社会变得越来越好，年轻的一代能有更多的自由。",
+          "text": "ああ、それなら私もできそう。誰も聞いてないし、間違えても気にならないもんね。",
           "speech_text": "",
-          "en": "I sincerely hope that in the future, as society gets better and better, the younger generation can have more freedom.",
+          "en": "Ah, I could probably do that. No one's listening, and I don't care if I make mistakes.",
           "summary": false
         },
         {
-          "segment_id": "seg_068",
-          "speaker": "female",
-          "text": "去选择他们真正热爱的东西，而不用再天天担心生存的问题。",
-          "speech_text": "",
-          "en": "To choose what they truly love, without having to worry about survival issues every single day.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_069",
+          "segment_id": "seg_048",
           "speaker": "male",
-          "text": "我相信那一天一定会到来的。但是在当下，我们依然要尊重那些为了过上好日子而努力拼搏的普通人。",
+          "text": "そうそう。それが大事です。プレッシャーがない状態で、まずは口を動かす習慣をつける。",
           "speech_text": "",
-          "en": "I believe that day will definitely come. But right now, we still have to respect those ordinary people who strive hard to live a better life.",
+          "en": "Exactly. That's important. First, build the habit of moving your mouth in a pressure-free state.",
+          "summary": false
+        }
+      ]
+    },
+    {
+      "chapter_id": "ch_005",
+      "block_id": "block_010",
+      "purpose": "練習法2：オウム返しと遅延スピーキング",
+      "segments": [
+        {
+          "segment_id": "seg_049",
+          "speaker": "female",
+          "text": "他にはどんな練習があるの？",
+          "speech_text": "",
+          "en": "What other kinds of practice are there?",
           "summary": false
         },
         {
-          "segment_id": "seg_070",
-          "speaker": "female",
-          "text": "是的，每一个努力生活的人，都值得被尊重。",
+          "segment_id": "seg_050",
+          "speaker": "male",
+          "text": "『オウム返し』ですね。ポッドキャストやドラマの短いセリフを聞いて、そのまま繰り返す。",
           "speech_text": "",
-          "en": "Yes, everyone who works hard at living deserves to be respected.",
+          "en": "There's 'parroting' — listen to a short line from a podcast or drama and repeat it exactly.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_051",
+          "speaker": "female",
+          "text": "それってシャドーイングと似てる？",
+          "speech_text": "",
+          "en": "Is that similar to shadowing?",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_052",
+          "speaker": "male",
+          "text": "似ていますが、オウム返しは少し遅れて、または止めてからやってもいいんです。自分のペースで大丈夫。",
+          "speech_text": "",
+          "en": "Similar, but with parroting, you can do it with a slight delay or after pausing. It's fine at your own pace.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_053",
+          "speaker": "female",
+          "text": "なるほど。それならハードルが低いかも。あと、『遅延スピーキング』って聞いたことあるんだけど、それも効果あるの？",
+          "speech_text": "",
+          "en": "I see. That might be lower hurdle. Also, I've heard of 'delayed speaking' — is that effective too?",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_054",
+          "speaker": "male",
+          "text": "はい。例えば一文聞いて、頭の中で少しだけ整理してから、自分の言葉で言い直す練習です。これがすごく力になります。",
+          "speech_text": "",
+          "en": "Yes. For example, listen to a sentence, organize it a little in your head, then rephrase it in your own words. That becomes very powerful.",
+          "summary": false
+        }
+      ]
+    },
+    {
+      "chapter_id": "ch_005",
+      "block_id": "block_011",
+      "purpose": "練習法3：間違いを恐れない環境を作る、言語交換やAIとの会話",
+      "segments": [
+        {
+          "segment_id": "seg_055",
+          "speaker": "female",
+          "text": "でもやっぱり、実際に誰かと話す練習も必要だよね。",
+          "speech_text": "",
+          "en": "But still, practicing with an actual person is necessary, right?",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_056",
+          "speaker": "male",
+          "text": "もちろん。でも、いきなりネイティブと話すのは緊張するから、まずは言語交換アプリで『間違えてもいいですよ』って相手に伝えてしまうのも手です。",
+          "speech_text": "",
+          "en": "Of course. But since it's nerve-wracking to speak with a native right away, you can first use a language exchange app and tell your partner 'It's okay if I make mistakes'.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_057",
+          "speaker": "female",
+          "text": "ああ、事前に言っておくのはいいアイデアだね。あと、最近はAIと話せるアプリもあるし。",
+          "speech_text": "",
+          "en": "Ah, saying that in advance is a good idea. Also, there are apps these days where you can talk to AI.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_058",
+          "speaker": "male",
+          "text": "そうですね。AIは絶対に笑わないし、いつでも練習できる。初心者にはとても優しい環境です。",
+          "speech_text": "",
+          "en": "Right. AI never laughs, and you can practice anytime. It's a very friendly environment for beginners.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_059",
+          "speaker": "female",
+          "text": "じゃあ、そういうところで『話す筋肉』を鍛えてから、実践に行くのがいいのか。",
+          "speech_text": "",
+          "en": "So it's good to train your 'speaking muscles' in places like that before going into real practice.",
+          "summary": false
+        },
+        {
+          "segment_id": "seg_060",
+          "speaker": "male",
+          "text": "まさに。階段を一つずつ登るように。",
+          "speech_text": "",
+          "en": "Exactly. Like climbing stairs one step at a time.",
           "summary": false
         }
       ]
     },
     {
       "chapter_id": "ch_006",
-      "block_id": "summary_cta",
-      "purpose": "总结本集话题，向听众提问并呼吁点赞订阅",
+      "block_id": "block_summary_cta",
+      "purpose": "本日のトピックをまとめ、リスナーにチャンネル登録と高評価を促す",
       "segments": [
         {
-          "segment_id": "seg_071",
+          "segment_id": "seg_061",
           "speaker": "female",
-          "text": "好了，今天我们聊了一个稍微有些沉重，但非常真实的话题：为什么在中国选专业这么重要。",
+          "text": "今日の話、すごく勉強になった。聞けるのに話せないのは、脳の仕組みや心理、練習不足が原因で、特別なことじゃないんだね。",
           "speech_text": "",
-          "en": "Alright, today we talked about a slightly heavy but very real topic: why choosing a major is so important in China.",
+          "en": "Today's talk was really educational. That being able to understand but not speak is due to brain mechanisms, psychology, and lack of practice, and it's nothing special.",
           "summary": false
         },
         {
-          "segment_id": "seg_072",
+          "segment_id": "seg_062",
           "speaker": "male",
-          "text": "我们从张雪峰老师的新闻说起，聊到了激烈的高考、换专业的困难，还有普通家庭的希望与压力。",
+          "text": "そうです。そして大事なのは、少しずつでも『話す』練習を積み重ねること。完璧を求めすぎないこと。",
           "speech_text": "",
-          "en": "We started from the news of Teacher Zhang Xuefeng, and talked about the fierce Gaokao, the difficulty of changing majors, as well as the hopes and pressures of ordinary families.",
+          "en": "That's right. And what's important is to accumulate speaking practice little by little, and not to seek perfection too much.",
           "summary": false
         },
         {
-          "segment_id": "seg_073",
+          "segment_id": "seg_063",
           "speaker": "female",
-          "text": "希望今天的内容，能帮助正在学习中文的你们，更深入地了解真实的中国社会。它不仅仅是关于考试，更是关于生活的。",
+          "text": "私も今日から独り言とオウム返し、やってみるね。みんなも一緒にやってみようよ。",
           "speech_text": "",
-          "en": "I hope today's content can help you who are learning Chinese to understand the real Chinese society more deeply. It's not just about exams, it's about life.",
+          "en": "I'll start self-talk and parroting from today. Everyone, let's try it together.",
           "summary": false
         },
         {
-          "segment_id": "seg_074",
+          "segment_id": "seg_064",
           "speaker": "male",
-          "text": "是的。我们也很想听听你们的故事。在你们的国家，大学换专业容易吗？大学专业会决定你未来的工作吗？",
+          "text": "このポッドキャストが役に立ったと思ったら、ぜひチャンネル登録と高評価をお願いします。",
           "speech_text": "",
-          "en": "Yes. We would also love to hear your stories. In your country, is it easy to change university majors? Does your university major decide your future job?",
+          "en": "If you found this podcast helpful, please subscribe to the channel and give us a like.",
           "summary": false
         },
         {
-          "segment_id": "seg_075",
+          "segment_id": "seg_065",
           "speaker": "female",
-          "text": "欢迎大家在视频下面用中文留言！和我们分享你的看法，这也是非常好的中文练习哦。",
+          "text": "それでは、また次のエピソードでお会いしましょう。バイバイ！",
           "speech_text": "",
-          "en": "Everyone is welcome to leave a comment in Chinese below the video! Sharing your views with us is also a very good Chinese practice.",
+          "en": "Well then, see you in the next episode. Bye bye!",
           "summary": false
         },
         {
-          "segment_id": "seg_076",
+          "segment_id": "seg_066",
           "speaker": "male",
-          "text": "如果你喜欢我们今天的播客，觉得对你有帮助，请一定记得点击点赞、订阅我们的频道。",
+          "text": "またね！",
           "speech_text": "",
-          "en": "If you liked our podcast today and feel it was helpful to you, please definitely remember to hit like and subscribe to our channel.",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_077",
-          "speaker": "female",
-          "text": "也欢迎分享给你身边同样在学中文的朋友们！",
-          "speech_text": "",
-          "en": "Also welcome to share it with your friends who are also learning Chinese around you!",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_078",
-          "speaker": "male",
-          "text": "最后，让我们也祝愿张雪峰老师一路走好。感谢大家今天的陪伴，我们下期节目再见啦！",
-          "speech_text": "",
-          "en": "Finally, let us also wish Teacher Zhang Xuefeng a peaceful journey. Thank you everyone for your company today, we'll see you in the next episode!",
-          "summary": false
-        },
-        {
-          "segment_id": "seg_079",
-          "speaker": "female",
-          "text": "谢谢大家，下期再见！",
-          "speech_text": "",
-          "en": "Thank you everyone, see you next time!",
+          "en": "See you!",
           "summary": true
         }
       ]

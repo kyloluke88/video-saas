@@ -1,6 +1,7 @@
 package podcast
 
 import (
+	"strings"
 	"testing"
 
 	"worker/internal/dto"
@@ -222,5 +223,45 @@ func TestChineseSubtitleLayout_ShrinksTopSectionWithoutMovingEnglishArea(t *test
 	expectedTop := boxTop + int(float64(boxHeight)*0.02) + int(float64(layout.PlayH)*0.03)
 	if got := layout.TopSectionTop; got != expectedTop {
 		t.Fatalf("top section did not shift down: got %d want %d", got, expectedTop)
+	}
+}
+
+func TestChineseSubtitleLayout_Style1UsesConfiguredTopBandsAndColors(t *testing.T) {
+	layout := chineseSubtitleLayout(1920, 1080, 1)
+	if got, want := layout.TopSectionTop, int(float64(layout.PlayH)*designType1TopBandTopRatio); got != want {
+		t.Fatalf("unexpected style1 top band start: got %d want %d", got, want)
+	}
+	expectedEnglishTop := layout.BoxTop + int(float64(layout.BoxHeight)*designType1TopSectionRatio)
+	if got := layout.BottomSectionTop; got != expectedEnglishTop {
+		t.Fatalf("unexpected style1 english band start: got %d want %d", got, expectedEnglishTop)
+	}
+	if got, want := layout.HanziColor, assColorRGB(255, 255, 255); got != want {
+		t.Fatalf("unexpected style1 hanzi color: got %q want %q", got, want)
+	}
+	if got, want := layout.HighlightColor, assColorRGB(196, 236, 121); got != want {
+		t.Fatalf("unexpected style1 highlight color: got %q want %q", got, want)
+	}
+	if got, want := layout.EnglishColor, assColorRGB(183, 236, 70); got != want {
+		t.Fatalf("unexpected style1 english color: got %q want %q", got, want)
+	}
+	if got, want := layout.RubyBold, 0; got != want {
+		t.Fatalf("unexpected style1 ruby bold: got %d want %d", got, want)
+	}
+
+	var b strings.Builder
+	writeASSHeader(&b, layout)
+	if !strings.Contains(b.String(), layout.HighlightColor) {
+		t.Fatalf("expected style1 ass header to use configured highlight color")
+	}
+}
+
+func TestChineseSubtitleLayout_Style2MatchesType1Typography(t *testing.T) {
+	style1 := chineseSubtitleLayout(1920, 1080, 1)
+	style2 := chineseSubtitleLayout(1920, 1080, 2)
+	if style2.RubySize != style1.RubySize || style2.HanziSize != style1.HanziSize || style2.EnglishSize != style1.EnglishSize {
+		t.Fatalf("expected style2 font sizes to match style1 typography")
+	}
+	if style2.RubyBold != style1.RubyBold || style2.HanziBold != style1.HanziBold || style2.EnglishBold != style1.EnglishBold {
+		t.Fatalf("expected style2 font weights to match style1 typography")
 	}
 }

@@ -50,7 +50,7 @@ func buildComposePayloadForRunMode2(saved, current dto.PodcastAudioGeneratePaylo
 		TargetPlatform: firstNonEmpty(current.TargetPlatform, saved.TargetPlatform),
 		AspectRatio:    firstNonEmpty(current.AspectRatio, saved.AspectRatio),
 		Resolution:     firstNonEmpty(current.Resolution, saved.Resolution),
-		DesignStyle:    firstPositive(current.DesignStyle, saved.DesignStyle, 1),
+		DesignStyle:    normalizePodcastDesignStyle(firstPositive(current.DesignStyle, saved.DesignStyle, 1)),
 	}, nil
 }
 

@@ -56,6 +56,22 @@ func normalizePodcastTTSType(value int) int {
 	return 1
 }
 
+func validPodcastDesignStyle(value int) bool {
+	switch value {
+	case 1, 2:
+		return true
+	default:
+		return false
+	}
+}
+
+func normalizePodcastDesignStyle(value int) int {
+	if value == 2 {
+		return 2
+	}
+	return 1
+}
+
 func decodePayload(raw map[string]interface{}) (dto.PodcastAudioGeneratePayload, error) {
 	data, err := json.Marshal(raw)
 	if err != nil {
@@ -166,6 +182,9 @@ func validateFreshGeneratePayload(payload dto.PodcastAudioGeneratePayload) error
 	if len(compactNonEmptyStrings(payload.BgImgFilenames)) == 0 {
 		return fmt.Errorf("bg_img_filenames is required")
 	}
+	if payload.DesignStyle != 0 && !validPodcastDesignStyle(payload.DesignStyle) {
+		return fmt.Errorf("design_style must be 1 or 2")
+	}
 	return nil
 }
 
@@ -190,7 +209,7 @@ func generateAndPublishCompose(ch *amqp.Channel, payload dto.PodcastAudioGenerat
 		TargetPlatform: payload.TargetPlatform,
 		AspectRatio:    payload.AspectRatio,
 		Resolution:     payload.Resolution,
-		DesignStyle:    payload.DesignStyle,
+		DesignStyle:    normalizePodcastDesignStyle(payload.DesignStyle),
 	})
 }
 
@@ -203,7 +222,7 @@ func publishComposeTask(ch *amqp.Channel, payload dto.PodcastComposePayload) err
 		"target_platform":  payload.TargetPlatform,
 		"aspect_ratio":     payload.AspectRatio,
 		"resolution":       payload.Resolution,
-		"design_style":     payload.DesignStyle,
+		"design_style":     normalizePodcastDesignStyle(payload.DesignStyle),
 	})
 }
 

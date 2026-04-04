@@ -1,12 +1,14 @@
 package podcast_audio_service
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 
 	"worker/internal/dto"
+	services "worker/services"
 )
 
 type audioArtifacts struct {
@@ -84,16 +86,27 @@ func validateAlignedTimeline(script dto.PodcastScript, dialoguePath string) erro
 		startMS := seg.StartMS
 		endMS := seg.EndMS
 		if endMS <= startMS {
-			return fmt.Errorf("invalid aligned timeline at segment %s: start_ms=%d end_ms=%d", seg.SegmentID, startMS, endMS)
+			return markAlignedTimelineNonRetryable(fmt.Errorf("invalid aligned timeline at segment %s: start_ms=%d end_ms=%d", seg.SegmentID, startMS, endMS))
 		}
 		if i > 0 && startMS < prevEnd {
-			return fmt.Errorf("non-monotonic aligned timeline at segment %s: start_ms=%d prev_end_ms=%d", seg.SegmentID, startMS, prevEnd)
+			return markAlignedTimelineNonRetryable(fmt.Errorf("non-monotonic aligned timeline at segment %s: start_ms=%d prev_end_ms=%d", seg.SegmentID, startMS, prevEnd))
 		}
 		prevEnd = endMS
 	}
 
 	if durationMS > 0 && prevEnd > durationMS+1000 {
-		return fmt.Errorf("aligned timeline exceeds dialogue audio: last_end_ms=%d audio_duration_ms=%d", prevEnd, durationMS)
+		return markAlignedTimelineNonRetryable(fmt.Errorf("aligned timeline exceeds dialogue audio: last_end_ms=%d audio_duration_ms=%d", prevEnd, durationMS))
 	}
 	return nil
+}
+
+func markAlignedTimelineNonRetryable(err error) error {
+	if err == nil {
+		return nil
+	}
+	var nonRetryable services.NonRetryableError
+	if errors.As(err, &nonRetryable) {
+		return err
+	}
+	return services.NonRetryableError{Err: err}
 }

@@ -798,7 +798,7 @@ func writeJapaneseASSHeader(b *strings.Builder, layout subtitleLayout) {
 	b.WriteString("Style: Box," + layout.HanziFontName + "," + strconv.Itoa(layout.HanziSize) + "," + layout.BoxColor + "," + layout.BoxColor + "," + layout.BoxColor + "," + layout.BoxColor + ",0,0,0,0,100,100,0,0,1,0,0,7,0,0,0,1\n")
 	b.WriteString("Style: Ruby," + layout.RubyFontName + "," + strconv.Itoa(layout.RubySize) + "," + layout.RubyColor + "," + layout.RubyColor + "," + layout.OutlineColor + ",&H64000000," + strconv.Itoa(layout.RubyBold) + ",0,0,0,100,100," + assSpacingText(layout.RubySpacing) + ",0,1,0,0,5,10,10,10,1\n")
 	b.WriteString("Style: JaBase," + layout.HanziFontName + "," + strconv.Itoa(layout.HanziSize) + "," + layout.HanziColor + "," + layout.HanziColor + "," + layout.OutlineColor + ",&H64000000," + strconv.Itoa(layout.HanziBold) + ",0,0,0,100,100," + assSpacingText(layout.HanziSpacing) + ",0,1,0,0,5,10,10,10,1\n")
-	b.WriteString("Style: JaActive," + layout.HanziFontName + "," + strconv.Itoa(layout.HanziSize) + ",&H00CC66CC,&H00CC66CC," + layout.OutlineColor + ",&H64000000,0,0,0,0,100,100," + assSpacingText(layout.HanziSpacing) + ",0,1,0,0,5,10,10,10,1\n")
+	b.WriteString("Style: JaActive," + layout.HanziFontName + "," + strconv.Itoa(layout.HanziSize) + "," + layout.HighlightColor + "," + layout.HighlightColor + "," + layout.OutlineColor + ",&H64000000,0,0,0,0,100,100," + assSpacingText(layout.HanziSpacing) + ",0,1,0,0,5,10,10,10,1\n")
 	b.WriteString("Style: English," + layout.EnglishFontName + "," + strconv.Itoa(layout.EnglishSize) + "," + layout.EnglishColor + "," + layout.EnglishColor + "," + layout.EnglishColor + ",&H00000000," + strconv.Itoa(layout.EnglishBold) + ",0,0,0,100,100," + assSpacingText(layout.EnglishSpacing) + ",0,1,0,0,5,10,10,10,1\n\n")
 
 	b.WriteString("[Events]\n")
@@ -813,8 +813,6 @@ func japaneseSubtitlePresetFor(style int) subtitlePreset {
 	switch style {
 	case 2:
 		return japaneseSubtitlePresetStyle2()
-	case 3:
-		return japaneseSubtitlePresetStyle3()
 	case 1:
 		fallthrough
 	default:
@@ -823,11 +821,25 @@ func japaneseSubtitlePresetFor(style int) subtitlePreset {
 }
 
 func japaneseSubtitlePresetStyle1() subtitlePreset {
-	return japaneseSubtitlePresetStyle2()
+	preset := japaneseSubtitlePresetStyle2()
+	preset.BoxTopRatio = designType1TopBandTopRatio
+	preset.BoxHeightRatio = designType1BoxHeightRatio
+	preset.TopSectionRatio = designType1TopSectionRatio
+	preset.BottomSectionRatio = designType1BottomSectionRatio
+	preset.TopSectionTopInset = 0
+	preset.TopSectionOffsetRatio = 0
+	preset.BottomSectionTopInset = 0
+	preset.RubyColor = assColorRGB(255, 255, 255)
+	preset.HanziColor = assColorRGB(255, 255, 255)
+	preset.HighlightColor = assColorRGB(196, 236, 121)
+	preset.EnglishColor = assColorRGB(183, 236, 70)
+	preset.OutlineColor = assColorRGB(0, 0, 0)
+	applyJapaneseDesignType1Typography(&preset)
+	return preset
 }
 
 func japaneseSubtitlePresetStyle2() subtitlePreset {
-	return subtitlePreset{
+	preset := subtitlePreset{
 		RubyFontName:          "Maruko Gothic CJKjp Light",  // 假名字体
 		HanziFontName:         "Maruko Gothic CJKjp Medium", // 日文正文汉字/假名字体
 		EnglishFontName:       "Radley",                     // 英文字幕字体
@@ -839,32 +851,41 @@ func japaneseSubtitlePresetStyle2() subtitlePreset {
 		TopSectionRatio:       0.7101,                       // 汉字区域高度占底框高度比例
 		BottomSectionRatio:    0.2699,                       // 英文区域高度占底框高度比例
 		TopSectionTopInset:    0.02,                         // 上半区顶部额外内边距比例
-		BottomSectionTopInset: 0,                            // 下半区顶部额外内边距比例
-		RubySize:              36,                           // 假名字号
-		HanziSize:             76,                           // 日文正文字号
-		EnglishSize:           46,                           // 英文字号
-		BaseGap:               1,                            // 字与字之间的基础间距
+		TopSectionOffsetRatio: 0.03,
+		BottomSectionTopInset: 0,  // 下半区顶部额外内边距比例
+		RubySize:              36, // 假名字号
+		HanziSize:             76, // 日文正文字号
+		EnglishSize:           46, // 英文字号
+		BaseGap:               1,  // 字与字之间的基础间距
 		HanziSpacing:          0.1083333333,
 		RubySpacing:           -2, // ruby 假名字距
 		EnglishSpacing:        0,  // 英文字距
 		PunctuationGapRatio:   0.4615384615,
-		MaxLineChars:          20,           // 正文每行最大字符数
-		RowGap:                1,            // 假名与正文之间的垂直间距
-		TokenLineGap:          16,           // 两行日文之间的垂直间距
-		EnglishLineGap:        8,            // 英文多行时的行间距
-		BoxColor:              "&HFF000000", // 底框颜色
-		RubyColor:             "&H00000000", // 假名颜色
-		HanziColor:            "&H00000000", // 日文正文颜色
-		EnglishColor:          "&H00494393", // 英文字幕颜色
-		OutlineColor:          "&H00DDD6CF", // 轮廓/描边颜色
-		RubyBold:              0,            // 假名是否粗体
-		HanziBold:             0,            // 日文正文是否粗体
-		EnglishBold:           1,            // 英文字幕是否粗体
+		MaxLineChars:          20,                        // 正文每行最大字符数
+		RowGap:                1,                         // 假名与正文之间的垂直间距
+		TokenLineGap:          16,                        // 两行日文之间的垂直间距
+		EnglishLineGap:        8,                         // 英文多行时的行间距
+		BoxColor:              "&HFF000000",              // 底框颜色
+		RubyColor:             "&H00000000",              // 假名颜色
+		HanziColor:            "&H00000000",              // 日文正文颜色
+		HighlightColor:        "&H00CC66CC",              // 高亮颜色
+		EnglishColor:          assColorRGB(183, 236, 70), // 英文字幕颜色
+		OutlineColor:          "&H00DDD6CF",              // 轮廓/描边颜色
+		RubyBold:              0,                         // 假名是否粗体
+		HanziBold:             0,                         // 日文正文是否粗体
+		EnglishBold:           1,                         // 英文字幕是否粗体
 	}
+	applyJapaneseDesignType1Typography(&preset)
+	return preset
 }
 
-func japaneseSubtitlePresetStyle3() subtitlePreset {
-	return japaneseSubtitlePresetStyle2()
+func applyJapaneseDesignType1Typography(preset *subtitlePreset) {
+	preset.RubySize = 38
+	preset.HanziSize = 78
+	preset.EnglishSize = 49
+	preset.RubyBold = 0
+	preset.HanziBold = 0
+	preset.EnglishBold = 1
 }
 
 // Keep a stable "base" entry for future style tuning workflows.

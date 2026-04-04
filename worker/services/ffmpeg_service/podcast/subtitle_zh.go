@@ -11,6 +11,16 @@ import (
 	"worker/internal/dto"
 )
 
+const (
+	designType1ReferenceHeight    = 775.0
+	designType1TopBandTopRatio    = 55.0 / designType1ReferenceHeight
+	designType1TopBandBottomRatio = 185.0 / designType1ReferenceHeight
+	designType1ENBandBottomRatio  = 270.0 / designType1ReferenceHeight
+	designType1BoxHeightRatio     = designType1ENBandBottomRatio - designType1TopBandTopRatio
+	designType1TopSectionRatio    = (designType1TopBandBottomRatio - designType1TopBandTopRatio) / designType1BoxHeightRatio
+	designType1BottomSectionRatio = (designType1ENBandBottomRatio - designType1TopBandBottomRatio) / designType1BoxHeightRatio
+)
+
 func writeChineseASS(script dto.PodcastScript, projectDir, resolution string, style int) (string, error) {
 	if len(script.Segments) == 0 {
 		return "", nil
@@ -127,6 +137,7 @@ type subtitleLayout struct {
 	BoxColor            string
 	RubyColor           string
 	HanziColor          string
+	HighlightColor      string
 	EnglishColor        string
 	OutlineColor        string
 	RubyFontName        string
@@ -140,7 +151,7 @@ type subtitleLayout struct {
 // 中文和日文公用一种布局计算方式，但预设参数不同
 func newSubtitleLayout(playW, playH int, preset subtitlePreset) subtitleLayout {
 	scale := float64(playH) / 1080.0
-	topSectionOffset := int(float64(playH) * 0.03)
+	topSectionOffset := int(float64(playH) * preset.TopSectionOffsetRatio)
 
 	boxLeft := int(float64(playW) * preset.BoxLeftRatio)
 	boxTop := int(float64(playH) * preset.BoxTopRatio)
@@ -186,6 +197,7 @@ func newSubtitleLayout(playW, playH int, preset subtitlePreset) subtitleLayout {
 		BoxColor:            preset.BoxColor,
 		RubyColor:           preset.RubyColor,
 		HanziColor:          preset.HanziColor,
+		HighlightColor:      preset.HighlightColor,
 		EnglishColor:        preset.EnglishColor,
 		OutlineColor:        preset.OutlineColor,
 		RubyFontName:        preset.RubyFontName,
@@ -213,6 +225,7 @@ type subtitlePreset struct {
 	TopSectionRatio       float64
 	BottomSectionRatio    float64
 	TopSectionTopInset    float64
+	TopSectionOffsetRatio float64
 	BottomSectionTopInset float64
 	RubySize              int
 	HanziSize             int
@@ -229,6 +242,7 @@ type subtitlePreset struct {
 	BoxColor              string
 	RubyColor             string
 	HanziColor            string
+	HighlightColor        string
 	EnglishColor          string
 	OutlineColor          string
 	RubyBold              int
@@ -240,8 +254,6 @@ func chineseSubtitlePresetFor(style int) subtitlePreset {
 	switch style {
 	case 2:
 		return chineseSubtitlePresetStyle2()
-	case 3:
-		return chineseSubtitlePresetStyle3()
 	case 1:
 		fallthrough
 	default:
@@ -250,11 +262,25 @@ func chineseSubtitlePresetFor(style int) subtitlePreset {
 }
 
 func chineseSubtitlePresetStyle1() subtitlePreset {
-	return chineseSubtitlePresetStyle2()
+	preset := chineseSubtitlePresetStyle2()
+	preset.BoxTopRatio = designType1TopBandTopRatio
+	preset.BoxHeightRatio = designType1BoxHeightRatio
+	preset.TopSectionRatio = designType1TopSectionRatio
+	preset.BottomSectionRatio = designType1BottomSectionRatio
+	preset.TopSectionTopInset = 0
+	preset.TopSectionOffsetRatio = 0
+	preset.BottomSectionTopInset = 0
+	preset.RubyColor = assColorRGB(255, 255, 255)
+	preset.HanziColor = assColorRGB(255, 255, 255)
+	preset.HighlightColor = assColorRGB(196, 236, 121)
+	preset.EnglishColor = assColorRGB(183, 236, 70)
+	preset.OutlineColor = assColorRGB(0, 0, 0)
+	applyChineseDesignType1Typography(&preset)
+	return preset
 }
 
 func chineseSubtitlePresetStyle2() subtitlePreset {
-	return subtitlePreset{
+	preset := subtitlePreset{
 		RubyFontName:          "Tenor Sans",
 		HanziFontName:         "HYWenRunSongYun J",
 		EnglishFontName:       "Radley",
@@ -266,11 +292,12 @@ func chineseSubtitlePresetStyle2() subtitlePreset {
 		TopSectionRatio:       0.7101, // 汉字区域高度占底框高度比例
 		BottomSectionRatio:    0.2699, // 英文区域高度占底框高度比例
 		TopSectionTopInset:    0.02,   // 上半区顶部额外内边距比例
-		BottomSectionTopInset: 0,      // 下半区顶部额外内边距比例
-		RubySize:              36,     // 假名字号
-		HanziSize:             76,     // 中文正文字号
-		EnglishSize:           46,     // 英文字号
-		BaseGap:               1,      // 字与字之间的基础间距
+		TopSectionOffsetRatio: 0.03,
+		BottomSectionTopInset: 0,  // 下半区顶部额外内边距比例
+		RubySize:              36, // 假名字号
+		HanziSize:             76, // 中文正文字号
+		EnglishSize:           46, // 英文字号
+		BaseGap:               1,  // 字与字之间的基础间距
 		HanziSpacing:          0.1083333333,
 		RubySpacing:           -2,
 		EnglishSpacing:        0, // 英文字距
@@ -282,16 +309,24 @@ func chineseSubtitlePresetStyle2() subtitlePreset {
 		BoxColor:              "&HFF000000",
 		RubyColor:             "&H00000000",
 		HanziColor:            "&H00000000",
-		EnglishColor:          "&H00494393",
+		HighlightColor:        "&H00CC66CC",
+		EnglishColor:          assColorRGB(183, 236, 70),
 		OutlineColor:          "&H00DDD6CF",
 		RubyBold:              0,
 		HanziBold:             1,
 		EnglishBold:           1,
 	}
+	applyChineseDesignType1Typography(&preset)
+	return preset
 }
 
-func chineseSubtitlePresetStyle3() subtitlePreset {
-	return chineseSubtitlePresetStyle2()
+func applyChineseDesignType1Typography(preset *subtitlePreset) {
+	preset.RubySize = 38
+	preset.HanziSize = 78
+	preset.EnglishSize = 49
+	preset.RubyBold = 0
+	preset.HanziBold = 1
+	preset.EnglishBold = 1
 }
 
 // Keep a stable "base" entry for future style tuning workflows.
@@ -340,6 +375,10 @@ func assSpacingText(value float64) string {
 	return strconv.FormatFloat(value, 'f', 2, 64)
 }
 
+func assColorRGB(r, g, b int) string {
+	return fmt.Sprintf("&H00%02X%02X%02X", b, g, r)
+}
+
 func writeASSHeader(b *strings.Builder, layout subtitleLayout) {
 	b.WriteString("[Script Info]\n")
 	b.WriteString("ScriptType: v4.00+\n")
@@ -356,7 +395,7 @@ func writeASSHeader(b *strings.Builder, layout subtitleLayout) {
 	b.WriteString("Style: Box," + layout.HanziFontName + ",20," + layout.BoxColor + "," + layout.BoxColor + "," + layout.BoxColor + "," + layout.BoxColor + ",0,0,0,0,100,100,0,0,1,0,0,7,0,0,0,1\n")
 	b.WriteString("Style: Ruby," + layout.RubyFontName + "," + strconv.Itoa(layout.RubySize) + "," + layout.RubyColor + "," + layout.RubyColor + "," + layout.OutlineColor + ",&H64000000," + strconv.Itoa(layout.RubyBold) + ",0,0,0,100,100," + assSpacingText(layout.RubySpacing) + ",0,1,1,0,5,10,10,10,1\n")
 	b.WriteString("Style: Hanzi," + layout.HanziFontName + "," + strconv.Itoa(layout.HanziSize) + "," + layout.HanziColor + "," + layout.HanziColor + "," + layout.OutlineColor + ",&H64000000," + strconv.Itoa(layout.HanziBold) + ",0,0,0,100,100," + assSpacingText(layout.HanziSpacing) + ",0,1,1,0,5,10,10,10,1\n")
-	b.WriteString("Style: HanziActive," + layout.HanziFontName + "," + strconv.Itoa(layout.HanziSize) + ",&H00CC66CC,&H00CC66CC," + layout.OutlineColor + ",&H64000000,0,0,0,0,100,100," + assSpacingText(layout.HanziSpacing) + ",0,1,1,0,5,10,10,10,1\n")
+	b.WriteString("Style: HanziActive," + layout.HanziFontName + "," + strconv.Itoa(layout.HanziSize) + "," + layout.HighlightColor + "," + layout.HighlightColor + "," + layout.OutlineColor + ",&H64000000,0,0,0,0,100,100," + assSpacingText(layout.HanziSpacing) + ",0,1,1,0,5,10,10,10,1\n")
 	b.WriteString("Style: English," + layout.EnglishFontName + "," + strconv.Itoa(layout.EnglishSize) + "," + layout.EnglishColor + "," + layout.EnglishColor + "," + layout.OutlineColor + ",&H64000000," + strconv.Itoa(layout.EnglishBold) + ",0,0,0,100,100," + assSpacingText(layout.EnglishSpacing) + ",0,1,1,0,5,10,10,10,1\n\n")
 
 	b.WriteString("[Events]\n")

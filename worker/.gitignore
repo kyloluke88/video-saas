@@ -1,6 +1,8 @@
 tmp/
 storage/logs/
 credentials/
+assets/podcast/bg-images/
+assets/podcast/scripts/
 .DS_Store
 .env
 .air.toml
