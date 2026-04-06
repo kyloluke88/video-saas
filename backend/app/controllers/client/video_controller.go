@@ -2,8 +2,10 @@ package client
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hash/fnv"
+	"net/http"
 	"regexp"
 	"sort"
 	"strings"
@@ -88,6 +90,12 @@ func (ctrl *VideoController) CreateIdiomStory(c *gin.Context) {
 		"plan":            plan,
 	})
 	if err != nil {
+		if errors.Is(err, queue.ErrDisabled) {
+			c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
+				"message": "rabbitmq is disabled on this environment",
+			})
+			return
+		}
 		response.Abort500(c, "enqueue idiom story plan task failed: "+err.Error())
 		return
 	}
@@ -134,6 +142,12 @@ func (ctrl *VideoController) SubmitPlan(c *gin.Context) {
 		"plan":            req.Plan,
 	})
 	if err != nil {
+		if errors.Is(err, queue.ErrDisabled) {
+			c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
+				"message": "rabbitmq is disabled on this environment",
+			})
+			return
+		}
 		response.Abort500(c, "enqueue plan task failed: "+err.Error())
 		return
 	}
@@ -189,6 +203,12 @@ func (ctrl *VideoController) CreatePodcastDialogue(c *gin.Context) {
 
 	taskID, err := queue.PublishVideoTask("podcast.audio.generate.v1", payload)
 	if err != nil {
+		if errors.Is(err, queue.ErrDisabled) {
+			c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
+				"message": "rabbitmq is disabled on this environment",
+			})
+			return
+		}
 		response.Abort500(c, "enqueue podcast audio task failed: "+err.Error())
 		return
 	}

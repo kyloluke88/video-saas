@@ -1,0 +1,37 @@
+services:
+  backend:
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST}
+    volumes:
+      - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/rabbitmq:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  worker:
+    image: ${WORKER_IMAGE}
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    env_file:
+      - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/env/worker.env
+    volumes:
+      - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/outputs:/app/outputs
+      - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/artifacts:/app/artifacts
+      - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/storage:/app/storage

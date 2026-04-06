@@ -2,6 +2,7 @@ package client
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 
 	"api/pkg/database"
@@ -29,12 +30,14 @@ func (ctrl *SystemController) Health(c *gin.Context) {
 	if pkgredis.Redis == nil || pkgredis.Redis.Ping() != nil {
 		redisStatus = "down"
 	}
-	if queue.Ping() != nil {
+	if !queue.Enabled() {
+		rabbitStatus = "disabled"
+	} else if queue.Ping() != nil {
 		rabbitStatus = "down"
 	}
 
 	status := "ok"
-	if dbStatus != "up" || redisStatus != "up" || rabbitStatus != "up" {
+	if dbStatus != "up" || redisStatus != "up" || (queue.Enabled() && rabbitStatus != "up") {
 		status = "degraded"
 	}
 
@@ -49,6 +52,13 @@ func (ctrl *SystemController) Health(c *gin.Context) {
 
 // PushTask 推送任务到 RabbitMQ
 func (ctrl *SystemController) PushTask(c *gin.Context) {
+	if !queue.Enabled() {
+		c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
+			"message": "rabbitmq is disabled on this environment",
+		})
+		return
+	}
+
 	task := c.Query("task")
 	if task == "" {
 		task = fmt.Sprintf("test_task_%d", time.Now().Unix())

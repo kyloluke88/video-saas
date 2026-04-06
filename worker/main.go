@@ -13,6 +13,7 @@ import (
 	idiompipeline "worker/internal/pipeline/idiom"
 	podcastaudiopipeline "worker/internal/pipeline/podcast_audio"
 	podcastcomposepipeline "worker/internal/pipeline/podcast_compose"
+	podcastpagepipeline "worker/internal/pipeline/podcast_page"
 	conf "worker/pkg/config"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -77,6 +78,7 @@ func newTaskScheduler() map[string]pipeline.TaskHandler {
 		"podcast.audio.generate.v1": podcastaudiopipeline.HandleGenerate,
 		"podcast.compose.v1":        podcastcomposepipeline.HandleCompose,
 		"upload.v1":                 idiompipeline.HandleUploadTask,
+		"podcast.page.persist.v1":   podcastpagepipeline.HandlePersist,
 	}
 }
 

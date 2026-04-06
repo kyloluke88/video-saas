@@ -1,0 +1,62 @@
+version: 0.2
+
+env:
+  shell: bash
+
+phases:
+  install:
+    runtime-versions:
+      golang: 1.24
+      nodejs: 20
+
+  pre_build:
+    commands:
+      - set -euo pipefail
+      - AWS_REGION="${AWS_DEFAULT_REGION:-${AWS_REGION:-us-east-1}}"
+      - AWS_ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
+      - ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+      - IMAGE_TAG="${CODEBUILD_RESOLVED_SOURCE_VERSION:-manual}"
+      - SHORT_SHA="${IMAGE_TAG:0:12}"
+      - BACKEND_IMAGE="${ECR_REGISTRY}/${ECR_BACKEND_REPOSITORY}:${SHORT_SHA}"
+      - FRONTEND_IMAGE="${ECR_REGISTRY}/${ECR_FRONTEND_REPOSITORY}:${SHORT_SHA}"
+      - WORKER_IMAGE="${ECR_REGISTRY}/${ECR_WORKER_REPOSITORY}:${SHORT_SHA}"
+      - aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin "${ECR_REGISTRY}"
+
+  build:
+    commands:
+      - pushd backend && GOCACHE=/tmp/go-build go test ./... && popd
+      - pushd frontend && npm ci && npm run build && popd
+      - |
+        if [[ "${BUILD_WORKER_IMAGE:-false}" == "true" ]]; then
+          pushd worker && GOCACHE=/tmp/go-build go test ./... && popd
+        else
+          echo "Skipping worker tests because BUILD_WORKER_IMAGE=false"
+        fi
+      - docker build -f backend/Dockerfile.prod -t "${BACKEND_IMAGE}" ./backend
+      - docker build -f frontend/Dockerfile.prod -t "${FRONTEND_IMAGE}" ./frontend
+      - |
+        if [[ "${BUILD_WORKER_IMAGE:-false}" == "true" ]]; then
+          docker build -f worker/Dockerfile.prod -t "${WORKER_IMAGE}" ./worker
+        else
+          echo "Skipping worker image build because BUILD_WORKER_IMAGE=false"
+        fi
+
+  post_build:
+    commands:
+      - docker push "${BACKEND_IMAGE}"
+      - docker push "${FRONTEND_IMAGE}"
+      - |
+        if [[ "${BUILD_WORKER_IMAGE:-false}" == "true" ]]; then
+          docker push "${WORKER_IMAGE}"
+        else
+          WORKER_IMAGE=""
+        fi
+      - mkdir -p infra/aws
+      - printf 'BACKEND_IMAGE=%s\nFRONTEND_IMAGE=%s\nWORKER_IMAGE=%s\n' "${BACKEND_IMAGE}" "${FRONTEND_IMAGE}" "${WORKER_IMAGE}" > infra/aws/image-tags.env
+
+artifacts:
+  files:
+    - appspec.yml
+    - docker-compose.prod.yml
+    - docker-compose.worker.prod.yml
+    - infra/aws/**/*

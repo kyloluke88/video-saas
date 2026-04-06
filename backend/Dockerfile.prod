@@ -1,0 +1,26 @@
+FROM golang:1.24-alpine AS builder
+
+WORKDIR /src
+
+RUN apk add --no-cache git
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /out/api .
+
+FROM alpine:3.22
+
+WORKDIR /app
+
+RUN apk add --no-cache ca-certificates wget
+
+COPY --from=builder /out/api /usr/local/bin/api
+
+EXPOSE 8080
+
+CMD ["/usr/local/bin/api", "serve"]

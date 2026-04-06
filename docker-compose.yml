@@ -53,7 +53,6 @@ services:
       - "8080:8080"
     volumes:
       - ./backend:/app
-      - ./worker/outputs:/data/worker-outputs:ro
     command: air
 
   worker:
@@ -65,6 +64,15 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+      postgres:
+        condition: service_started
+    environment:
+      DB_CONNECTION: postgresql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${POSTGRES_DB}
+      DB_USERNAME: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - ./worker:/app
 

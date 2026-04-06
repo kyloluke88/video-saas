@@ -22,8 +22,8 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func HandleUploadTask(_ *amqp.Channel, task dto.VideoTaskMessage) error {
-	return handleProjectUpload(task)
+func HandleUploadTask(ch *amqp.Channel, task dto.VideoTaskMessage) error {
+	return handleProjectUpload(ch, task)
 }
 
 func HandlePlan(ch *amqp.Channel, task dto.VideoTaskMessage) error {
@@ -214,31 +214,46 @@ func HandleProjectCompose(ch *amqp.Channel, task dto.VideoTaskMessage) error {
 		"project_id":    projectID,
 		"idiom_name_en": helpers.GetString(task.Payload, "idiom_name_en"),
 		"file_path":     finalPath,
+		"content_type":  "idiom",
 	})
 }
 
-func handleProjectUpload(task dto.VideoTaskMessage) error {
+func handleProjectUpload(ch *amqp.Channel, task dto.VideoTaskMessage) error {
 	projectID := helpers.GetString(task.Payload, "project_id")
 	filePath := helpers.GetString(task.Payload, "file_path")
+	contentType := strings.TrimSpace(helpers.GetString(task.Payload, "content_type"))
+	videoURL := ""
 
 	if !conf.Get[bool]("worker.s3_enabled") || strings.TrimSpace(conf.Get[string]("worker.s3_bucket")) == "" {
 		log.Printf("📦 S3 未启用，保留本地文件 project_id=%s path=%s", projectID, filePath)
-		return nil
+	} else {
+		objectKey := fmt.Sprintf("projects/%s/final.mp4", projectID)
+		publicURL, err := storageS3.UploadFile(storageS3.Config{
+			Endpoint:  conf.Get[string]("worker.s3_endpoint"),
+			Region:    conf.Get[string]("worker.s3_region"),
+			Bucket:    conf.Get[string]("worker.s3_bucket"),
+			AccessKey: conf.Get[string]("worker.s3_access_key"),
+			SecretKey: conf.Get[string]("worker.s3_secret_key"),
+			PublicURL: conf.Get[string]("worker.s3_public_url"),
+		}, filePath, objectKey)
+		if err != nil {
+			return err
+		}
+		videoURL = publicURL
+		log.Printf("☁️ 上传S3完成 project_id=%s url=%s", projectID, publicURL)
 	}
 
-	objectKey := fmt.Sprintf("projects/%s/final.mp4", projectID)
-	publicURL, err := storageS3.UploadFile(storageS3.Config{
-		Endpoint:  conf.Get[string]("worker.s3_endpoint"),
-		Region:    conf.Get[string]("worker.s3_region"),
-		Bucket:    conf.Get[string]("worker.s3_bucket"),
-		AccessKey: conf.Get[string]("worker.s3_access_key"),
-		SecretKey: conf.Get[string]("worker.s3_secret_key"),
-		PublicURL: conf.Get[string]("worker.s3_public_url"),
-	}, filePath, objectKey)
-	if err != nil {
-		return err
+	if contentType == "podcast" {
+		if err := pipeline.UpdatePodcastProjectUpload(projectID, videoURL, "", ""); err != nil {
+			log.Printf("⚠️ update podcast upload status failed project_id=%s err=%v", projectID, err)
+		}
+		return pipeline.PublishTask(ch, "podcast.page.persist.v1", map[string]interface{}{
+			"project_id":   projectID,
+			"video_url":    videoURL,
+			"content_type": "podcast",
+		})
 	}
-	log.Printf("☁️ 上传S3完成 project_id=%s url=%s", projectID, publicURL)
+
 	return nil
 }
 

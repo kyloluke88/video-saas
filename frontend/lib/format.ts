@@ -1,4 +1,4 @@
-export function formatUpdatedAt(value) {
+export function formatUpdatedAt(value?: string | null) {
   if (!value) {
     return "未知";
   }

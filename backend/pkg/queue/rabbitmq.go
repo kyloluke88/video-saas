@@ -3,6 +3,7 @@ package queue
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"regexp"
@@ -54,10 +55,42 @@ type VideoTaskMessage struct {
 
 var Rabbit *RabbitClient
 var rabbitMu sync.Mutex
+var rabbitEnabled = true
+var ErrDisabled = errors.New("rabbitmq is disabled")
+
+func SetEnabled(enabled bool) {
+	rabbitMu.Lock()
+	defer rabbitMu.Unlock()
+
+	rabbitEnabled = enabled
+	if enabled {
+		return
+	}
+
+	if Rabbit != nil {
+		if Rabbit.ch != nil {
+			_ = Rabbit.ch.Close()
+		}
+		if Rabbit.conn != nil {
+			_ = Rabbit.conn.Close()
+		}
+	}
+	Rabbit = nil
+}
+
+func Enabled() bool {
+	rabbitMu.Lock()
+	defer rabbitMu.Unlock()
+	return rabbitEnabled
+}
 
 func ConnectRabbitMQ(cfg RabbitConfig) error {
 	rabbitMu.Lock()
 	defer rabbitMu.Unlock()
+
+	if !rabbitEnabled {
+		return ErrDisabled
+	}
 
 	if Rabbit != nil && Rabbit.isOpen() {
 		return nil
@@ -72,6 +105,9 @@ func ConnectRabbitMQ(cfg RabbitConfig) error {
 }
 
 func Ping() error {
+	if !Enabled() {
+		return ErrDisabled
+	}
 	if Rabbit == nil || !Rabbit.isOpen() {
 		return fmt.Errorf("rabbitmq is not connected")
 	}
@@ -211,6 +247,9 @@ func ensureConnected() error {
 	rabbitMu.Lock()
 	defer rabbitMu.Unlock()
 
+	if !rabbitEnabled {
+		return ErrDisabled
+	}
 	if Rabbit == nil {
 		return fmt.Errorf("rabbitmq is not initialized")
 	}
@@ -224,6 +263,9 @@ func reconnectWithCurrentConfig() error {
 	rabbitMu.Lock()
 	defer rabbitMu.Unlock()
 
+	if !rabbitEnabled {
+		return ErrDisabled
+	}
 	if Rabbit == nil {
 		return fmt.Errorf("rabbitmq is not initialized")
 	}

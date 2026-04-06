@@ -216,7 +216,7 @@ func buildElevenLabsDialoguePrompt(language string) string {
 		languageLabel = "Japanese"
 	}
 	base := strings.TrimSpace(fmt.Sprintf(
-		"Generate a natural two-speaker %s learning podcast dialogue. Interpret inline square-bracket emotion/action tags as performance instructions and never read tag words aloud (examples: [indecisive], [quizzically], [elated], [laughs], [soft laugh], [sigh]). The speakers are longtime close friends in a relaxed everyday conversation with subtle humor and occasional self-deprecating banter. Keep voices stable and recognizable while allowing natural, human emotional shading. Keep pacing clear for learners but not robotic. Avoid theatrical overacting, exaggerated cartoon voices, and extreme emotional swings.",
+		"Generate a natural two-speaker %s learning podcast dialogue. Interpret inline square-bracket emotion/action tags as performance instructions and never read tag words aloud. Prefer common tags such as [soft laugh], [laughs], [amused], [sigh], [surprised], [whispers], [calmly], [gently], [confidently], [relieved], [quizzically], [indecisive], and [elated], but treat these examples as non-exhaustive: other short, clear English square-bracket emotion/action tags are also allowed. The speakers are longtime close friends in a relaxed everyday conversation with subtle humor and occasional self-deprecating banter. Keep voices stable and recognizable while allowing natural, human emotional shading. Keep pacing clear for learners but not robotic. Avoid theatrical overacting, exaggerated cartoon voices, and extreme emotional swings.",
 		languageLabel,
 	))
 

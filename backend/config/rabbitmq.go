@@ -6,6 +6,7 @@ import "github.com/spf13/cast"
 func init() {
 	config.Add("rabbitmq", func() map[string]interface{} {
 		return map[string]interface{}{
+			"enabled": cast.ToBool(config.Env("RABBITMQ_ENABLED", true)),
 			"url": config.Env("RABBITMQ_URL", ""),
 
 			"host":     config.Env("RABBITMQ_HOST", "127.0.0.1"),

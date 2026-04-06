@@ -8,6 +8,14 @@ import (
 )
 
 func SetupRabbitMQ() {
+	if !config.Get[bool]("rabbitmq.enabled") {
+		queue.SetEnabled(false)
+		log.Printf("⚠️ RabbitMQ disabled by RABBITMQ_ENABLED=false")
+		return
+	}
+
+	queue.SetEnabled(true)
+
 	cfg := queue.RabbitConfig{
 		URL: config.Get[string]("rabbitmq.url"),
 

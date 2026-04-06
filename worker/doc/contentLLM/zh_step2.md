@@ -13,47 +13,6 @@
 1. 为每一个 segment 补全 tokens
 2. 输出最终完整 JSON
 
-你还会收到一个独立输入参数：
-- tts_type（google 或 eleven）
-- tts_type 是外部输入参数，不要把它写进输出 JSON 字段
-
-【核心原则】
-- 第二阶段以补全 segment.tokens 为主
-- 仅允许按下方 tts_type 规则对 speech_text 做必要规范化
-- 第一阶段已有内容原样保留
-
-【speech_text 保留与校验规则（按 tts_type 分支）】
-- 第二阶段不得改写 text 的语义
-- text 字段中不允许出现 [] 标签；如果检测到，移除标签并保留正文
-- 每个 segment 必须保留 speech_text 字段
-
-- 当 tts_type = google：
-  - speech_text 强制为 ""
-  - 如果 speech_text 非空，直接清空为 ""
-  - text 中允许保留“哈哈、呵呵、嘿嘿”等笑感文字（Google 通过 text 表达）
-  - text/speech_text 都不允许出现 [] 标签
-
-- 当 tts_type = eleven：
-  - 如果某个 segment 缺少 speech_text，则补成与 text 完全相同
-  - speech_text 语义必须与 text 一致
-  - speech_text 允许使用标签，但只能使用白名单标签；遇到非白名单标签请删除标签本身，保留正文
-  - 除了标签清洗与缺失补全外，不要对 speech_text 做额外润色
-
-【speech_text 标签白名单（仅允许以下）】
-说明：Eleven 官方文档给的是 Non-Exhaustive（非穷尽）示例列表；为了稳定和可控，本项目只允许以下白名单，禁止扩写。
-Directions / Emotion:
-- [happy], [sad], [excited], [angry], [curious], [sarcastic], [mischievously], [thoughtful], [surprised], [appalled], [annoyed]
-- [cautiously], [jumping in], [cheerfully], [indecisive], [quizzically], [elated]
-
-Voice / Non-verbal:
-- [laughs], [laughing], [laughs harder], [starts laughing], [giggling], [snorts], [chuckles], [wheezing]
-- [sigh], [sighs], [exhales], [exhales sharply], [inhales deeply], [clears throat], [groaning], [crying]
-- [whispers], [whispering], [swallows], [gulps]
-
-Audio events / special（播客场景一般不建议使用）:
-- [applause], [clapping], [gunshot], [explosion], [leaves rustling], [gentle footsteps]
-- [strong X accent], [sings], [woo], [fart]
-
 【tokens 规则】
 - segments.tokens 用于给 segments.text 中出现的内容补全 token
 - tokens 必须严格按 text 从左到右顺序排列，不能乱序、漏字、跳字

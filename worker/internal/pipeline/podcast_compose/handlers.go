@@ -38,8 +38,11 @@ func HandleCompose(ch *amqp.Channel, task dto.VideoTaskMessage) error {
 
 	log.Printf("🎙️ podcast compose done project_id=%s final=%s", payload.ProjectID, result.FinalVideoPath)
 	return pipeline.PublishTask(ch, "upload.v1", map[string]interface{}{
-		"project_id": payload.ProjectID,
-		"file_path":  result.FinalVideoPath,
+		"project_id":   payload.ProjectID,
+		"file_path":    result.FinalVideoPath,
+		"content_type": "podcast",
+		"lang":         payload.Lang,
+		"title":        payload.Title,
 	})
 }
 
