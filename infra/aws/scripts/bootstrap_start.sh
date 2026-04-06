@@ -26,17 +26,21 @@ done
 
 source "${GLOBAL_ENV}"
 
-docker compose \
-  --project-name "${COMPOSE_PROJECT_NAME:-video-saas}" \
-  --env-file "${GLOBAL_ENV}" \
-  -f "${SOURCE_DIR}/docker-compose.bootstrap.yml" \
-  build
+docker build \
+  -f "${SOURCE_DIR}/backend/Dockerfile.prod" \
+  -t "video-saas/backend-bootstrap:latest" \
+  "${SOURCE_DIR}/backend"
+
+docker build \
+  -f "${SOURCE_DIR}/frontend/Dockerfile.prod" \
+  -t "video-saas/frontend-bootstrap:latest" \
+  "${SOURCE_DIR}/frontend"
 
 docker compose \
   --project-name "${COMPOSE_PROJECT_NAME:-video-saas}" \
   --env-file "${GLOBAL_ENV}" \
   -f "${SOURCE_DIR}/docker-compose.bootstrap.yml" \
-  up -d
+  up -d --no-build
 
 docker compose \
   --project-name "${COMPOSE_PROJECT_NAME:-video-saas}" \
