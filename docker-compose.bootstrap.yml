@@ -49,6 +49,8 @@ services:
         condition: service_healthy
     env_file:
       - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/env/backend.env
+    volumes:
+      - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/env/backend.env:/app/.env:ro
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/api/system/health >/dev/null || exit 1"]
       interval: 30s
