@@ -94,6 +94,29 @@ Only create `worker.env` when you later set `ENABLE_WORKER_STACK=true`.
 6. The PostgreSQL container is published on `POSTGRES_PUBLIC_PORT` so your local machine can connect directly. Do not open that port to the world; restrict the EC2 security group to your own office or home IP.
 7. [validate.sh](/Users/luca/go/github.com/luca/video-saas/infra/aws/scripts/validate.sh) checks the running stack.
 
+## First Manual Startup Before CI/CD
+
+Before ECR and CodePipeline are ready, you can bring up the public website stack directly on EC2 from the checked-out repository:
+
+```bash
+cd /home/ec2-user/video-saas
+chmod +x infra/aws/scripts/bootstrap_start.sh
+sudo bash infra/aws/scripts/bootstrap_start.sh /home/ec2-user/video-saas
+```
+
+This uses:
+
+- [docker-compose.bootstrap.yml](/Users/luca/go/github.com/luca/video-saas/docker-compose.bootstrap.yml)
+- [bootstrap_start.sh](/Users/luca/go/github.com/luca/video-saas/infra/aws/scripts/bootstrap_start.sh)
+
+It builds `frontend` and `backend` locally on the EC2 host and starts:
+
+- `caddy`
+- `frontend`
+- `backend`
+- `postgres`
+- `redis`
+
 ## Notes
 
 - TLS is handled by Caddy inside Docker. As long as DNS already points to the instance and ports `80/443` are reachable, certificates are issued automatically.

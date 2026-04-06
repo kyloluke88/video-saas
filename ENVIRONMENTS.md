@@ -137,6 +137,10 @@ Production base:
 
 - [docker-compose.prod.yml](/Users/luca/go/github.com/luca/video-saas/docker-compose.prod.yml)
 
+Production bootstrap before ECR:
+
+- [docker-compose.bootstrap.yml](/Users/luca/go/github.com/luca/video-saas/docker-compose.bootstrap.yml)
+
 Production worker extension:
 
 - [docker-compose.worker.prod.yml](/Users/luca/go/github.com/luca/video-saas/docker-compose.worker.prod.yml)
@@ -146,6 +150,7 @@ AWS deployment helpers:
 - [buildspec.yml](/Users/luca/go/github.com/luca/video-saas/buildspec.yml)
 - [appspec.yml](/Users/luca/go/github.com/luca/video-saas/appspec.yml)
 - [infra/aws/scripts/deploy.sh](/Users/luca/go/github.com/luca/video-saas/infra/aws/scripts/deploy.sh)
+- [infra/aws/scripts/bootstrap_start.sh](/Users/luca/go/github.com/luca/video-saas/infra/aws/scripts/bootstrap_start.sh)
 
 ## Current Recommended Workflow
 

@@ -1,0 +1,87 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      CADDY_EMAIL: ${CADDY_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ${SOURCE_DIR:-.}/infra/aws/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/caddy/data:/data
+      - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/caddy/config:/config
+
+  frontend:
+    build:
+      context: ${SOURCE_DIR:-.}/frontend
+      dockerfile: Dockerfile.prod
+    image: video-saas/frontend-bootstrap:latest
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    env_file:
+      - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/env/frontend.env
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000 >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  backend:
+    build:
+      context: ${SOURCE_DIR:-.}/backend
+      dockerfile: Dockerfile.prod
+    image: video-saas/backend-bootstrap:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/env/backend.env
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/api/system/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PUBLIC_PORT:-15432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
