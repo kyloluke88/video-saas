@@ -2,10 +2,10 @@
 set -euo pipefail
 
 DEPLOY_BASE_DIR="${DEPLOY_BASE_DIR:-/opt/video-saas}"
-AWS_REGION="${AWS_REGION:-us-east-1}"
+AWS_REGION="${AWS_REGION:-ap-southeast-1}"
 
 dnf update -y
-dnf install -y awscli docker ruby wget
+dnf install -y awscli docker git ruby wget
 
 systemctl enable docker
 systemctl start docker
