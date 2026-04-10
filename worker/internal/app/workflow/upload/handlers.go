@@ -12,8 +12,8 @@ import (
 	"worker/internal/app/task"
 	"worker/internal/persistence"
 	conf "worker/pkg/config"
-	"worker/pkg/x/mapx"
 	storageS3 "worker/pkg/storage/s3"
+	"worker/pkg/x/mapx"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )

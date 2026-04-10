@@ -270,12 +270,7 @@ func (ctrl *VideoController) CreatePodcastDialogue(c *gin.Context) {
 	}
 	payload := buildPodcastTaskPayload(req, projectID, runMode, blockNums, bgImgFilenames, podcastSeed)
 
-	taskType := "podcast.audio.generate.v1"
-	if runMode == 3 {
-		taskType = "podcast.page.persist.v1"
-	} else if runMode == 4 {
-		taskType = "podcast.audio.align.v1"
-	}
+	taskType := podcastTaskTypeForRunMode(runMode)
 
 	trackPodcastProject(projectID, runMode, taskType, payload)
 
@@ -335,6 +330,26 @@ func normalizePodcastRunMode(value int) int {
 		return value
 	default:
 		return 0
+	}
+}
+
+func normalizeOnlyCurrentStep(value int) int {
+	if value == 1 {
+		return 1
+	}
+	return 0
+}
+
+func podcastTaskTypeForRunMode(runMode int) string {
+	switch runMode {
+	case 2:
+		return "podcast.compose.render.v1"
+	case 3:
+		return "podcast.page.persist.v1"
+	case 4:
+		return "podcast.audio.align.v1"
+	default:
+		return "podcast.audio.generate.v1"
 	}
 }
 
@@ -399,17 +414,18 @@ func buildPodcastTaskPayload(
 	podcastSeed int,
 ) map[string]interface{} {
 	payload := map[string]interface{}{
-		"content_type":    "podcast",
-		"project_id":      projectID,
-		"run_mode":        runMode,
-		"title":           strings.TrimSpace(req.Title),
-		"lang":            strings.TrimSpace(req.Lang),
-		"content_profile": strings.TrimSpace(req.ContentProfile),
-		"script_filename": strings.TrimSpace(req.ScriptFilename),
-		"target_platform": strings.TrimSpace(req.TargetPlatform),
-		"aspect_ratio":    strings.TrimSpace(req.AspectRatio),
-		"resolution":      strings.TrimSpace(req.Resolution),
-		"design_style":    req.DesignStyle,
+		"content_type":      "podcast",
+		"project_id":        projectID,
+		"run_mode":          runMode,
+		"only_current_step": normalizeOnlyCurrentStep(req.OnlyCurrentStep),
+		"title":             strings.TrimSpace(req.Title),
+		"lang":              strings.TrimSpace(req.Lang),
+		"content_profile":   strings.TrimSpace(req.ContentProfile),
+		"script_filename":   strings.TrimSpace(req.ScriptFilename),
+		"target_platform":   strings.TrimSpace(req.TargetPlatform),
+		"aspect_ratio":      strings.TrimSpace(req.AspectRatio),
+		"resolution":        strings.TrimSpace(req.Resolution),
+		"design_style":      req.DesignStyle,
 	}
 	if runMode == 1 || runMode == 2 || runMode == 3 || runMode == 4 {
 		if sourceProjectID := strings.TrimSpace(req.ProjectID); sourceProjectID != "" {

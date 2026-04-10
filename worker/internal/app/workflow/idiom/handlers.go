@@ -16,8 +16,8 @@ import (
 	"worker/pkg/x/httpx"
 	"worker/pkg/x/mapx"
 	dto "worker/services/idiom/model"
-	ffmpegservice "worker/services/media/ffmpeg"
 	idiompromptservice "worker/services/idiom/prompt"
+	ffmpegservice "worker/services/media/ffmpeg"
 	seedancegenerateservice "worker/services/media/seedance"
 
 	amqp "github.com/rabbitmq/amqp091-go"

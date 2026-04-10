@@ -1,4 +1,4 @@
-package podcast_audio
+package replay
 
 import (
 	"testing"
@@ -24,13 +24,13 @@ func TestBuildComposePayloadFromSavedAndCurrentUsesCurrentVisualOverrides(t *tes
 		DesignStyle:    2,
 	}
 
-	replayPayload, err := buildReplayGeneratePayloadFromSavedAndCurrent(saved, current)
+	replayPayload, err := BuildGeneratePayloadFromSavedAndCurrent(saved, current)
 	if err != nil {
-		t.Fatalf("buildReplayGeneratePayloadFromSavedAndCurrent returned err: %v", err)
+		t.Fatalf("BuildGeneratePayloadFromSavedAndCurrent returned err: %v", err)
 	}
-	payload, err := buildComposePayloadFromGenerate(replayPayload)
+	payload, err := BuildComposePayloadFromGenerate(replayPayload)
 	if err != nil {
-		t.Fatalf("buildComposePayloadFromGenerate returned err: %v", err)
+		t.Fatalf("BuildComposePayloadFromGenerate returned err: %v", err)
 	}
 	if payload.ProjectID != "proj_123__rm1__20260409120000" {
 		t.Fatalf("project_id mismatch: %s", payload.ProjectID)
@@ -46,34 +46,38 @@ func TestBuildComposePayloadFromSavedAndCurrentUsesCurrentVisualOverrides(t *tes
 	}
 }
 
-func TestBuildReplayGeneratePayloadFromSavedAndCurrentUsesCurrentVisualOverrides(t *testing.T) {
+func TestBuildGeneratePayloadFromSavedAndCurrentUsesCurrentVisualOverrides(t *testing.T) {
 	saved := dto.PodcastAudioGeneratePayload{
-		ProjectID:      "proj_123",
-		Lang:           "zh",
-		Title:          "old title",
-		ScriptFilename: "old.json",
-		BgImgFilenames: []string{"old-a.png", "old-b.png"},
-		TargetPlatform: "youtube",
-		AspectRatio:    "16:9",
-		Resolution:     "720p",
-		DesignStyle:    1,
-		TTSType:        2,
-		Seed:           11,
+		ProjectID:       "proj_123",
+		Lang:            "zh",
+		Title:           "old title",
+		ScriptFilename:  "old.json",
+		BgImgFilenames:  []string{"old-a.png", "old-b.png"},
+		TargetPlatform:  "youtube",
+		AspectRatio:     "16:9",
+		Resolution:      "720p",
+		DesignStyle:     1,
+		TTSType:         2,
+		Seed:            11,
+		OnlyCurrentStep: 1,
+		BlockNums:       []int{1, 2},
 	}
 	current := dto.PodcastAudioGeneratePayload{
-		ProjectID:      "proj_123__rm1__20260409120000",
-		BgImgFilenames: []string{"new-a.png"},
-		Resolution:     "1080p",
-		DesignStyle:    2,
-		AspectRatio:    "9:16",
-		TargetPlatform: "bilibili",
-		Title:          "new title",
-		BlockNums:      []int{3, 4},
+		ProjectID:       "proj_123__rm1__20260409120000",
+		BgImgFilenames:  []string{"new-a.png"},
+		Resolution:      "1080p",
+		DesignStyle:     2,
+		AspectRatio:     "9:16",
+		TargetPlatform:  "bilibili",
+		Title:           "new title",
+		BlockNums:       []int{3, 4},
+		RunMode:         4,
+		OnlyCurrentStep: 0,
 	}
 
-	payload, err := buildReplayGeneratePayloadFromSavedAndCurrent(saved, current)
+	payload, err := BuildGeneratePayloadFromSavedAndCurrent(saved, current)
 	if err != nil {
-		t.Fatalf("buildReplayGeneratePayloadFromSavedAndCurrent returned err: %v", err)
+		t.Fatalf("BuildGeneratePayloadFromSavedAndCurrent returned err: %v", err)
 	}
 	if len(payload.BgImgFilenames) != 1 || payload.BgImgFilenames[0] != "new-a.png" {
 		t.Fatalf("expected current bg override, got %#v", payload.BgImgFilenames)
@@ -105,6 +109,12 @@ func TestBuildReplayGeneratePayloadFromSavedAndCurrentUsesCurrentVisualOverrides
 	if payload.ScriptFilename != "old.json" {
 		t.Fatalf("expected saved script filename preserved, got %s", payload.ScriptFilename)
 	}
+	if payload.RunMode != 4 {
+		t.Fatalf("expected current run mode preserved, got %d", payload.RunMode)
+	}
+	if payload.OnlyCurrentStep != 0 {
+		t.Fatalf("expected current only_current_step override, got %d", payload.OnlyCurrentStep)
+	}
 }
 
 func TestBuildComposePayloadFromSavedAndCurrentNormalizesUnknownDesignStyleToOne(t *testing.T) {
@@ -115,22 +125,22 @@ func TestBuildComposePayloadFromSavedAndCurrentNormalizesUnknownDesignStyleToOne
 		DesignStyle:    3,
 	}
 
-	replayPayload, err := buildReplayGeneratePayloadFromSavedAndCurrent(saved, dto.PodcastAudioGeneratePayload{
+	replayPayload, err := BuildGeneratePayloadFromSavedAndCurrent(saved, dto.PodcastAudioGeneratePayload{
 		ProjectID: "proj_123__rm1__20260409120000",
 	})
 	if err != nil {
-		t.Fatalf("buildReplayGeneratePayloadFromSavedAndCurrent returned err: %v", err)
+		t.Fatalf("BuildGeneratePayloadFromSavedAndCurrent returned err: %v", err)
 	}
-	payload, err := buildComposePayloadFromGenerate(replayPayload)
+	payload, err := BuildComposePayloadFromGenerate(replayPayload)
 	if err != nil {
-		t.Fatalf("buildComposePayloadFromGenerate returned err: %v", err)
+		t.Fatalf("BuildComposePayloadFromGenerate returned err: %v", err)
 	}
 	if payload.DesignStyle != 1 {
 		t.Fatalf("expected unknown saved design style to normalize to 1, got %d", payload.DesignStyle)
 	}
 }
 
-func TestBuildReplayGeneratePayloadFromSavedAndCurrentRejectsLanguageMismatch(t *testing.T) {
+func TestBuildGeneratePayloadFromSavedAndCurrentRejectsLanguageMismatch(t *testing.T) {
 	saved := dto.PodcastAudioGeneratePayload{
 		ProjectID: "proj_123",
 		Lang:      "zh",
@@ -144,7 +154,7 @@ func TestBuildReplayGeneratePayloadFromSavedAndCurrentRejectsLanguageMismatch(t 
 		Lang:      "ja",
 	}
 
-	if _, err := buildReplayGeneratePayloadFromSavedAndCurrent(saved, current); err == nil {
+	if _, err := BuildGeneratePayloadFromSavedAndCurrent(saved, current); err == nil {
 		t.Fatalf("expected lang mismatch error")
 	}
 }
@@ -157,28 +167,28 @@ func TestBuildComposePayloadFromSavedAndCurrentFallsBackToBackgroundList(t *test
 		DesignStyle:    1,
 	}
 
-	replayPayload, err := buildReplayGeneratePayloadFromSavedAndCurrent(saved, dto.PodcastAudioGeneratePayload{
+	replayPayload, err := BuildGeneratePayloadFromSavedAndCurrent(saved, dto.PodcastAudioGeneratePayload{
 		ProjectID: "proj_123__rm1__20260409120000",
 	})
 	if err != nil {
-		t.Fatalf("buildReplayGeneratePayloadFromSavedAndCurrent returned err: %v", err)
+		t.Fatalf("BuildGeneratePayloadFromSavedAndCurrent returned err: %v", err)
 	}
-	payload, err := buildComposePayloadFromGenerate(replayPayload)
+	payload, err := BuildComposePayloadFromGenerate(replayPayload)
 	if err != nil {
-		t.Fatalf("buildComposePayloadFromGenerate returned err: %v", err)
+		t.Fatalf("BuildComposePayloadFromGenerate returned err: %v", err)
 	}
 	if len(payload.BgImgFilenames) != 2 {
 		t.Fatalf("expected saved bg list to survive, got %#v", payload.BgImgFilenames)
 	}
 }
 
-func TestResolveReplaySourceProjectIDPrefersExplicitSourceProjectID(t *testing.T) {
-	sourceProjectID, err := resolveReplaySourceProjectID(dto.PodcastAudioGeneratePayload{
+func TestResolveSourceProjectIDPrefersExplicitSourceProjectID(t *testing.T) {
+	sourceProjectID, err := ResolveSourceProjectID(dto.PodcastAudioGeneratePayload{
 		ProjectID:       "zh_podcast_20260408154607__rm3__20260409180433",
 		SourceProjectID: "zh_podcast_20260408154607__rm1__20260409171630",
 	})
 	if err != nil {
-		t.Fatalf("resolveReplaySourceProjectID returned err: %v", err)
+		t.Fatalf("ResolveSourceProjectID returned err: %v", err)
 	}
 	if sourceProjectID != "zh_podcast_20260408154607__rm1__20260409171630" {
 		t.Fatalf("unexpected source project id: %s", sourceProjectID)

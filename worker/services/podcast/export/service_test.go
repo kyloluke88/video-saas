@@ -8,11 +8,11 @@ import (
 )
 
 func TestGenerateFromProjectDirCreatesExportFiles(t *testing.T) {
-	assetsDir, err := filepath.Abs(filepath.Join("..", "..", "assets"))
+	assetsDir, err := filepath.Abs(filepath.Join("..", "..", "..", "assets"))
 	if err != nil {
 		t.Fatalf("resolve assets dir failed: %v", err)
 	}
-	sourceDir, err := filepath.Abs(filepath.Join("..", "..", "outputs", "projects", "zh_podcast_20260401165006_json"))
+	sourceDir, err := filepath.Abs(filepath.Join("..", "..", "..", "outputs", "projects", "zh_podcast_20260401165006_json"))
 	if err != nil {
 		t.Fatalf("resolve source dir failed: %v", err)
 	}

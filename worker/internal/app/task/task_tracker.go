@@ -143,11 +143,6 @@ func updateTrackedTask(task VideoTaskMessage, retryNum int, status int16, taskEr
 }
 
 func trackedTaskStage(task VideoTaskMessage) string {
-	if task.TaskType == "podcast.audio.generate.v1" {
-		if runMode := taskRunMode(task); runMode != nil && *runMode == 2 {
-			return "compose"
-		}
-	}
 	return taskStage(task.TaskType)
 }
 
@@ -204,6 +199,9 @@ func taskRunMode(task VideoTaskMessage) *int {
 }
 
 func isTerminalProjectTask(task VideoTaskMessage) bool {
+	if taskOnlyCurrentStep(task) {
+		return true
+	}
 	switch taskContentType(task) {
 	case "podcast":
 		return task.TaskType == "upload.v1"
@@ -212,6 +210,13 @@ func isTerminalProjectTask(task VideoTaskMessage) bool {
 	default:
 		return false
 	}
+}
+
+func taskOnlyCurrentStep(task VideoTaskMessage) bool {
+	if task.Payload == nil {
+		return false
+	}
+	return mapx.GetInt(task.Payload, "only_current_step", 0) == 1
 }
 
 func projectCancelled(store *persistence.Store, projectID string) (bool, error) {

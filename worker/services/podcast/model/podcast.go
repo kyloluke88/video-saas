@@ -15,6 +15,7 @@ type PodcastAudioGeneratePayload struct {
 	TTSType         int      `json:"tts_type,omitempty"`
 	Seed            int      `json:"seed,omitempty"`
 	RunMode         int      `json:"run_mode,omitempty"`
+	OnlyCurrentStep int      `json:"only_current_step,omitempty"`
 	BlockNums       []int    `json:"block_nums,omitempty"`
 	Title           string   `json:"title,omitempty"`
 	ScriptFilename  string   `json:"script_filename"`
@@ -26,14 +27,17 @@ type PodcastAudioGeneratePayload struct {
 }
 
 type PodcastComposePayload struct {
-	ProjectID      string   `json:"project_id"`
-	Lang           string   `json:"lang"`
-	Title          string   `json:"title,omitempty"`
-	BgImgFilenames []string `json:"bg_img_filenames,omitempty"`
-	TargetPlatform string   `json:"target_platform,omitempty"`
-	AspectRatio    string   `json:"aspect_ratio,omitempty"`
-	Resolution     string   `json:"resolution,omitempty"`
-	DesignStyle    int      `json:"design_style,omitempty"`
+	ProjectID       string   `json:"project_id"`
+	SourceProjectID string   `json:"source_project_id,omitempty"`
+	Lang            string   `json:"lang"`
+	RunMode         int      `json:"run_mode,omitempty"`
+	OnlyCurrentStep int      `json:"only_current_step,omitempty"`
+	Title           string   `json:"title,omitempty"`
+	BgImgFilenames  []string `json:"bg_img_filenames,omitempty"`
+	TargetPlatform  string   `json:"target_platform,omitempty"`
+	AspectRatio     string   `json:"aspect_ratio,omitempty"`
+	Resolution      string   `json:"resolution,omitempty"`
+	DesignStyle     int      `json:"design_style,omitempty"`
 }
 
 type PodcastScript struct {

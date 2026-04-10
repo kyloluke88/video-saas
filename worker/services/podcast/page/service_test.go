@@ -14,7 +14,7 @@ import (
 
 func TestBuildPageUpsertFromProjectDir(t *testing.T) {
 	projectID := "zh_podcast_20260401165006_json"
-	projectDir := filepath.Clean(filepath.Join("..", "..", "outputs", "projects", projectID))
+	projectDir := filepath.Clean(filepath.Join("..", "..", "..", "outputs", "projects", projectID))
 
 	upsert, err := BuildPageUpsertFromProjectDir(projectDir, PersistInput{
 		ProjectID: projectID,

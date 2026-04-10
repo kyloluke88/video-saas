@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	"worker/internal/app/task"
-	"worker/internal/workspace"
+	podcastreplay "worker/internal/app/workflow/podcast/replay"
 	services "worker/services"
-	dto "worker/services/podcast/model"
 	podcastaudioservice "worker/services/podcast/audio"
+	dto "worker/services/podcast/model"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -21,15 +21,13 @@ func HandleGenerate(ctx context.Context, ch *amqp.Channel, msg task.VideoTaskMes
 	if err != nil {
 		return err
 	}
-	switch normalizePodcastRunMode(payload.RunMode) {
+	switch payload.RunMode {
 	case 1:
 		return handleRunModeReplay(ctx, ch, payload)
-	case 2:
-		return handleRunModeComposeOnly(ctx, ch, payload)
-	case 4:
-		return handleRunModeAlignOnly(ctx, ch, payload)
-	default:
+	case 0:
 		return handleRunModeFresh(ctx, ch, payload)
+	default:
+		return services.NonRetryableError{Err: fmt.Errorf("podcast.audio.generate.v1 only supports run_mode 0 or 1")}
 	}
 }
 
@@ -38,7 +36,23 @@ func HandleAlign(ctx context.Context, ch *amqp.Channel, msg task.VideoTaskMessag
 	if err != nil {
 		return err
 	}
-	return handleRunModeAlignOnly(ctx, ch, payload)
+	if payload.SourceProjectID != "" {
+		if payload.RunMode != 4 {
+			return services.NonRetryableError{Err: fmt.Errorf("replay align entry requires run_mode=4")}
+		}
+		replayPayload, err := podcastreplay.PrepareGeneratePayload(payload)
+		if err != nil {
+			return err
+		}
+		if normalizePodcastTTSType(replayPayload.TTSType) != 1 {
+			return services.NonRetryableError{Err: fmt.Errorf("run_mode=4 is only valid for google tts projects")}
+		}
+		return alignAndContinue(ctx, ch, replayPayload)
+	}
+	if normalizePodcastTTSType(payload.TTSType) != 1 {
+		return services.NonRetryableError{Err: fmt.Errorf("align task is only valid for google tts projects")}
+	}
+	return alignAndContinue(ctx, ch, payload)
 }
 
 func validPodcastLanguage(value string) bool {
@@ -94,103 +108,25 @@ func decodePayload(raw map[string]interface{}) (dto.PodcastAudioGeneratePayload,
 	return payload, nil
 }
 
-func persistGeneratePayload(payload dto.PodcastAudioGeneratePayload) error {
-	return workspace.WriteRequestPayload(payload.ProjectID, payload)
-}
-
-func loadPersistedGeneratePayload(projectID string) (dto.PodcastAudioGeneratePayload, error) {
-	if strings.TrimSpace(projectID) == "" {
-		return dto.PodcastAudioGeneratePayload{}, fmt.Errorf("project_id is required")
-	}
-	rawPayload, err := workspace.LoadRequestPayloadMap(projectID)
-	if err != nil {
-		return dto.PodcastAudioGeneratePayload{}, err
-	}
-	payload, err := decodePayload(rawPayload)
-	if err != nil {
-		return dto.PodcastAudioGeneratePayload{}, err
-	}
-	if strings.TrimSpace(payload.ProjectID) == "" {
-		payload.ProjectID = strings.TrimSpace(projectID)
-	}
-	return payload, nil
-}
-
-func prepareReplayGeneratePayload(current dto.PodcastAudioGeneratePayload) (dto.PodcastAudioGeneratePayload, error) {
-	sourceProjectID, err := resolveReplaySourceProjectID(current)
-	if err != nil {
-		return dto.PodcastAudioGeneratePayload{}, err
-	}
-	if err := workspace.EnsureReplayProjectDir(sourceProjectID, current.ProjectID); err != nil {
-		return dto.PodcastAudioGeneratePayload{}, err
-	}
-
-	savedPayload, err := loadPersistedGeneratePayload(sourceProjectID)
-	if err != nil {
-		return dto.PodcastAudioGeneratePayload{}, err
-	}
-	replayPayload, err := buildReplayGeneratePayloadFromSavedAndCurrent(savedPayload, current)
-	if err != nil {
-		return dto.PodcastAudioGeneratePayload{}, err
-	}
-	if err := persistGeneratePayload(replayPayload); err != nil {
-		return dto.PodcastAudioGeneratePayload{}, err
-	}
-	return replayPayload, nil
-}
-
 func handleRunModeFresh(ctx context.Context, ch *amqp.Channel, payload dto.PodcastAudioGeneratePayload) error {
 	if err := validateFreshGeneratePayload(payload); err != nil {
 		return err
 	}
-	if err := persistGeneratePayload(payload); err != nil {
+	if err := podcastreplay.PersistGeneratePayload(payload); err != nil {
 		return err
 	}
 	return generateAndContinue(ctx, ch, payload)
 }
 
 func handleRunModeReplay(ctx context.Context, ch *amqp.Channel, payload dto.PodcastAudioGeneratePayload) error {
-	replayPayload, err := prepareReplayGeneratePayload(payload)
+	replayPayload, err := podcastreplay.PrepareGeneratePayload(payload)
 	if err != nil {
 		return err
 	}
-	sourceProjectID, _ := resolveReplaySourceProjectID(payload)
+	sourceProjectID, _ := podcastreplay.ResolveSourceProjectID(payload)
 	log.Printf("♻️ podcast run_mode=1 replay source=%s target=%s block_nums=%v background=%s backgrounds=%d design_style=%d resolution=%s",
 		sourceProjectID, replayPayload.ProjectID, replayPayload.BlockNums, firstBackgroundName(replayPayload.BgImgFilenames), len(replayPayload.BgImgFilenames), replayPayload.DesignStyle, replayPayload.Resolution)
 	return generateAndContinue(ctx, ch, replayPayload)
-}
-
-func handleRunModeComposeOnly(_ context.Context, ch *amqp.Channel, payload dto.PodcastAudioGeneratePayload) error {
-	replayPayload, err := prepareReplayGeneratePayload(payload)
-	if err != nil {
-		return err
-	}
-	composePayload, err := buildComposePayloadFromGenerate(replayPayload)
-	if err != nil {
-		return err
-	}
-	sourceProjectID, _ := resolveReplaySourceProjectID(payload)
-	log.Printf("🎬 podcast run_mode=2 compose-only source=%s target=%s background=%s backgrounds=%d design_style=%d resolution=%s",
-		sourceProjectID, composePayload.ProjectID, firstBackgroundName(composePayload.BgImgFilenames), len(composePayload.BgImgFilenames), composePayload.DesignStyle, composePayload.Resolution)
-	return publishComposeTask(ch, composePayload)
-}
-
-func handleRunModeAlignOnly(ctx context.Context, ch *amqp.Channel, payload dto.PodcastAudioGeneratePayload) error {
-	replayPayload, err := prepareReplayGeneratePayload(payload)
-	if err != nil {
-		return err
-	}
-	if normalizePodcastTTSType(replayPayload.TTSType) != 1 {
-		return services.NonRetryableError{Err: fmt.Errorf("run_mode=4 is only valid for google tts projects")}
-	}
-	return alignAndPublishCompose(ctx, ch, replayPayload)
-}
-
-func resolveReplaySourceProjectID(current dto.PodcastAudioGeneratePayload) (string, error) {
-	if sourceProjectID := strings.TrimSpace(current.SourceProjectID); sourceProjectID != "" {
-		return sourceProjectID, nil
-	}
-	return workspace.ReplaySourceProjectID(current.ProjectID)
 }
 
 func validateFreshGeneratePayload(payload dto.PodcastAudioGeneratePayload) error {
@@ -228,6 +164,9 @@ func generateAndContinue(ctx context.Context, ch *amqp.Channel, payload dto.Podc
 		}); err != nil {
 			return err
 		}
+		if shouldStopAfterCurrentStep(payload.OnlyCurrentStep) {
+			return nil
+		}
 		return publishAlignTask(ch, payload)
 	}
 
@@ -242,15 +181,18 @@ func generateAndContinue(ctx context.Context, ch *amqp.Channel, payload dto.Podc
 	if err != nil {
 		return err
 	}
+	if shouldStopAfterCurrentStep(payload.OnlyCurrentStep) {
+		return nil
+	}
 
-	composePayload, err := buildComposePayloadFromGenerate(payload)
+	composePayload, err := podcastreplay.BuildComposePayloadFromGenerate(payload)
 	if err != nil {
 		return err
 	}
 	return publishComposeTask(ch, composePayload)
 }
 
-func alignAndPublishCompose(ctx context.Context, ch *amqp.Channel, payload dto.PodcastAudioGeneratePayload) error {
+func alignAndContinue(ctx context.Context, ch *amqp.Channel, payload dto.PodcastAudioGeneratePayload) error {
 	_, err := podcastaudioservice.AlignGoogle(ctx, podcastaudioservice.AlignInput{
 		ProjectID: payload.ProjectID,
 		Language:  payload.Lang,
@@ -259,8 +201,11 @@ func alignAndPublishCompose(ctx context.Context, ch *amqp.Channel, payload dto.P
 	if err != nil {
 		return err
 	}
+	if shouldStopAfterCurrentStep(payload.OnlyCurrentStep) {
+		return nil
+	}
 
-	composePayload, err := buildComposePayloadFromGenerate(payload)
+	composePayload, err := podcastreplay.BuildComposePayloadFromGenerate(payload)
 	if err != nil {
 		return err
 	}
@@ -269,16 +214,17 @@ func alignAndPublishCompose(ctx context.Context, ch *amqp.Channel, payload dto.P
 
 func publishAlignTask(ch *amqp.Channel, payload dto.PodcastAudioGeneratePayload) error {
 	alignPayload := map[string]interface{}{
-		"content_type":    "podcast",
-		"project_id":      payload.ProjectID,
-		"lang":            payload.Lang,
-		"tts_type":        normalizePodcastTTSType(payload.TTSType),
-		"run_mode":        payload.RunMode,
-		"title":           payload.Title,
-		"target_platform": payload.TargetPlatform,
-		"aspect_ratio":    payload.AspectRatio,
-		"resolution":      payload.Resolution,
-		"design_style":    normalizePodcastDesignStyle(payload.DesignStyle),
+		"content_type":      "podcast",
+		"project_id":        payload.ProjectID,
+		"lang":              payload.Lang,
+		"tts_type":          normalizePodcastTTSType(payload.TTSType),
+		"run_mode":          payload.RunMode,
+		"only_current_step": payload.OnlyCurrentStep,
+		"title":             payload.Title,
+		"target_platform":   payload.TargetPlatform,
+		"aspect_ratio":      payload.AspectRatio,
+		"resolution":        payload.Resolution,
+		"design_style":      normalizePodcastDesignStyle(payload.DesignStyle),
 	}
 	if len(payload.BlockNums) > 0 {
 		alignPayload["block_nums"] = compactPositiveInts(payload.BlockNums)
@@ -291,16 +237,22 @@ func publishAlignTask(ch *amqp.Channel, payload dto.PodcastAudioGeneratePayload)
 
 func publishComposeTask(ch *amqp.Channel, payload dto.PodcastComposePayload) error {
 	return task.PublishTask(ch, "podcast.compose.render.v1", map[string]interface{}{
-		"content_type":     "podcast",
-		"project_id":       payload.ProjectID,
-		"lang":             payload.Lang,
-		"title":            payload.Title,
-		"bg_img_filenames": payload.BgImgFilenames,
-		"target_platform":  payload.TargetPlatform,
-		"aspect_ratio":     payload.AspectRatio,
-		"resolution":       payload.Resolution,
-		"design_style":     normalizePodcastDesignStyle(payload.DesignStyle),
+		"content_type":      "podcast",
+		"project_id":        payload.ProjectID,
+		"lang":              payload.Lang,
+		"run_mode":          payload.RunMode,
+		"only_current_step": payload.OnlyCurrentStep,
+		"title":             payload.Title,
+		"bg_img_filenames":  payload.BgImgFilenames,
+		"target_platform":   payload.TargetPlatform,
+		"aspect_ratio":      payload.AspectRatio,
+		"resolution":        payload.Resolution,
+		"design_style":      normalizePodcastDesignStyle(payload.DesignStyle),
 	})
+}
+
+func shouldStopAfterCurrentStep(value int) bool {
+	return value == 1
 }
 
 func firstBackgroundName(backgrounds []string) string {
@@ -324,6 +276,16 @@ func compactPositiveInts(values []int) []int {
 		}
 		seen[value] = struct{}{}
 		out = append(out, value)
+	}
+	return out
+}
+
+func compactNonEmptyStrings(values []string) []string {
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			out = append(out, trimmed)
+		}
 	}
 	return out
 }
