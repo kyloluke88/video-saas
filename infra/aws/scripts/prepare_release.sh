@@ -3,7 +3,7 @@ set -euo pipefail
 
 DEPLOY_BASE_DIR="${DEPLOY_BASE_DIR:-/opt/video-saas}"
 
-mkdir -p "${DEPLOY_BASE_DIR}/shared"/{env,postgres,redis,rabbitmq,outputs,artifacts,storage,caddy/data,caddy/config}
+mkdir -p "${DEPLOY_BASE_DIR}/shared"/{env,postgres,redis,rabbitmq,outputs,storage,caddy/data,caddy/config}
 mkdir -p "${DEPLOY_BASE_DIR}/release"
 
 required_files=(

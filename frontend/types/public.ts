@@ -3,6 +3,11 @@ export interface ConversationRuby {
   reading: string;
 }
 
+export interface PhoneticToken {
+  char: string;
+  reading: string;
+}
+
 export interface ConversationSegment {
   segment_id: string;
   display_text: string;
@@ -29,25 +34,30 @@ export interface PodcastScriptLine {
 
 export interface PodcastScriptSection {
   heading?: string;
-  body?: string;
   lines: PodcastScriptLine[];
 }
 
 export interface VocabularyItem {
   term: string;
-  pinyin?: string;
+  tokens?: PhoneticToken[];
   meaning: string;
-  notes?: string;
-  example?: string;
-  example_translation?: string;
+  explanation: string;
+  examples?: Array<{
+    text: string;
+    tokens?: PhoneticToken[];
+    translation?: string;
+  }>;
 }
 
 export interface GrammarItem {
   pattern: string;
+  tokens?: PhoneticToken[];
+  meaning: string;
   explanation: string;
   examples?: Array<{
-    zh: string;
-    en?: string;
+    text: string;
+    tokens?: PhoneticToken[];
+    translation?: string;
   }>;
 }
 
@@ -58,15 +68,6 @@ export interface DownloadAsset {
   ready?: boolean;
 }
 
-export interface SidebarProduct {
-  id: number | string;
-  title: string;
-  description?: string;
-  image_url?: string;
-  price_label?: string;
-  href?: string;
-}
-
 export interface PodcastScriptPage {
   id: number;
   slug: string;
@@ -75,7 +76,7 @@ export interface PodcastScriptPage {
   summary?: string;
   language: string;
   audience_language?: string;
-  project_id?: string;
+  project_id: string;
   cover_image_url?: string;
   video_url?: string;
   youtube_video_id?: string;
@@ -87,12 +88,8 @@ export interface PodcastScriptPage {
   published_at?: string;
   downloads?: DownloadAsset[];
   script: {
-    intro?: string;
     sections: PodcastScriptSection[];
   };
   vocabulary?: VocabularyItem[];
   grammar?: GrammarItem[];
-  sidebar?: {
-    products?: SidebarProduct[];
-  };
 }

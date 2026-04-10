@@ -2,11 +2,11 @@ package client
 
 import (
 	"errors"
-	"strconv"
 	"strings"
 
 	contentModel "api/app/models/content"
 	"api/pkg/database"
+	"api/pkg/logger"
 	"api/pkg/response"
 
 	"github.com/gin-gonic/gin"
@@ -18,13 +18,14 @@ type PublicPodcastScriptController struct {
 }
 
 func (ctrl *PublicPodcastScriptController) ShowPage(c *gin.Context) {
-	resourceID := strings.TrimSpace(c.Param("resourceID"))
-	if resourceID == "" {
+	slug := strings.TrimSpace(c.Param("slug"))
+	logger.DebugString("slug", "", "Received request for podcast script page with slug: "+slug)
+	if slug == "" {
 		response.Abort404(c, "page not found")
 		return
 	}
 
-	page, err := findPublishedPodcastScriptPage(resourceID)
+	page, err := findPublishedPodcastScriptPage(slug)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Abort404(c, "page not found")
@@ -39,40 +40,20 @@ func (ctrl *PublicPodcastScriptController) ShowPage(c *gin.Context) {
 	})
 }
 
-func findPublishedPodcastScriptPage(resourceID string) (*contentModel.PodcastScriptPage, error) {
-	resourceID = strings.TrimSpace(resourceID)
-	if resourceID == "" {
+func findPublishedPodcastScriptPage(slug string) (*contentModel.PodcastScriptPage, error) {
+	slug = strings.TrimSpace(slug)
+	if slug == "" {
 		return nil, gorm.ErrRecordNotFound
 	}
 
 	page := new(contentModel.PodcastScriptPage)
-	query := database.DB.Model(&contentModel.PodcastScriptPage{}).Where("status = ?", "published")
-
-	normalizedID := resourceID
-	if parts := strings.SplitN(resourceID, "-", 2); len(parts) > 0 && strings.TrimSpace(parts[0]) != "" {
-		normalizedID = strings.TrimSpace(parts[0])
-	}
-
-	if numericID, err := strconv.ParseUint(normalizedID, 10, 64); err == nil {
-		if err := query.Where("id = ?", numericID).First(page).Error; err == nil {
-			return page, nil
-		}
-	}
-
 	if err := database.DB.
 		Model(&contentModel.PodcastScriptPage{}).
 		Where("status = ?", "published").
-		Where("slug = ?", resourceID).
+		Where("slug = ?", slug).
 		First(page).
 		Error; err != nil {
-		if err := database.DB.
-			Model(&contentModel.PodcastScriptPage{}).
-			Where("status = ?", "published").
-			Where("project_id = ?", resourceID).
-			First(page).
-			Error; err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
 	return page, nil
 }

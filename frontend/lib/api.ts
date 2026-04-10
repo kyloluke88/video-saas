@@ -7,11 +7,11 @@ function normalizeBaseUrl(baseUrl: string) {
   return baseUrl.replace(/\/$/, "");
 }
 
-export async function getPodcastScriptPage(resourceId: string): Promise<PodcastScriptPage | null> {
+export async function getPodcastScriptPage(slug: string): Promise<PodcastScriptPage | null> {
   const response = await fetch(
-    `${normalizeBaseUrl(DEFAULT_SERVER_API_BASE_URL)}/api/public/podcast/scripts/${resourceId}`,
+    `${normalizeBaseUrl(DEFAULT_SERVER_API_BASE_URL)}/api/public/podcast/scripts/${encodeURIComponent(slug.trim())}`,
     {
-      next: { revalidate: 60 },
+      cache: "no-store",
     },
   );
 

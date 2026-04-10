@@ -647,7 +647,14 @@ func normalizeLanguageCode(language string) string {
 }
 
 func normalizeSpeaker(speaker string) string {
-	if strings.EqualFold(strings.TrimSpace(speaker), "female") {
+	normalized := strings.ToLower(strings.TrimSpace(speaker))
+	switch normalized {
+	case "female", "f", "woman", "girl", "女":
+		return "female"
+	case "male", "m", "man", "boy", "男":
+		return "male"
+	}
+	if strings.Contains(normalized, "female") || strings.Contains(normalized, "女") {
 		return "female"
 	}
 	return "male"

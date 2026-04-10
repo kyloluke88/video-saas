@@ -38,7 +38,7 @@ func RegisterApiRoutes(r *gin.Engine) {
 	publicGroup := v1.Group("/public")
 	publicGroup.Use(middlewares.LimitIP("1000-H"))
 	{
-		publicGroup.GET("/podcast/scripts/:resourceID", publicPodcastScriptCtrl.ShowPage)
+		publicGroup.GET("/podcast/scripts/:slug", publicPodcastScriptCtrl.ShowPage)
 	}
 
 	videoCtrl := new(clientCtrl.VideoController)
@@ -48,6 +48,7 @@ func RegisterApiRoutes(r *gin.Engine) {
 		videoGroup.POST("/content/idiom/create", videoCtrl.CreateIdiomStory)
 		videoGroup.POST("/content/idiom/submit", videoCtrl.SubmitPlan)
 		videoGroup.POST("/content/podcast/create", videoCtrl.CreatePodcastDialogue)
+		videoGroup.POST("/project/cancel", videoCtrl.CancelProject)
 	}
 
 	authGroup := v1.Group("/auth")

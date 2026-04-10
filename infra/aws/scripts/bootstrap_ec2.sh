@@ -16,7 +16,7 @@ curl -fsSL https://github.com/docker/compose/releases/latest/download/docker-com
   -o /usr/local/lib/docker/cli-plugins/docker-compose
 chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
-mkdir -p "${DEPLOY_BASE_DIR}/shared"/{env,postgres,redis,rabbitmq,outputs,artifacts,storage,caddy/data,caddy/config}
+mkdir -p "${DEPLOY_BASE_DIR}/shared"/{env,postgres,redis,rabbitmq,outputs,storage,caddy/data,caddy/config}
 mkdir -p "${DEPLOY_BASE_DIR}/release"
 
 cd /tmp

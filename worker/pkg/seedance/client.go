@@ -2,6 +2,7 @@ package seedance
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,16 +12,19 @@ import (
 	"strings"
 	"time"
 
-	"worker/pkg/helpers"
+	"worker/pkg/x/httpx"
 )
 
-func Generate(cfg Config, req GenerateRequest) (GenerateResult, error) {
-	seedanceTaskID, createRespRaw, err := submitGenerate(cfg, req)
+func Generate(ctx context.Context, cfg Config, req GenerateRequest) (GenerateResult, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	seedanceTaskID, createRespRaw, err := submitGenerate(ctx, cfg, req)
 	if err != nil {
 		return GenerateResult{CreateResponseBody: createRespRaw}, err
 	}
 
-	videoURL, statusRespRaw, err := pollResult(cfg, seedanceTaskID)
+	videoURL, statusRespRaw, err := pollResult(ctx, cfg, seedanceTaskID)
 	return GenerateResult{
 		VideoURL:           videoURL,
 		CreateResponseBody: createRespRaw,
@@ -28,15 +32,15 @@ func Generate(cfg Config, req GenerateRequest) (GenerateResult, error) {
 	}, err
 }
 
-func submitGenerate(cfg Config, req GenerateRequest) (string, []byte, error) {
+func submitGenerate(ctx context.Context, cfg Config, req GenerateRequest) (string, []byte, error) {
 	body, err := json.Marshal(req)
 	if err != nil {
 		return "", nil, err
 	}
 
 	client := &http.Client{Timeout: time.Duration(cfg.HTTPTimeoutSec) * time.Second}
-	endpoint := helpers.JoinURL(cfg.BaseURL, cfg.GeneratePath)
-	httpReq, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(body))
+	endpoint := httpx.JoinURL(cfg.BaseURL, cfg.GeneratePath)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
 		return "", nil, err
 	}
@@ -68,11 +72,11 @@ func submitGenerate(cfg Config, req GenerateRequest) (string, []byte, error) {
 	return parsed.Data.TaskID, respBody, nil
 }
 
-func pollResult(cfg Config, seedanceTaskID string) (string, []byte, error) {
+func pollResult(ctx context.Context, cfg Config, seedanceTaskID string) (string, []byte, error) {
 	client := &http.Client{Timeout: time.Duration(cfg.HTTPTimeoutSec) * time.Second}
 	var lastStatusBody []byte
 	for i := 0; i < cfg.MaxPollAttempts; i++ {
-		statusResp, statusBody, err := getStatus(client, cfg, seedanceTaskID)
+		statusResp, statusBody, err := getStatus(ctx, client, cfg, seedanceTaskID)
 		if err != nil {
 			return "", lastStatusBody, err
 		}
@@ -92,13 +96,19 @@ func pollResult(cfg Config, seedanceTaskID string) (string, []byte, error) {
 			}
 			return "", lastStatusBody, fmt.Errorf("seedance failed status=%s", statusResp.Data.Status)
 		}
-		time.Sleep(time.Duration(cfg.PollIntervalSec) * time.Second)
+		timer := time.NewTimer(time.Duration(cfg.PollIntervalSec) * time.Second)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return "", lastStatusBody, ctx.Err()
+		case <-timer.C:
+		}
 	}
 	return "", lastStatusBody, fmt.Errorf("seedance poll timeout task_id=%s", seedanceTaskID)
 }
 
-func getStatus(client *http.Client, cfg Config, seedanceTaskID string) (*statusResponse, []byte, error) {
-	endpoint := helpers.JoinURL(cfg.BaseURL, cfg.StatusPath)
+func getStatus(ctx context.Context, client *http.Client, cfg Config, seedanceTaskID string) (*statusResponse, []byte, error) {
+	endpoint := httpx.JoinURL(cfg.BaseURL, cfg.StatusPath)
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, nil, err
@@ -107,7 +117,7 @@ func getStatus(client *http.Client, cfg Config, seedanceTaskID string) (*statusR
 	q.Set("task_id", seedanceTaskID)
 	u.RawQuery = q.Encode()
 
-	httpReq, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, nil, err
 	}

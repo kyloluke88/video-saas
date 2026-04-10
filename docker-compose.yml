@@ -66,6 +66,8 @@ services:
         condition: service_healthy
       postgres:
         condition: service_started
+      redis:
+        condition: service_started
     environment:
       DB_CONNECTION: postgresql
       DB_HOST: postgres
@@ -73,6 +75,9 @@ services:
       DB_DATABASE: ${POSTGRES_DB}
       DB_USERNAME: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      S3_ENABLED: "false"
     volumes:
       - ./worker:/app
 

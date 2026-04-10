@@ -45,6 +45,11 @@
   ruby rt {
     @apply text-[0.65em] font-medium text-primary/90;
   }
+
+  ruby {
+    ruby-align: center;
+    ruby-position: over;
+  }
 }
 
 @layer components {
@@ -62,5 +67,9 @@
 
   .section-copy {
     @apply text-base leading-7 text-muted-foreground;
+  }
+
+  .script-line-card {
+    box-shadow: inset 0 1px 0 hsl(var(--background) / 0.82);
   }
 }

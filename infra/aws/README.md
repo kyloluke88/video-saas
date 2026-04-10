@@ -56,7 +56,6 @@ Create these additional directories only when `ENABLE_WORKER_STACK=true`:
 
 - `rabbitmq/`
 - `outputs/`
-- `artifacts/`
 - `storage/`
 
 The current release bundle is copied to `/opt/video-saas/release`.

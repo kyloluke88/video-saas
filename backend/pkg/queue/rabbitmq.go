@@ -119,10 +119,7 @@ func PublishVideoTask(taskType string, payload map[string]interface{}) (string, 
 		return "", err
 	}
 
-	taskID := fmt.Sprintf("task-%d", time.Now().UnixNano())
-	if suffix := taskIDSuffixFromPayload(payload); suffix != "" {
-		taskID = fmt.Sprintf("%s-%s", taskID, suffix)
-	}
+	taskID := fmt.Sprintf("%s-%d", taskIDPrefixFromPayload(payload), time.Now().UnixNano())
 	body, err := json.Marshal(VideoTaskMessage{
 		TaskID:    taskID,
 		TaskType:  taskType,
@@ -175,16 +172,27 @@ func PublishVideoTask(taskType string, payload map[string]interface{}) (string, 
 	return taskID, nil
 }
 
-func taskIDSuffixFromPayload(payload map[string]interface{}) string {
+func taskIDPrefixFromPayload(payload map[string]interface{}) string {
 	if payload == nil {
-		return ""
+		return "task"
+	}
+	if raw := strings.TrimSpace(fmt.Sprint(payload["project_id"])); raw != "" {
+		return raw
+	}
+	if requestPayload, ok := payload["request_payload"].(map[string]interface{}); ok {
+		if raw := strings.TrimSpace(fmt.Sprint(requestPayload["project_id"])); raw != "" {
+			return raw
+		}
 	}
 	raw, _ := payload["idiom_name_en"].(string)
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
-		return ""
+		return "task"
 	}
-	return toSafeSlug(raw)
+	if slug := toSafeSlug(raw); slug != "" {
+		return slug
+	}
+	return "task"
 }
 
 func toSafeSlug(s string) string {

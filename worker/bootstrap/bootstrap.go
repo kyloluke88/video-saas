@@ -12,5 +12,11 @@ func Initialize(env string) error {
 	if err := logger.InitLogger(config.Get[string]("log.filename")); err != nil {
 		return err
 	}
+	if err := SetupDB(); err != nil {
+		return err
+	}
+	if err := SetupRedis(); err != nil {
+		return err
+	}
 	return nil
 }

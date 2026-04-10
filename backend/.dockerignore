@@ -2,7 +2,6 @@
 .gitignore
 .env
 tmp
-outputs
 storage/logs
 Dockerfile
 Dockerfile.prod

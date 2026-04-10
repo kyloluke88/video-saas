@@ -6,7 +6,7 @@ type CreatePodcastDialogueRequest struct {
 	Lang           string   `json:"lang" binding:"omitempty,oneof=zh ja"`
 	ContentProfile string   `json:"content_profile" binding:"omitempty,oneof=daily social_issue international"`
 	TTSType        int      `json:"tts_type" binding:"omitempty,oneof=1 2"`
-	RunMode        int      `json:"run_mode" binding:"omitempty,oneof=0 1 2"`
+	RunMode        int      `json:"run_mode" binding:"omitempty,oneof=0 1 2 3 4"`
 	BlockNums      []int    `json:"block_nums" binding:"omitempty,dive,min=1"`
 	BlockNum       []int    `json:"block_num" binding:"omitempty,dive,min=1"`
 	ScriptFilename string   `json:"script_filename" binding:"omitempty,max=255"`

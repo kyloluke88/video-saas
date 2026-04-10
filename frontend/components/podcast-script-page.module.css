@@ -1,0 +1,25 @@
+.transcriptLineText ruby {
+  @apply px-[0.01em] font-medium text-foreground;
+}
+
+.transcriptLineText rt {
+  @apply pb-0.5 text-[0.7em] font-medium tracking-[0.01em] text-primary/80;
+}
+
+.transcriptShell summary::-webkit-details-marker {
+  display: none;
+}
+
+.transcriptSummary {
+  background:
+    radial-gradient(circle at top left, hsl(var(--secondary) / 0.6), transparent 32%),
+    linear-gradient(135deg, hsl(var(--card) / 0.95), hsl(var(--background) / 0.92));
+}
+
+.transcriptSummaryChevron {
+  transition: transform 200ms ease;
+}
+
+.transcriptShell[open] .transcriptSummaryChevron {
+  transform: rotate(180deg);
+}

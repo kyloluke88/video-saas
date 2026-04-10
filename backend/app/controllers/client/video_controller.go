@@ -11,8 +11,10 @@ import (
 	"strings"
 	"time"
 
+	"api/app/models/content"
 	"api/app/requests/client/video"
 	appconfig "api/pkg/config"
+	"api/pkg/database"
 	"api/pkg/deepseek"
 	"api/pkg/logger"
 	"api/pkg/queue"
@@ -20,6 +22,7 @@ import (
 	"api/pkg/wanxiang"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type VideoController struct {
@@ -40,6 +43,8 @@ type referenceImage struct {
 	TaskID   string `json:"task_id,omitempty"`
 	ImageURL string `json:"image_url,omitempty"`
 }
+
+var podcastReplayProjectPattern = regexp.MustCompile(`^(.*)__rm\d+__\d{14}$`)
 
 // CreateIdiomStory 由 backend 同步调用 DeepSeek 规划，成功后再入队给 worker 执行生成流水线。
 func (ctrl *VideoController) CreateIdiomStory(c *gin.Context) {
@@ -84,12 +89,14 @@ func (ctrl *VideoController) CreateIdiomStory(c *gin.Context) {
 		"aspect_ratio":        planInput.AspectRatio,
 		"resolution":          planInput.Resolution,
 	}
+	trackIdiomProject(projectID, "plan.v1", requestPayload)
 
 	taskID, err := queue.PublishVideoTask("plan.v1", map[string]interface{}{
 		"request_payload": requestPayload,
 		"plan":            plan,
 	})
 	if err != nil {
+		markProjectRequestFailed(projectID, "plan.v1", err)
 		if errors.Is(err, queue.ErrDisabled) {
 			c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
 				"message": "rabbitmq is disabled on this environment",
@@ -136,12 +143,14 @@ func (ctrl *VideoController) SubmitPlan(c *gin.Context) {
 		response.BadRequest(c, fmt.Errorf("project_id missing"), "request_payload.project_id is required")
 		return
 	}
+	trackIdiomProject(projectID, "plan.v1", requestPayload)
 
 	taskID, err := queue.PublishVideoTask("plan.v1", map[string]interface{}{
 		"request_payload": requestPayload,
 		"plan":            req.Plan,
 	})
 	if err != nil {
+		markProjectRequestFailed(projectID, "plan.v1", err)
 		if errors.Is(err, queue.ErrDisabled) {
 			c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
 				"message": "rabbitmq is disabled on this environment",
@@ -157,6 +166,82 @@ func (ctrl *VideoController) SubmitPlan(c *gin.Context) {
 		"project_id": projectID,
 		"task_id":    taskID,
 		"task_type":  "plan.v1",
+	})
+}
+
+func (ctrl *VideoController) CancelProject(c *gin.Context) {
+	var req video.CancelProjectRequest
+	if !ctrl.BindJSON(c, &req) {
+		return
+	}
+
+	projectID := strings.TrimSpace(req.ProjectID)
+	if projectID == "" {
+		response.BadRequest(c, fmt.Errorf("project_id is required"), "project_id is required")
+		return
+	}
+	if database.DB == nil {
+		response.Abort500(c, "database is not initialized")
+		return
+	}
+
+	project, err := content.FindProjectByProjectID(projectID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
+				"message":    "project not found",
+				"project_id": projectID,
+			})
+			return
+		}
+		response.Abort500(c, "query project failed: "+err.Error())
+		return
+	}
+
+	switch project.Status {
+	case content.ProjectStatusFinished, content.ProjectStatusError:
+		c.AbortWithStatusJSON(http.StatusConflict, gin.H{
+			"message":     "project is already terminal",
+			"project_id":  projectID,
+			"status":      project.Status,
+			"status_name": content.ProjectStatusName(project.Status),
+		})
+		return
+	case content.ProjectStatusCancelling:
+		response.JSON(c, gin.H{
+			"message":     "project cancellation already requested",
+			"project_id":  projectID,
+			"status":      project.Status,
+			"status_name": content.ProjectStatusName(project.Status),
+		})
+		return
+	case content.ProjectStatusCancelled:
+		response.JSON(c, gin.H{
+			"message":     "project already cancelled",
+			"project_id":  projectID,
+			"status":      project.Status,
+			"status_name": content.ProjectStatusName(project.Status),
+		})
+		return
+	}
+
+	now := time.Now().UTC()
+	if err := content.UpdateProjectByProjectID(projectID, map[string]interface{}{
+		"status":               content.ProjectStatusCancelling,
+		"terminated_task_type": project.CurrentTaskType,
+		"cancel_requested_at":  &now,
+		"cancel_source":        content.ProjectCancelSourceManualAPI,
+		"updated_at":           now,
+	}); err != nil {
+		response.Abort500(c, "cancel project failed: "+err.Error())
+		return
+	}
+
+	response.JSON(c, gin.H{
+		"message":     "project cancellation requested",
+		"project_id":  projectID,
+		"status":      content.ProjectStatusCancelling,
+		"status_name": content.ProjectStatusName(content.ProjectStatusCancelling),
 	})
 }
 
@@ -179,30 +264,24 @@ func (ctrl *VideoController) CreatePodcastDialogue(c *gin.Context) {
 
 	bgImgFilenames := compactStringSlice(req.BgImgFilenames)
 	blockNums := mergePodcastBlockNums(req.BlockNums, req.BlockNum)
-	podcastSeed := buildPodcastSeed(projectID)
-	payload := map[string]interface{}{
-		"project_id":      projectID,
-		"lang":            strings.TrimSpace(req.Lang),
-		"content_profile": strings.TrimSpace(req.ContentProfile),
-		"tts_type":        defaultInt(req.TTSType, 1),
-		"seed":            podcastSeed, // eleven API need this param
-		"run_mode":        runMode,
-		"title":           strings.TrimSpace(req.Title),
-		"script_filename": strings.TrimSpace(req.ScriptFilename),
-		"target_platform": defaultIfEmpty(strings.TrimSpace(req.TargetPlatform), "youtube"),
-		"aspect_ratio":    defaultIfEmpty(strings.TrimSpace(req.AspectRatio), "16:9"),
-		"resolution":      defaultIfEmpty(strings.TrimSpace(req.Resolution), defaultPodcastResolution()),
-		"design_style":    defaultInt(req.DesignStyle, 1),
+	podcastSeed := 0
+	if runMode == 0 {
+		podcastSeed = buildPodcastSeed(projectID)
 	}
-	if len(bgImgFilenames) > 0 {
-		payload["bg_img_filenames"] = bgImgFilenames
-	}
-	if runMode == 1 && len(blockNums) > 0 {
-		payload["block_nums"] = blockNums
+	payload := buildPodcastTaskPayload(req, projectID, runMode, blockNums, bgImgFilenames, podcastSeed)
+
+	taskType := "podcast.audio.generate.v1"
+	if runMode == 3 {
+		taskType = "podcast.page.persist.v1"
+	} else if runMode == 4 {
+		taskType = "podcast.audio.align.v1"
 	}
 
-	taskID, err := queue.PublishVideoTask("podcast.audio.generate.v1", payload)
+	trackPodcastProject(projectID, runMode, taskType, payload)
+
+	taskID, err := queue.PublishVideoTask(taskType, payload)
 	if err != nil {
+		markPodcastProjectRequestFailed(projectID, taskType, err)
 		if errors.Is(err, queue.ErrDisabled) {
 			c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
 				"message": "rabbitmq is disabled on this environment",
@@ -218,7 +297,7 @@ func (ctrl *VideoController) CreatePodcastDialogue(c *gin.Context) {
 		"project_id": projectID,
 		"seed":       podcastSeed,
 		"task_id":    taskID,
-		"task_type":  "podcast.audio.generate.v1",
+		"task_type":  taskType,
 	})
 }
 
@@ -235,10 +314,9 @@ func buildProjectID(seed string) string {
 	return fmt.Sprintf("pro_%d_%s", time.Now().UnixNano(), slug)
 }
 
-func buildPodcastProjectID(lang, seed string) string {
+func buildPodcastProjectID(lang string) string {
 	prefix := normalizePodcastLang(lang) + "_podcast"
-	slug := slugForID(strings.TrimSpace(seed))
-	return fmt.Sprintf("%s_%s_%s", prefix, time.Now().Format("20060102150405"), slug)
+	return fmt.Sprintf("%s_%s", prefix, time.Now().Format("20060102150405"))
 }
 
 func buildPodcastSeed(projectID string) int {
@@ -253,7 +331,7 @@ func buildPodcastSeed(projectID string) int {
 
 func normalizePodcastRunMode(value int) int {
 	switch value {
-	case 1, 2:
+	case 1, 2, 3, 4:
 		return value
 	default:
 		return 0
@@ -261,20 +339,16 @@ func normalizePodcastRunMode(value int) int {
 }
 
 func resolvePodcastProjectID(req video.CreatePodcastDialogueRequest, runMode int) (string, error) {
-	if runMode == 1 || runMode == 2 {
-		projectID := strings.TrimSpace(req.ProjectID)
-		if projectID == "" {
-			return "", fmt.Errorf("project_id is required when run_mode is 1 or 2")
+	if runMode == 1 || runMode == 2 || runMode == 3 || runMode == 4 {
+		sourceProjectID := strings.TrimSpace(req.ProjectID)
+		if sourceProjectID == "" {
+			return "", fmt.Errorf("project_id is required when run_mode is 1, 2, 3 or 4")
 		}
-		return projectID, nil
+		return buildPodcastReplayProjectID(sourceProjectID, runMode), nil
 	}
 
 	lang := normalizePodcastLang(req.Lang)
-	projectSeed := req.Title
-	if strings.TrimSpace(projectSeed) == "" {
-		projectSeed = req.ScriptFilename
-	}
-	return buildPodcastProjectID(lang, projectSeed), nil
+	return buildPodcastProjectID(lang), nil
 }
 
 func validatePodcastCreateRequest(req video.CreatePodcastDialogueRequest, runMode int) error {
@@ -287,6 +361,16 @@ func validatePodcastCreateRequest(req video.CreatePodcastDialogueRequest, runMod
 	case 2:
 		if strings.TrimSpace(req.ProjectID) == "" {
 			return fmt.Errorf("project_id is required when run_mode is 2")
+		}
+		return nil
+	case 3:
+		if strings.TrimSpace(req.ProjectID) == "" {
+			return fmt.Errorf("project_id is required when run_mode is 3")
+		}
+		return nil
+	case 4:
+		if strings.TrimSpace(req.ProjectID) == "" {
+			return fmt.Errorf("project_id is required when run_mode is 4")
 		}
 		return nil
 	default:
@@ -304,6 +388,63 @@ func validatePodcastCreateRequest(req video.CreatePodcastDialogueRequest, runMod
 		}
 		return nil
 	}
+}
+
+func buildPodcastTaskPayload(
+	req video.CreatePodcastDialogueRequest,
+	projectID string,
+	runMode int,
+	blockNums []int,
+	bgImgFilenames []string,
+	podcastSeed int,
+) map[string]interface{} {
+	payload := map[string]interface{}{
+		"content_type":    "podcast",
+		"project_id":      projectID,
+		"run_mode":        runMode,
+		"title":           strings.TrimSpace(req.Title),
+		"lang":            strings.TrimSpace(req.Lang),
+		"content_profile": strings.TrimSpace(req.ContentProfile),
+		"script_filename": strings.TrimSpace(req.ScriptFilename),
+		"target_platform": strings.TrimSpace(req.TargetPlatform),
+		"aspect_ratio":    strings.TrimSpace(req.AspectRatio),
+		"resolution":      strings.TrimSpace(req.Resolution),
+		"design_style":    req.DesignStyle,
+	}
+	if runMode == 1 || runMode == 2 || runMode == 3 || runMode == 4 {
+		if sourceProjectID := strings.TrimSpace(req.ProjectID); sourceProjectID != "" {
+			payload["source_project_id"] = sourceProjectID
+		}
+	}
+	if podcastSeed > 0 {
+		payload["seed"] = podcastSeed
+	}
+	if req.TTSType == 1 || req.TTSType == 2 {
+		payload["tts_type"] = req.TTSType
+	}
+	if len(blockNums) > 0 {
+		payload["block_nums"] = blockNums
+	}
+	if len(bgImgFilenames) > 0 {
+		payload["bg_img_filenames"] = bgImgFilenames
+	}
+	return payload
+}
+
+func buildPodcastReplayProjectID(sourceProjectID string, runMode int) string {
+	return fmt.Sprintf("%s__rm%d__%s", normalizePodcastReplayRootProjectID(sourceProjectID), runMode, time.Now().Format("20060102150405"))
+}
+
+func normalizePodcastReplayRootProjectID(projectID string) string {
+	projectID = strings.TrimSpace(projectID)
+	if projectID == "" {
+		return ""
+	}
+	matches := podcastReplayProjectPattern.FindStringSubmatch(projectID)
+	if len(matches) == 2 && strings.TrimSpace(matches[1]) != "" {
+		return strings.TrimSpace(matches[1])
+	}
+	return projectID
 }
 
 func compactStringSlice(values []string) []string {

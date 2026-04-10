@@ -29,10 +29,14 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     env_file:
+      - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/env/global.env
       - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/env/worker.env
     volumes:
       - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/env/worker.env:/app/.env:ro
       - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/outputs:/app/outputs
-      - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/artifacts:/app/artifacts
       - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/storage:/app/storage
