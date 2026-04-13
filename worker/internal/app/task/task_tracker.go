@@ -216,7 +216,17 @@ func taskOnlyCurrentStep(task VideoTaskMessage) bool {
 	if task.Payload == nil {
 		return false
 	}
-	return mapx.GetInt(task.Payload, "only_current_step", 0) == 1
+	if mapx.GetInt(task.Payload, "only_current_step", 0) != 1 {
+		return false
+	}
+	// run_mode=2 should execute compose.render + compose.finalize as one
+	// compose stage when only_current_step=1, so render is not terminal.
+	if taskContentType(task) == "podcast" &&
+		mapx.GetInt(task.Payload, "run_mode", 0) == 2 &&
+		task.TaskType == "podcast.compose.render.v1" {
+		return false
+	}
+	return true
 }
 
 func projectCancelled(store *persistence.Store, projectID string) (bool, error) {

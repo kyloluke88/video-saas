@@ -16,6 +16,7 @@ type ScriptPageUpsert struct {
 	Language         string
 	AudienceLanguage string
 	Title            string
+	EnTitle          string
 	Subtitle         string
 	Summary          string
 	CoverImageURL    string
@@ -45,6 +46,7 @@ func (s *Store) UpsertPodcastScriptPage(input ScriptPageUpsert) (uint64, error) 
 		Language:         input.Language,
 		AudienceLanguage: input.AudienceLanguage,
 		Title:            input.Title,
+		EnTitle:          input.EnTitle,
 		Subtitle:         input.Subtitle,
 		Summary:          input.Summary,
 		CoverImageURL:    input.CoverImageURL,
@@ -81,6 +83,7 @@ func (s *Store) UpsertPodcastScriptPage(input ScriptPageUpsert) (uint64, error) 
 		"language":          coalesceString(record.Language, existing.Language),
 		"audience_language": coalesceString(record.AudienceLanguage, existing.AudienceLanguage),
 		"title":             coalesceString(record.Title, existing.Title),
+		"en_title":          coalesceString(record.EnTitle, existing.EnTitle),
 		"subtitle":          coalesceString(record.Subtitle, existing.Subtitle),
 		"summary":           coalesceString(record.Summary, existing.Summary),
 		"cover_image_url":   coalesceString(record.CoverImageURL, existing.CoverImageURL),

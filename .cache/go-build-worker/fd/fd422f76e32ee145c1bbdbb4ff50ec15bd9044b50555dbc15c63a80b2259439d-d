@@ -1,0 +1,9 @@
+./background.go
+./compose.go
+./render_config.go
+./renderer.go
+./subtitle_ja.go
+./subtitle_paging.go
+./subtitle_zh.go
+./types.go
+./waveform.go

@@ -50,7 +50,7 @@ func ResolveSourceProjectID(current dto.PodcastAudioGeneratePayload) (string, er
 	return workspace.ReplaySourceProjectID(current.ProjectID)
 }
 
-func PrepareGeneratePayload(current dto.PodcastAudioGeneratePayload) (dto.PodcastAudioGeneratePayload, error) {
+func PrepareGeneratePayload(current dto.PodcastAudioGeneratePayload, requestPayloadPatch ...map[string]interface{}) (dto.PodcastAudioGeneratePayload, error) {
 	sourceProjectID, err := ResolveSourceProjectID(current)
 	if err != nil {
 		return dto.PodcastAudioGeneratePayload{}, err
@@ -68,10 +68,36 @@ func PrepareGeneratePayload(current dto.PodcastAudioGeneratePayload) (dto.Podcas
 		return dto.PodcastAudioGeneratePayload{}, err
 	}
 	replayPayload.SourceProjectID = sourceProjectID
+	if len(requestPayloadPatch) > 0 && requestPayloadPatch[0] != nil {
+		if err := persistReplayRequestPayloadPatch(replayPayload.ProjectID, requestPayloadPatch[0]); err != nil {
+			return dto.PodcastAudioGeneratePayload{}, err
+		}
+		return replayPayload, nil
+	}
 	if err := PersistGeneratePayload(replayPayload); err != nil {
 		return dto.PodcastAudioGeneratePayload{}, err
 	}
 	return replayPayload, nil
+}
+
+func persistReplayRequestPayloadPatch(projectID string, patch map[string]interface{}) error {
+	basePayload, err := workspace.LoadRequestPayloadMap(projectID)
+	if err != nil {
+		return err
+	}
+	merged := mergePayloadPatch(basePayload, patch)
+	return workspace.WriteRequestPayload(projectID, merged)
+}
+
+func mergePayloadPatch(base, patch map[string]interface{}) map[string]interface{} {
+	out := make(map[string]interface{}, len(base)+len(patch))
+	for key, value := range base {
+		out[key] = value
+	}
+	for key, value := range patch {
+		out[key] = value
+	}
+	return out
 }
 
 func BuildGeneratePayloadFromSavedAndCurrent(saved, current dto.PodcastAudioGeneratePayload) (dto.PodcastAudioGeneratePayload, error) {
@@ -98,7 +124,7 @@ func BuildGeneratePayloadFromSavedAndCurrent(saved, current dto.PodcastAudioGene
 		Lang:            lang,
 		ContentProfile:  firstNonEmpty(saved.ContentProfile, current.ContentProfile),
 		TTSType:         firstPositive(saved.TTSType, current.TTSType, 1),
-		Seed:            firstPositive(saved.Seed, current.Seed),
+		Seed:            firstPositive(current.Seed, saved.Seed),
 		RunMode:         firstPositive(current.RunMode, saved.RunMode),
 		OnlyCurrentStep: normalizeOnlyCurrentStep(current.OnlyCurrentStep),
 		BlockNums:       firstPositiveInts(current.BlockNums, saved.BlockNums),

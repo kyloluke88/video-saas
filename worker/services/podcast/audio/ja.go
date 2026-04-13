@@ -3,7 +3,6 @@ package podcast_audio_service
 import (
 	"fmt"
 	"strings"
-	"unicode/utf8"
 
 	dto "worker/services/podcast/model"
 )
@@ -16,20 +15,6 @@ type japaneseAnnotationSpan struct {
 func normalizeJapaneseSegment(seg dto.PodcastSegment) dto.PodcastSegment {
 	seg.TokenSpans = dto.BuildJapaneseTokenSpans(japaneseDisplayText(seg), seg.Tokens)
 	return fillUnalignedJapaneseAnnotationTokens(seg)
-}
-
-func japaneseAlignmentStats(seg dto.PodcastSegment) (int, int) {
-	matched := 0
-	for _, token := range seg.Tokens {
-		if token.EndMS > token.StartMS {
-			matched++
-		}
-	}
-	return matched, len(seg.Tokens)
-}
-
-func japaneseCharacterCount(seg dto.PodcastSegment) int {
-	return utf8.RuneCountInString(strings.TrimSpace(japaneseDisplayText(seg)))
 }
 
 func validateJapaneseScriptInput(script dto.PodcastScript) error {

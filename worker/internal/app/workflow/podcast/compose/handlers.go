@@ -32,7 +32,7 @@ func HandleComposeRender(ctx context.Context, ch *amqp.Channel, msg task.VideoTa
 	if err != nil {
 		return err
 	}
-	if shouldStopAfterCurrentStep(payload.OnlyCurrentStep) {
+	if shouldStopAfterRender(payload) {
 		return nil
 	}
 	return publishFinalizeTask(ch, payload)
@@ -59,7 +59,7 @@ func resolveComposePayload(raw map[string]interface{}) (dto.PodcastComposePayloa
 		if err != nil {
 			return dto.PodcastComposePayload{}, err
 		}
-		replayPayload, err := podcastreplay.PrepareGeneratePayload(generatePayload)
+		replayPayload, err := podcastreplay.PrepareGeneratePayload(generatePayload, raw)
 		if err != nil {
 			return dto.PodcastComposePayload{}, err
 		}
@@ -140,4 +140,13 @@ func decodePayload(raw map[string]interface{}) (dto.PodcastComposePayload, error
 
 func shouldStopAfterCurrentStep(value int) bool {
 	return value == 1
+}
+
+func shouldStopAfterRender(payload dto.PodcastComposePayload) bool {
+	if payload.OnlyCurrentStep != 1 {
+		return false
+	}
+	// run_mode=2 means compose-stage replay. User expectation is:
+	// "only_current_step=1" should still run render + finalize, then stop.
+	return payload.RunMode != 2
 }

@@ -23,7 +23,7 @@ func HandleGenerate(ctx context.Context, ch *amqp.Channel, msg task.VideoTaskMes
 	}
 	switch payload.RunMode {
 	case 1:
-		return handleRunModeReplay(ctx, ch, payload)
+		return handleRunModeReplay(ctx, ch, payload, msg.Payload)
 	case 0:
 		return handleRunModeFresh(ctx, ch, payload)
 	default:
@@ -40,7 +40,7 @@ func HandleAlign(ctx context.Context, ch *amqp.Channel, msg task.VideoTaskMessag
 		if payload.RunMode != 4 {
 			return services.NonRetryableError{Err: fmt.Errorf("replay align entry requires run_mode=4")}
 		}
-		replayPayload, err := podcastreplay.PrepareGeneratePayload(payload)
+		replayPayload, err := podcastreplay.PrepareGeneratePayload(payload, msg.Payload)
 		if err != nil {
 			return err
 		}
@@ -118,14 +118,14 @@ func handleRunModeFresh(ctx context.Context, ch *amqp.Channel, payload dto.Podca
 	return generateAndContinue(ctx, ch, payload)
 }
 
-func handleRunModeReplay(ctx context.Context, ch *amqp.Channel, payload dto.PodcastAudioGeneratePayload) error {
-	replayPayload, err := podcastreplay.PrepareGeneratePayload(payload)
+func handleRunModeReplay(ctx context.Context, ch *amqp.Channel, payload dto.PodcastAudioGeneratePayload, rawPayload map[string]interface{}) error {
+	replayPayload, err := podcastreplay.PrepareGeneratePayload(payload, rawPayload)
 	if err != nil {
 		return err
 	}
 	sourceProjectID, _ := podcastreplay.ResolveSourceProjectID(payload)
-	log.Printf("♻️ podcast run_mode=1 replay source=%s target=%s block_nums=%v background=%s backgrounds=%d design_style=%d resolution=%s",
-		sourceProjectID, replayPayload.ProjectID, replayPayload.BlockNums, firstBackgroundName(replayPayload.BgImgFilenames), len(replayPayload.BgImgFilenames), replayPayload.DesignStyle, replayPayload.Resolution)
+	log.Printf("♻️ podcast run_mode=1 replay source=%s target=%s block_nums=%v background=%s backgrounds=%d design_style=%d resolution=%s project_id=%s",
+		sourceProjectID, replayPayload.ProjectID, replayPayload.BlockNums, firstBackgroundName(replayPayload.BgImgFilenames), len(replayPayload.BgImgFilenames), replayPayload.DesignStyle, replayPayload.Resolution, replayPayload.ProjectID)
 	return generateAndContinue(ctx, ch, replayPayload)
 }
 

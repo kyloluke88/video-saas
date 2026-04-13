@@ -47,12 +47,12 @@ func synthesizeWithElevenLabs(
 ) ([]blockSynthesisResult, error) {
 	results := make([]blockSynthesisResult, len(script.Blocks))
 	projectSeed := elevenLabsProjectSeed(projectID, configSeed)
-	log.Printf("🎛️ podcast tts mode provider=elevenlabs request_mode=per_block blocks=%d selected_blocks=%d", len(script.Blocks), len(requestedBlocks))
+	log.Printf("🎛️ podcast tts mode provider=elevenlabs request_mode=per_block blocks=%d selected_blocks=%d project_id=%s", len(script.Blocks), len(requestedBlocks), projectID)
 
 	for blockIndex, block := range script.Blocks {
 		forceRerun := isRequestedBlock(requestedBlocks, blockIndex)
 		if !forceRerun {
-			reused, ok, err := tryReuseCachedBlockWithoutMFA(language, artifacts, blockIndex, block)
+			reused, ok, err := tryReuseCachedBlockWithoutMFA(projectID, language, artifacts, blockIndex, block)
 			if err != nil {
 				return nil, err
 			}
@@ -67,17 +67,21 @@ func synthesizeWithElevenLabs(
 		if err != nil {
 			return nil, err
 		}
-		log.Printf("🎛️ podcast tts block start provider=elevenlabs block=%03d/%03d block_id=%s turns=%d force_rerun=%t",
-			blockIndex+1, len(script.Blocks), strings.TrimSpace(block.BlockID), len(inputs), forceRerun)
+		log.Printf("🎛️ podcast tts block start provider=elevenlabs block=%03d/%03d block_id=%s turns=%d force_rerun=%t project_id=%s",
+			blockIndex+1, len(script.Blocks), strings.TrimSpace(block.BlockID), len(inputs), forceRerun, projectID)
 
-		ttsResult, err := client.SynthesizeDialogueWithTimestamps(ctx, elevenlabs.SynthesizeDialogueWithTimestampsRequest{
+		ttsRequest := elevenlabs.SynthesizeDialogueWithTimestampsRequest{
 			Inputs:       inputs,
 			Prompt:       buildElevenLabsDialoguePrompt(language),
 			LanguageCode: elevenLabsLanguageCode(language),
 			Speed:        elevenLabsSpeakingSpeed(),
 			Seed:         projectSeed,
-		})
+		}
+		ttsResult, err := client.SynthesizeDialogueWithTimestamps(ctx, ttsRequest)
 		if err != nil {
+			return nil, err
+		}
+		if err := persistElevenTTSDebugArtifacts(artifacts.blockStatesDir, block.BlockID, ttsRequest, ttsResult.RawResponse, len(ttsResult.Audio)); err != nil {
 			return nil, err
 		}
 
@@ -129,8 +133,8 @@ func synthesizeWithElevenLabs(
 		if err == nil {
 			_ = writeJSON(filepath.Join(projectDir, "script_partial.json"), partialScript)
 		}
-		log.Printf("✅ podcast tts block done provider=elevenlabs block=%03d/%03d block_id=%s audio=%s duration_ms=%d",
-			blockIndex+1, len(script.Blocks), strings.TrimSpace(block.BlockID), blockAudioPath, blockDurationMS)
+		log.Printf("✅ podcast tts block done provider=elevenlabs block=%03d/%03d block_id=%s duration_ms=%d project_id=%s",
+			blockIndex+1, len(script.Blocks), strings.TrimSpace(block.BlockID), blockDurationMS, projectID)
 	}
 	return results, nil
 }
@@ -261,6 +265,7 @@ func elevenLabsLanguageCode(language string) string {
 }
 
 func tryReuseCachedBlockWithoutMFA(
+	projectID string,
 	language string,
 	artifacts audioArtifacts,
 	index int,
@@ -269,10 +274,13 @@ func tryReuseCachedBlockWithoutMFA(
 	return tryReuseCompletedBlockWithoutMFA(
 		podcastTTSTypeElevenLabs,
 		"elevenlabs",
+		projectID,
 		language,
 		artifacts,
 		index,
 		block,
+		true,
+		false,
 	)
 }
 

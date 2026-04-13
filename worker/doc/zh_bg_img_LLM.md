@@ -17,8 +17,7 @@
   },
   "background": {
     "description": "Strict flat single-color background.",
-    "colors": "Midnight Indigo, Charcoal Slate, Dark Teal Green, Deep Smoke Blue, Dusty Cedar, Taupe Gray.",
-    "rules": "The background must be one single uniform color across the entire canvas. No gradient. No brightness variation. No shading. No vignette. No lighting falloff. No top-bottom color difference. No horizontal or vertical split. No banding. No horizon line. No color blocks. No layered background. No tonal shift of any kind.",
+    "colors": "#004aad. The entire canvas uses this single uniform color. No gradient. No brightness variation. No shading. No vignette. No lighting falloff. No top-bottom color difference. No horizontal or vertical split. No banding. No horizon line. No color blocks. No layered background. No tonal shift of any kind.",
     "text_area": "The upper 45% of the canvas must remain completely empty, clean, and unobstructed, reserved strictly for text."
   },
   "lighting": "Soft, even illustrative lighting applied only to characters, not affecting the background.",

@@ -106,7 +106,6 @@ male 更沉稳，负责用清楚、温和、自然的方式解释概念、补充
     - 标签必须是简短英文短语，建议 1 到 3 个英文单词
     - 标签必须表达清晰的情绪、动作或语气，例如 laugh、sigh、whisper、pause、teasing、relieved 这一类
     - 禁止中文标签、日文标签、整句式标签、解释型标签、冗长标签
-  - 当要表达笑声、轻叹、吸气、低声、停顿等非语言效果时，禁止写成「あはは/はは/ふふ/へへ/[笑]/（笑）/w」这类正文；必须改用标签
   - 禁止双重表达，例如 `[laughs] あはは、…`、`[soft laugh] ふふ、…`
   - 标签位置规则：
     - [happy]/[excited]/[sad]/[thoughtful]/[curious]/[surprised]/[cheerfully]/[amused]/[calmly]/[gently]/[confidently]/[reassuringly] 优先放句首
@@ -137,9 +136,8 @@ Audio events / special（播客场景一般不建议使用）:
 【总结规则】
 - 最后一个 block.block_id 必须为 summary_cta
 - summary_cta block 回收总结本集 topic，并自然鼓励听众点赞和订阅频道
-- summary_cta block 的结尾还必须自然告诉听众：本次聊天内容的脚本可以从描述栏获取
-- 这段“描述栏获取脚本”的提示必须属于实际会说出来的正文，表达要自然、口语化，不要生硬广告腔
-- 只能说“描述栏”，不要改写成评论区、置顶评论、简介页或其他位置
+- summary_cta block 的结尾还必须自然告诉听众：本次聊天内容的脚本可以从置顶评论获取
+- 这段“置顶评论获取脚本”的提示必须属于实际会说出来的正文，表达要自然、口语化，不要生硬广告腔
 - 最后的 segment.summary=true，所有其他 segment 的 summary 必须为 false
 
 【第一阶段特别规则】
@@ -214,9 +212,10 @@ Audio events / special（播客场景一般不建议使用）:
 }
 
 现在根据以下输入生成内容：
-topic：「ね」「よ」「よね」到底差在哪？
+topic：今の日本、若い人は本当に余裕がない？
+方向：钱、时间、情绪、工作压力等等、为什么大家看起来都很累。
 difficulty_level：N3
-target_duration_minutes：13
+target_duration_minutes：15
 tts_type: google
 
 请按照规则要求给我生成内容并且给我可以下载的json文件

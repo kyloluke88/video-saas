@@ -1,0 +1,3 @@
+./email_exist_request.go
+./signin_by_password_request.go
+./signup_email_request.go

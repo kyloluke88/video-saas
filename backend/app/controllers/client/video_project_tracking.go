@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	"api/app/models/content"
@@ -54,7 +55,8 @@ func trackPodcastProject(
 	requestPayload map[string]interface{},
 ) {
 	runModeValue := runMode
-	trackProject(projectID, "podcast", &runModeValue, podcastTriggerStage(runMode), targetTaskType, requestPayload)
+	payloadForTracking := buildTrackedPodcastPayload(runMode, requestPayload)
+	trackProject(projectID, "podcast", &runModeValue, podcastTriggerStage(runMode), targetTaskType, payloadForTracking)
 }
 
 func trackIdiomProject(projectID string, targetTaskType string, requestPayload map[string]interface{}) {
@@ -97,4 +99,50 @@ func podcastTriggerStage(runMode int) string {
 	default:
 		return "audio_generate"
 	}
+}
+
+func buildTrackedPodcastPayload(runMode int, requestPayload map[string]interface{}) map[string]interface{} {
+	patch := cloneStringAnyMap(requestPayload)
+	if runMode == 0 {
+		return patch
+	}
+	sourceProjectID := strings.TrimSpace(anyString(requestPayload["source_project_id"]))
+	if sourceProjectID == "" || database.DB == nil {
+		return patch
+	}
+
+	sourceProject, err := content.FindProjectByProjectID(sourceProjectID)
+	if err != nil {
+		logger.Warn("load source project payload failed", zap.Error(err), zap.String("source_project_id", sourceProjectID))
+		return patch
+	}
+	if len(sourceProject.Payload) == 0 {
+		return patch
+	}
+
+	base := make(map[string]interface{})
+	if err := json.Unmarshal(sourceProject.Payload, &base); err != nil {
+		logger.Warn("decode source project payload failed", zap.Error(err), zap.String("source_project_id", sourceProjectID))
+		return patch
+	}
+	return mergeStringAnyMap(base, patch)
+}
+
+func cloneStringAnyMap(src map[string]interface{}) map[string]interface{} {
+	if len(src) == 0 {
+		return map[string]interface{}{}
+	}
+	out := make(map[string]interface{}, len(src))
+	for key, value := range src {
+		out[key] = value
+	}
+	return out
+}
+
+func mergeStringAnyMap(base, patch map[string]interface{}) map[string]interface{} {
+	out := cloneStringAnyMap(base)
+	for key, value := range patch {
+		out[key] = value
+	}
+	return out
 }

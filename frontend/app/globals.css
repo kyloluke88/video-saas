@@ -20,6 +20,8 @@
     --input: 32 28% 82%;
     --ring: 181 71% 23%;
     --radius: 1rem;
+    --brand-mint: 154 42% 73%;
+    --brand-green: 157 43% 46%;
   }
 
   * {
@@ -53,6 +55,14 @@
 }
 
 @layer components {
+  .page-shell {
+    @apply mx-auto w-full max-w-[1720px] px-5 py-10 md:px-10 md:py-14;
+  }
+
+  .soft-surface {
+    @apply rounded-2xl border border-border/70 bg-card shadow-sm;
+  }
+
   .shell {
     @apply mx-auto w-full max-w-7xl px-4 py-10 md:px-6 md:py-14;
   }

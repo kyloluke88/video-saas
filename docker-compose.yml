@@ -97,7 +97,9 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+      - frontend_next_cache:/app/.next
     command: npm run dev
 
 volumes:
   postgres_data:
+  frontend_next_cache:

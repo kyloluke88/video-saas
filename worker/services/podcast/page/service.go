@@ -150,6 +150,7 @@ func BuildPageSourceFromProjectDir(projectDir string, input PersistInput) (PageS
 		Language:         coalesce(script.Language, request.Lang),
 		AudienceLanguage: "en",
 		Title:            coalesce(script.Title, request.Title, strings.TrimSuffix(filepath.Base(request.ScriptFilename), filepath.Ext(request.ScriptFilename)), input.ProjectID),
+		EnTitle:          strings.TrimSpace(script.EnTitle),
 		Subtitle:         buildSubtitle(script),
 		Summary:          buildSummary(script),
 		VideoURL:         strings.TrimSpace(input.VideoURL),

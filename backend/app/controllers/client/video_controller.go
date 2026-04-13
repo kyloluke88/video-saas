@@ -267,6 +267,8 @@ func (ctrl *VideoController) CreatePodcastDialogue(c *gin.Context) {
 	podcastSeed := 0
 	if runMode == 0 {
 		podcastSeed = buildPodcastSeed(projectID)
+	} else if req.Seed > 0 {
+		podcastSeed = req.Seed
 	}
 	payload := buildPodcastTaskPayload(req, projectID, runMode, blockNums, bgImgFilenames, podcastSeed)
 
@@ -418,14 +420,30 @@ func buildPodcastTaskPayload(
 		"project_id":        projectID,
 		"run_mode":          runMode,
 		"only_current_step": normalizeOnlyCurrentStep(req.OnlyCurrentStep),
-		"title":             strings.TrimSpace(req.Title),
-		"lang":              strings.TrimSpace(req.Lang),
-		"content_profile":   strings.TrimSpace(req.ContentProfile),
-		"script_filename":   strings.TrimSpace(req.ScriptFilename),
-		"target_platform":   strings.TrimSpace(req.TargetPlatform),
-		"aspect_ratio":      strings.TrimSpace(req.AspectRatio),
-		"resolution":        strings.TrimSpace(req.Resolution),
-		"design_style":      req.DesignStyle,
+	}
+	if title := strings.TrimSpace(req.Title); title != "" {
+		payload["title"] = title
+	}
+	if lang := strings.TrimSpace(req.Lang); lang != "" {
+		payload["lang"] = lang
+	}
+	if profile := strings.TrimSpace(req.ContentProfile); profile != "" {
+		payload["content_profile"] = profile
+	}
+	if scriptFile := strings.TrimSpace(req.ScriptFilename); scriptFile != "" {
+		payload["script_filename"] = scriptFile
+	}
+	if platform := strings.TrimSpace(req.TargetPlatform); platform != "" {
+		payload["target_platform"] = platform
+	}
+	if aspect := strings.TrimSpace(req.AspectRatio); aspect != "" {
+		payload["aspect_ratio"] = aspect
+	}
+	if resolution := strings.TrimSpace(req.Resolution); resolution != "" {
+		payload["resolution"] = resolution
+	}
+	if req.DesignStyle > 0 {
+		payload["design_style"] = req.DesignStyle
 	}
 	if runMode == 1 || runMode == 2 || runMode == 3 || runMode == 4 {
 		if sourceProjectID := strings.TrimSpace(req.ProjectID); sourceProjectID != "" {

@@ -1,0 +1,318 @@
+.page {
+  @apply space-y-7 md:space-y-8;
+}
+
+.topGrid {
+  @apply grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,1.15fr)];
+}
+
+.galleryCard {
+  @apply border-border/80 bg-card;
+}
+
+.mainImageWrap {
+  @apply p-6 pb-4;
+}
+
+.mainImageInner {
+  @apply overflow-hidden rounded-xl border border-border/70 bg-muted/45 p-6;
+  min-height: 620px;
+}
+
+.mainImage {
+  @apply h-[520px] w-full object-contain;
+}
+
+.mainImageFallback {
+  @apply flex h-[520px] w-full items-center justify-center rounded-lg text-base text-muted-foreground;
+  background:
+    radial-gradient(circle at top left, hsl(var(--brand-mint) / 0.62), transparent 50%),
+    linear-gradient(140deg, hsl(var(--muted)), hsl(var(--background) / 0.9));
+}
+
+.thumbRail {
+  @apply grid grid-cols-4 gap-4 px-6 pb-6;
+}
+
+.thumbItem {
+  @apply flex h-[102px] items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-background p-3 transition;
+}
+
+.thumbItem:hover {
+  @apply border-primary/60;
+}
+
+.thumbItemActive {
+  @apply border-primary/70 shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.34)];
+}
+
+.thumbImage {
+  @apply h-full w-full object-contain;
+}
+
+.thumbFallback {
+  @apply text-xs text-muted-foreground;
+}
+
+.detailCard {
+  @apply border-border/80 bg-card;
+}
+
+.productName {
+  @apply font-display text-[2.35rem] font-semibold leading-tight text-foreground md:text-[2.95rem];
+}
+
+.ratingRow {
+  @apply mt-4 flex items-center gap-3;
+}
+
+.stars {
+  @apply text-lg text-amber-500;
+}
+
+.ratingText {
+  @apply text-[1.3rem] text-muted-foreground;
+}
+
+.priceHeader {
+  @apply mt-6 flex flex-wrap items-start justify-between gap-6;
+}
+
+.priceRow {
+  @apply flex flex-wrap items-end gap-3;
+}
+
+.currentPrice {
+  @apply text-[3rem] font-semibold leading-none text-foreground;
+}
+
+.oldPrice {
+  @apply text-[2rem] text-muted-foreground line-through;
+}
+
+.discount {
+  @apply text-[2rem] font-semibold text-primary;
+}
+
+.mrp {
+  @apply mt-2 text-[1.05rem] text-muted-foreground;
+}
+
+.stockBox {
+  @apply min-w-[180px] text-left;
+}
+
+.skuLine {
+  @apply text-[2rem] font-semibold leading-none text-foreground;
+}
+
+.stockOk {
+  @apply mt-3 text-[1.8rem] font-medium text-primary;
+}
+
+.stockLow {
+  @apply mt-3 text-[1.8rem] font-medium text-rose-500;
+}
+
+.desc {
+  @apply mt-7 text-[1.4rem] leading-9 text-muted-foreground;
+}
+
+.featureList {
+  @apply mt-5 space-y-2 text-[1.35rem] text-foreground;
+  opacity: 0.88;
+}
+
+.featureList li {
+  @apply relative pl-5;
+}
+
+.featureList li::before {
+  content: "◦";
+  @apply absolute left-0 text-muted-foreground;
+}
+
+.pillTitle {
+  @apply mt-7 text-lg font-semibold tracking-[0.12em];
+}
+
+.pills {
+  @apply mt-3 flex flex-wrap gap-2;
+}
+
+.pill {
+  @apply rounded-lg border border-border/80 bg-background px-4 py-2 text-[1.05rem] font-medium text-foreground;
+}
+
+.pillActive {
+  @apply border-primary/20 bg-primary text-primary-foreground;
+}
+
+.buyRow {
+  @apply mt-8 flex flex-wrap items-center gap-3;
+}
+
+.qtyBox {
+  @apply flex h-12 items-center overflow-hidden rounded-lg border border-border/80 bg-background;
+}
+
+.qtyBox button {
+  @apply h-full w-10 text-xl text-foreground;
+}
+
+.qtyBox span {
+  @apply min-w-[50px] text-center text-lg font-medium text-foreground;
+}
+
+.cartButton {
+  @apply h-12 rounded-lg bg-slate-700 px-8 text-sm font-semibold tracking-[0.08em] text-white;
+}
+
+.iconButton {
+  @apply flex h-12 min-w-12 items-center justify-center rounded-lg border border-border/80 bg-background px-4 text-lg text-foreground no-underline;
+}
+
+.recommendStrip {
+  @apply border-border/80 bg-card;
+}
+
+.stripGrid {
+  @apply grid gap-3 md:grid-cols-3;
+}
+
+.stripItem {
+  @apply flex items-center gap-4 rounded-xl border border-border/70 bg-muted/30 p-4 text-foreground no-underline transition;
+}
+
+.stripItem:hover {
+  @apply border-primary/45 bg-muted/45;
+}
+
+.stripThumb {
+  @apply h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-border/70 bg-background;
+}
+
+.stripThumbImage {
+  @apply h-full w-full object-cover;
+}
+
+.stripThumbFallback {
+  @apply flex h-full w-full items-center justify-center text-[10px] text-muted-foreground;
+}
+
+.stripName {
+  @apply text-[1.4rem] font-semibold leading-tight text-foreground;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.stripStars {
+  @apply mt-1 text-sm text-amber-500;
+}
+
+.stripPrice {
+  @apply mt-1 text-[1.4rem] font-semibold text-foreground;
+}
+
+.podcastStrip {
+  @apply border-border/80 bg-card;
+}
+
+.podcastStripTitle {
+  @apply mb-4 text-[1.5rem] font-semibold text-foreground;
+}
+
+.podcastGrid {
+  @apply grid gap-3 md:grid-cols-3;
+}
+
+.podcastItem {
+  @apply flex items-center gap-3 rounded-xl border border-border/65 bg-muted/25 p-3 text-foreground no-underline transition;
+}
+
+.podcastItem:hover {
+  @apply border-primary/40 bg-muted/45;
+}
+
+.podcastThumb {
+  @apply h-16 w-24 shrink-0 overflow-hidden rounded-lg bg-muted/70;
+}
+
+.podcastThumbImage {
+  @apply h-full w-full object-cover;
+}
+
+.podcastThumbFallback {
+  @apply flex h-full w-full items-center justify-center text-xs text-muted-foreground;
+}
+
+.podcastTitle {
+  @apply text-base font-semibold leading-6 text-foreground;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.podcastMeta {
+  @apply mt-1 text-sm text-muted-foreground;
+}
+
+@media (max-width: 1280px) {
+  .mainImageInner {
+    min-height: 500px;
+  }
+
+  .mainImage {
+    height: 420px;
+  }
+
+  .currentPrice {
+    @apply text-[2.4rem];
+  }
+
+  .oldPrice,
+  .discount,
+  .skuLine,
+  .stockOk,
+  .stockLow {
+    @apply text-[1.4rem];
+  }
+}
+
+@media (max-width: 768px) {
+  .mainImageWrap {
+    @apply p-4 pb-3;
+  }
+
+  .mainImageInner {
+    min-height: 340px;
+  }
+
+  .mainImage {
+    height: 280px;
+  }
+
+  .thumbRail {
+    @apply grid-cols-2 px-4 pb-4;
+  }
+
+  .productName {
+    @apply text-[2rem];
+  }
+
+  .priceRow {
+    @apply gap-2;
+  }
+
+  .currentPrice {
+    @apply text-[2rem];
+  }
+
+  .oldPrice,
+  .discount {
+    @apply text-[1.2rem];
+  }
+}

@@ -1,3 +1,84 @@
+.pageLayout {
+  @apply grid gap-8 xl:grid-cols-[minmax(0,1fr)_400px];
+}
+
+.mainColumn {
+  @apply space-y-6;
+}
+
+.sidebar {
+  @apply space-y-6 xl:sticky xl:top-6 xl:self-start;
+}
+
+.sidebarCard {
+  @apply border-border/70 bg-card/95;
+}
+
+.sidebarTitle {
+  @apply mb-4 font-display text-2xl font-semibold tracking-tight text-foreground;
+}
+
+.searchWrap {
+  @apply relative;
+}
+
+.searchIcon {
+  @apply pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground;
+}
+
+.searchInput {
+  @apply h-12 w-full rounded-xl border border-input bg-background px-4 pr-10 text-base text-foreground outline-none ring-0;
+}
+
+.searchInput::placeholder {
+  @apply text-muted-foreground;
+}
+
+.recentItem {
+  @apply block rounded-xl px-2 py-2 text-foreground no-underline transition hover:bg-muted/70;
+}
+
+.recentRow {
+  @apply flex flex-col gap-2;
+}
+
+.recentThumb {
+  @apply w-full shrink-0 overflow-hidden rounded-lg bg-muted/80;
+  aspect-ratio: 16 / 9;
+}
+
+.recentThumbImage {
+  @apply h-full w-full object-cover;
+}
+
+.recentThumbFallback {
+  @apply flex h-full w-full items-center justify-center text-xs text-muted-foreground;
+}
+
+.recentTitle {
+  @apply text-base font-medium leading-6 text-foreground;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.recentEnTitle {
+  @apply text-base font-semibold leading-6 text-foreground;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.recentMeta {
+  @apply mt-1 text-sm text-muted-foreground;
+}
+
+.recentEmpty {
+  @apply rounded-xl border border-dashed border-border/70 bg-background/70 px-4 py-5 text-sm text-muted-foreground;
+}
+
 .transcriptLineText ruby {
   @apply px-[0.01em] font-medium text-foreground;
 }
@@ -22,4 +103,11 @@
 
 .transcriptShell[open] .transcriptSummaryChevron {
   transform: rotate(180deg);
+}
+
+@media (max-width: 1279px) {
+  .sidebar {
+    position: static;
+    top: auto;
+  }
 }

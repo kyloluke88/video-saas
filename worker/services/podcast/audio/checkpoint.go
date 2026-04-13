@@ -55,8 +55,8 @@ func finalizeAlignedScript(projectID, alignedPath, dialoguePath string, script d
 		return dto.PodcastScript{}, err
 	}
 	timedSegments, totalSegments, timedTokens, totalTokens := alignedStats(finalScript)
-	log.Printf("🎧 podcast audio ready project_id=%s audio=%s script=%s segments_timed=%d/%d tokens_timed=%d/%d",
-		projectID, dialoguePath, alignedPath, timedSegments, totalSegments, timedTokens, totalTokens)
+	log.Printf("🎧 podcast audio ready project_id=%s segments_timed=%d/%d tokens_timed=%d/%d",
+		projectID, timedSegments, totalSegments, timedTokens, totalTokens)
 	return finalScript, nil
 }
 

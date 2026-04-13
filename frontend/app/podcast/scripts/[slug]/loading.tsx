@@ -1,6 +1,6 @@
 export default function LoadingPodcastScriptPage() {
   return (
-    <main className="shell">
+    <main className="page-shell">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <section className="glass-panel p-8 md:p-10">
           <div className="h-5 w-40 animate-pulse rounded-full bg-muted" />

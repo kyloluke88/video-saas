@@ -72,7 +72,7 @@ func writeChineseASS(script dto.PodcastScript, projectDir, resolution string, st
 				x := positions[i]
 				if strings.TrimSpace(cell.Hanzi) != "" {
 					b.WriteString(dialogueLine("Hanzi", pageStart, pageEnd, posText(x, row.HanziY, cell.Hanzi)))
-					if highlightEnabled && cell.EndMS > cell.StartMS {
+					if highlightEnabled && chineseCellHighlightable(cell.Hanzi) && cell.EndMS > cell.StartMS {
 						activeStart, activeEnd, ok := clampWindow(cell.StartMS, cell.EndMS, window.StartMS, window.EndMS)
 						if ok {
 							b.WriteString(dialogueLine("HanziActive", formatASSTimestampMS(activeStart), formatASSTimestampMS(activeEnd), posText(x, row.HanziY, cell.Hanzi)))
@@ -272,7 +272,7 @@ func chineseSubtitlePresetStyle1() subtitlePreset {
 	preset.BottomSectionTopInset = 0
 	preset.RubyColor = assColorRGB(255, 255, 255)
 	preset.HanziColor = assColorRGB(255, 255, 255)
-	preset.HighlightColor = assColorRGB(196, 236, 121)
+	preset.HighlightColor = assColorRGB(255, 222, 89)
 	preset.EnglishColor = assColorRGB(183, 236, 70)
 	preset.OutlineColor = assColorRGB(0, 0, 0)
 	applyChineseDesignType1Typography(&preset)
@@ -309,7 +309,7 @@ func chineseSubtitlePresetStyle2() subtitlePreset {
 		BoxColor:              "&HFF000000",
 		RubyColor:             "&H00000000",
 		HanziColor:            "&H00000000",
-		HighlightColor:        "&H00CC66CC",
+		HighlightColor:        assColorRGB(255, 222, 89),
 		EnglishColor:          assColorRGB(183, 236, 70),
 		OutlineColor:          "&H00DDD6CF",
 		RubyBold:              0,
@@ -723,16 +723,50 @@ func chinesePageMetrics(cells []tokenCell, start, end int) (int, float64) {
 func chinesePageStartTimes(pages [][]tokenCell) []int {
 	out := make([]int, 0, len(pages))
 	for _, page := range pages {
-		start := 0
+		startAny := 0
+		startAnchor := 0
 		for _, cell := range page {
-			if cell.StartMS > 0 {
-				start = cell.StartMS
+			if cell.StartMS <= 0 {
+				continue
+			}
+			if startAny == 0 {
+				startAny = cell.StartMS
+			}
+			if chineseCellSpeechAnchor(cell.Hanzi) {
+				startAnchor = cell.StartMS
 				break
 			}
 		}
-		out = append(out, start)
+		if startAnchor > 0 {
+			out = append(out, startAnchor)
+			continue
+		}
+		out = append(out, startAny)
 	}
 	return out
+}
+
+func chineseCellSpeechAnchor(text string) bool {
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" {
+		return false
+	}
+	hasContentRune := false
+	for _, r := range []rune(trimmed) {
+		if unicode.IsSpace(r) {
+			continue
+		}
+		if isPunctuationRune(r) {
+			continue
+		}
+		hasContentRune = true
+		break
+	}
+	return hasContentRune
+}
+
+func chineseCellHighlightable(text string) bool {
+	return chineseCellSpeechAnchor(text)
 }
 
 func chinesePageHasRuby(page []tokenCell) bool {

@@ -15,6 +15,7 @@ type PodcastScriptPage struct {
 	Language         string          `gorm:"column:language" json:"language"`
 	AudienceLanguage string          `gorm:"column:audience_language" json:"audience_language,omitempty"`
 	Title            string          `gorm:"column:title" json:"title"`
+	EnTitle          string          `gorm:"column:en_title" json:"en_title,omitempty"`
 	Subtitle         string          `gorm:"column:subtitle" json:"subtitle,omitempty"`
 	Summary          string          `gorm:"column:summary" json:"summary,omitempty"`
 	CoverImageURL    string          `gorm:"column:cover_image_url" json:"cover_image_url,omitempty"`

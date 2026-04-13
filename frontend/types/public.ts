@@ -72,6 +72,7 @@ export interface PodcastScriptPage {
   id: number;
   slug: string;
   title: string;
+  en_title?: string;
   subtitle?: string;
   summary?: string;
   language: string;
@@ -92,4 +93,47 @@ export interface PodcastScriptPage {
   };
   vocabulary?: VocabularyItem[];
   grammar?: GrammarItem[];
+}
+
+export interface PodcastScriptListItem {
+  id: number;
+  slug: string;
+  title: string;
+  en_title?: string;
+  summary?: string;
+  youtube_video_id?: string;
+  youtube_video_url?: string;
+  published_at?: string;
+}
+
+export interface ProductListItem {
+  id: number;
+  slug: string;
+  product_code: string;
+  name: string;
+  locale: "zh" | "ja" | string;
+  product_type: string;
+  status: string;
+  currency: string;
+  min_price?: number;
+  max_price?: number;
+  cover_image_url?: string;
+  description?: string;
+}
+
+export interface ProductSKUItem {
+  id: number;
+  sku_code: string;
+  name: string;
+  price: number;
+  original_price?: number;
+  currency: string;
+  status: string;
+  is_default: boolean;
+  stock_qty?: number;
+}
+
+export interface ProductDetail extends ProductListItem {
+  metadata?: Record<string, unknown>;
+  skus?: ProductSKUItem[];
 }

@@ -15,11 +15,11 @@ export default function HomePage() {
             </div>
 
             <h1 className="mt-4 max-w-4xl font-display text-5xl font-bold leading-none tracking-tight text-balance md:text-7xl">
-              播客公开页现在只走数据库，不再直接读取 `worker/outputs`。
+              The public pages are now fully database-driven.
             </h1>
 
             <p className="mt-6 max-w-3xl text-lg leading-8 text-muted-foreground">
-              公开内容入口已经收敛为单个脚本详情页。视频、脚本、词汇、语法和右侧商品位都从 backend 的结构化数据返回。
+              Scripts, product catalog pages, and product detail pages now pull structured data from backend APIs instead of reading static worker outputs.
             </p>
           </div>
 
@@ -31,7 +31,7 @@ export default function HomePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm leading-7 text-muted-foreground">
-                每条播客对应一个独立页面，顶部优先嵌入 YouTube，其次降级为视频地址。
+                Each podcast has a dedicated detail page. YouTube is prioritized, with a fallback to direct video URLs.
               </CardContent>
             </Card>
 
@@ -42,7 +42,7 @@ export default function HomePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm leading-7 text-muted-foreground">
-                worker 在上传后会追加数据库持久化任务，把脚本页数据和项目状态写入 PostgreSQL。
+                The generation pipeline persists script and project data to PostgreSQL for stable public rendering.
               </CardContent>
             </Card>
 
@@ -53,7 +53,7 @@ export default function HomePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-sm leading-7 text-muted-foreground">
-                右侧商品位已经留好，但当前先保持为空，后续只需要给数据库补商品数据。
+                Product list/detail routes are now available with localized catalogs and podcast recommendations.
               </CardContent>
             </Card>
           </div>

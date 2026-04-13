@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import PodcastScriptPageView from "@/components/podcast-script-page";
-import { getPodcastScriptPage } from "@/lib/api";
+import { getPodcastScriptList, getPodcastScriptPage } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -15,6 +15,14 @@ type Props = {
 
 function normalizeSlug(value: string) {
   return value.trim();
+}
+
+function normalizeScriptLanguage(value?: string): "zh" | "ja" | undefined {
+  const normalized = value?.trim().toLowerCase();
+  if (normalized === "zh" || normalized === "ja") {
+    return normalized;
+  }
+  return undefined;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -64,14 +72,19 @@ export default async function PodcastScriptDetailPage({ params }: Props) {
     mainEntityOfPage: page.canonical_url,
   };
 
+  const language = normalizeScriptLanguage(page.language);
+  const sidebarPages = await getPodcastScriptList(10, language)
+    .then((items) => items.filter((item) => item.slug !== page.slug).slice(0, 6))
+    .catch(() => []);
+
   return (
     <>
       <script
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
         type="application/ld+json"
       />
-      <main className="shell">
-        <PodcastScriptPageView page={page} />
+      <main className="page-shell">
+        <PodcastScriptPageView page={page} sidebarPages={sidebarPages} />
       </main>
     </>
   );

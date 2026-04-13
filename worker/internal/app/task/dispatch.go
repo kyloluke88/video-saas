@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"worker/internal/persistence"
@@ -59,11 +60,11 @@ func HandleMessage(ch *amqp.Channel, msg amqp.Delivery, scheduler map[string]Tas
 			if errors.Is(err, context.Canceled) {
 				log.Printf("🛑 跳过已取消任务 task_id=%s type=%s project_id=%s", task.TaskID, task.TaskType, projectID)
 				if trackerErr := taskTracker.OnTaskCancelled(task, retries); trackerErr != nil {
-					log.Printf("⚠️ task tracker cancel update failed task_id=%s err=%v", task.TaskID, trackerErr)
+					log.Printf("⚠️ task tracker cancel update failed task_id=%s project_id=%s err=%v", task.TaskID, projectID, trackerErr)
 				}
 				return msg.Ack(false)
 			}
-			log.Printf("❌ project activity check failed task_id=%s err=%v", task.TaskID, err)
+			log.Printf("❌ project activity check failed task_id=%s project_id=%s err=%v", task.TaskID, projectID, err)
 			if isNonRetryable(err) {
 				if dlqErr := publishToDLQ(ch, msg.Body, retries); dlqErr != nil {
 					_ = msg.Nack(false, true)
@@ -75,16 +76,18 @@ func HandleMessage(ch *amqp.Channel, msg amqp.Delivery, scheduler map[string]Tas
 			return err
 		}
 
-		log.Printf("🎬 收到任务 task_id=%s type=%s retries=%d", task.TaskID, task.TaskType, retries)
+		materials := buildTaskMaterials(task, projectID)
+		log.Printf("🎬 收到任务 task_id=%s type=%s retries=%d project_id=%s 所需材料=[%s]",
+			task.TaskID, task.TaskType, retries, projectID, strings.Join(materials, ","))
 		if err := taskTracker.OnTaskStart(task, retries); err != nil {
 			if errors.Is(err, context.Canceled) {
 				log.Printf("🛑 任务启动前已取消 task_id=%s type=%s project_id=%s", task.TaskID, task.TaskType, projectID)
 				if trackerErr := taskTracker.OnTaskCancelled(task, retries); trackerErr != nil {
-					log.Printf("⚠️ task tracker cancel update failed task_id=%s err=%v", task.TaskID, trackerErr)
+					log.Printf("⚠️ task tracker cancel update failed task_id=%s project_id=%s err=%v", task.TaskID, projectID, trackerErr)
 				}
 				return msg.Ack(false)
 			}
-			log.Printf("❌ task tracker start failed task_id=%s err=%v", task.TaskID, err)
+			log.Printf("❌ task tracker start failed task_id=%s project_id=%s err=%v", task.TaskID, projectID, err)
 			if isNonRetryable(err) {
 				if dlqErr := publishToDLQ(ch, msg.Body, retries); dlqErr != nil {
 					_ = msg.Nack(false, true)
@@ -107,15 +110,15 @@ func HandleMessage(ch *amqp.Channel, msg amqp.Delivery, scheduler map[string]Tas
 			if errors.Is(err, context.Canceled) {
 				log.Printf("🛑 任务已取消 task_id=%s type=%s project_id=%s", task.TaskID, task.TaskType, projectID)
 				if trackerErr := taskTracker.OnTaskCancelled(task, retries); trackerErr != nil {
-					log.Printf("⚠️ task tracker cancel update failed task_id=%s err=%v", task.TaskID, trackerErr)
+					log.Printf("⚠️ task tracker cancel update failed task_id=%s project_id=%s err=%v", task.TaskID, projectID, trackerErr)
 				}
 				return msg.Ack(false)
 			}
-			log.Printf("❌ 任务处理失败 task_id=%s: %v", task.TaskID, err)
+			log.Printf("❌ 任务处理失败 task_id=%s project_id=%s err=%v", task.TaskID, projectID, err)
 			if isNonRetryable(err) {
-				log.Printf("⛔ 不可重试错误，任务终止且不再重试 task_id=%s", task.TaskID)
+				log.Printf("⛔ 不可重试错误，任务终止且不再重试 task_id=%s project_id=%s", task.TaskID, projectID)
 				if trackerErr := taskTracker.OnTaskFailed(task, retries, err); trackerErr != nil {
-					log.Printf("⚠️ task tracker final failure update failed task_id=%s err=%v", task.TaskID, trackerErr)
+					log.Printf("⚠️ task tracker final failure update failed task_id=%s project_id=%s err=%v", task.TaskID, projectID, trackerErr)
 				}
 				if dlqErr := publishToDLQ(ch, msg.Body, retries); dlqErr != nil {
 					_ = msg.Nack(false, true)
@@ -125,7 +128,7 @@ func HandleMessage(ch *amqp.Channel, msg amqp.Delivery, scheduler map[string]Tas
 			}
 			if retries >= conf.Get[int]("worker.task_max_retries") {
 				if trackerErr := taskTracker.OnTaskFailed(task, retries, err); trackerErr != nil {
-					log.Printf("⚠️ task tracker max-retries failure update failed task_id=%s err=%v", task.TaskID, trackerErr)
+					log.Printf("⚠️ task tracker max-retries failure update failed task_id=%s project_id=%s err=%v", task.TaskID, projectID, trackerErr)
 				}
 				if dlqErr := publishToDLQ(ch, msg.Body, retries+1); dlqErr != nil {
 					_ = msg.Nack(false, true)
@@ -138,15 +141,15 @@ func HandleMessage(ch *amqp.Channel, msg amqp.Delivery, scheduler map[string]Tas
 				return retryErr
 			}
 			if trackerErr := taskTracker.OnTaskRetry(task, retries, err); trackerErr != nil {
-				log.Printf("⚠️ task tracker retry update failed task_id=%s err=%v", task.TaskID, trackerErr)
+				log.Printf("⚠️ task tracker retry update failed task_id=%s project_id=%s err=%v", task.TaskID, projectID, trackerErr)
 			}
-			log.Printf("🔁 任务进入延迟重试 task_id=%s next_retry=%d delay=%s", task.TaskID, retries+1, TaskRetryDelay(retries+1).String())
+			log.Printf("🔁 任务进入延迟重试 task_id=%s next_retry=%d delay=%s project_id=%s", task.TaskID, retries+1, TaskRetryDelay(retries+1).String(), projectID)
 			return msg.Ack(false)
 		}
 
-		log.Printf("✅ 当前任务节点处理完成 task_id=%s type=%s project_id=%s", task.TaskID, task.TaskType, taskProjectID(task))
+		log.Printf("✅ %s 任务处理完成 task_id=%s project_id=%s", task.TaskType, task.TaskID, projectID)
 		if err := taskTracker.OnTaskSucceeded(task, retries); err != nil {
-			log.Printf("⚠️ task tracker success update failed task_id=%s err=%v", task.TaskID, err)
+			log.Printf("⚠️ task tracker success update failed task_id=%s project_id=%s err=%v", task.TaskID, projectID, err)
 		}
 
 		return msg.Ack(false)
@@ -219,4 +222,107 @@ func taskProjectID(task VideoTaskMessage) string {
 		return projectID
 	}
 	return fmt.Sprint(requestProjectID)
+}
+
+func buildTaskMaterials(task VideoTaskMessage, projectID string) []string {
+	materials := make([]string, 0, 16)
+	seen := make(map[string]struct{}, 16)
+	appendMaterial := func(name string) {
+		text := strings.TrimSpace(name)
+		if text == "" {
+			return
+		}
+		if _, ok := seen[text]; ok {
+			return
+		}
+		seen[text] = struct{}{}
+		materials = append(materials, text)
+	}
+
+	payload := task.Payload
+
+	if projectID != "" {
+		appendMaterial(projectID)
+		if strings.HasPrefix(strings.TrimSpace(task.TaskType), "podcast.") {
+			appendMaterial("script_input.json")
+			appendMaterial("script_aligned.json")
+			appendMaterial("dialogue.mp3")
+			appendMaterial("blocks")
+			appendMaterial("block_states")
+			if strings.HasPrefix(strings.TrimSpace(task.TaskType), "podcast.compose.") {
+				appendMaterial("podcast_final.mp4")
+			}
+		}
+	}
+
+	if sourceProjectID := payloadString(payload, "source_project_id"); sourceProjectID != "" {
+		appendMaterial(sourceProjectID)
+	}
+	if scriptName := payloadString(payload, "script_filename"); scriptName != "" {
+		appendMaterial(scriptName)
+	}
+
+	backgrounds := payloadStringSlice(payload, "bg_img_filenames")
+	for _, bg := range backgrounds {
+		appendMaterial(bg)
+	}
+
+	return materials
+}
+
+func payloadString(payload map[string]interface{}, key string) string {
+	if payload == nil {
+		return ""
+	}
+	value, ok := payload[key]
+	if !ok || value == nil {
+		return ""
+	}
+	if text, ok := value.(string); ok {
+		return strings.TrimSpace(text)
+	}
+	text := strings.TrimSpace(fmt.Sprint(value))
+	if text == "<nil>" {
+		return ""
+	}
+	return text
+}
+
+func payloadStringSlice(payload map[string]interface{}, key string) []string {
+	if payload == nil {
+		return nil
+	}
+	value, ok := payload[key]
+	if !ok || value == nil {
+		return nil
+	}
+
+	clean := func(raw string) string {
+		text := strings.TrimSpace(raw)
+		if text == "" || text == "<nil>" {
+			return ""
+		}
+		return text
+	}
+
+	out := make([]string, 0)
+	switch typed := value.(type) {
+	case []string:
+		for _, item := range typed {
+			if text := clean(item); text != "" {
+				out = append(out, text)
+			}
+		}
+	case []interface{}:
+		for _, item := range typed {
+			if text := clean(fmt.Sprint(item)); text != "" {
+				out = append(out, text)
+			}
+		}
+	default:
+		if text := clean(fmt.Sprint(typed)); text != "" {
+			out = append(out, text)
+		}
+	}
+	return out
 }

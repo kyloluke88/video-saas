@@ -80,7 +80,7 @@ func bootstrapReplayPageProject(raw map[string]interface{}) error {
 	if err != nil {
 		return err
 	}
-	_, err = podcastreplay.PrepareGeneratePayload(current)
+	_, err = podcastreplay.PrepareGeneratePayload(current, raw)
 	return err
 }
 

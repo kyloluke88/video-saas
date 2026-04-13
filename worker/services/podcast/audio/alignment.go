@@ -273,7 +273,7 @@ func alignBlockWithTimedWords(language string, block dto.PodcastBlock, words []m
 		if isJapaneseLanguage(language) {
 			aligned.Segments[i] = alignJapaneseSegmentWithWords(seg, spec, localMatches, window)
 		} else {
-			aligned.Segments[i] = alignChineseSegmentWithWords(seg, spec, localMatches, window)
+			aligned.Segments[i] = alignChineseSegmentWithWords(seg, localMatches, window)
 		}
 		if window.HasMatch {
 			matchedSegments++
@@ -480,7 +480,7 @@ func alignSingleSegmentWithWords(language string, seg dto.PodcastSegment, words 
 	if isJapaneseLanguage(language) {
 		return alignJapaneseSegmentWithWords(seg, spec, matches, window), true
 	}
-	return alignChineseSegmentWithWords(seg, spec, matches, window), true
+	return alignChineseSegmentWithWords(seg, matches, window), true
 }
 
 func buildSingleSegmentSpec(language string, seg dto.PodcastSegment) segmentSpec {
@@ -545,25 +545,76 @@ func windowForMatches(matches []timedWordMatch, fallbackStartMS, fallbackEndMS i
 	return window
 }
 
-func alignChineseSegmentWithWords(seg dto.PodcastSegment, spec segmentSpec, matches []timedWordMatch, window segmentWindow) dto.PodcastSegment {
+func alignChineseSegmentWithWords(seg dto.PodcastSegment, matches []timedWordMatch, window segmentWindow) dto.PodcastSegment {
 	seg.StartMS = window.StartMS
 	seg.EndMS = maxInt(window.EndMS, window.StartMS+1)
 
 	tokens := chineseSegmentTokens(seg)
 	indexByRune := chineseTokenIndexByRune(seg, tokens)
 	for _, match := range matches {
-		for runeIndex := match.StartNorm; runeIndex < match.EndNorm; runeIndex++ {
-			tokenIndex, ok := indexByRune[runeIndex]
-			if !ok || tokenIndex < 0 || tokenIndex >= len(tokens) {
-				continue
-			}
-			tokens[tokenIndex].StartMS = match.StartMS
-			tokens[tokenIndex].EndMS = match.EndMS
-		}
+		tokenIndexes := chineseTokenIndexesForRange(indexByRune, match.StartNorm, match.EndNorm)
+		assignWindowToChineseTokens(tokens, tokenIndexes, match.StartMS, match.EndMS)
 	}
 	fillUnalignedChineseTokens(tokens, seg.StartMS, seg.EndMS)
 	seg.Tokens = tokens
 	return seg
+}
+
+func chineseTokenIndexesForRange(indexByRune map[int]int, startRune, endRune int) []int {
+	if len(indexByRune) == 0 || endRune <= startRune {
+		return nil
+	}
+	out := make([]int, 0, endRune-startRune)
+	seen := make(map[int]struct{}, endRune-startRune)
+	for runeIndex := startRune; runeIndex < endRune; runeIndex++ {
+		tokenIndex, ok := indexByRune[runeIndex]
+		if !ok || tokenIndex < 0 {
+			continue
+		}
+		if _, exists := seen[tokenIndex]; exists {
+			continue
+		}
+		seen[tokenIndex] = struct{}{}
+		out = append(out, tokenIndex)
+	}
+	return out
+}
+
+func assignWindowToChineseTokens(tokens []dto.PodcastToken, tokenIndexes []int, startMS, endMS int) {
+	if len(tokens) == 0 || len(tokenIndexes) == 0 {
+		return
+	}
+	if endMS <= startMS {
+		endMS = startMS + 1
+	}
+
+	count := len(tokenIndexes)
+	span := maxInt(1, endMS-startMS)
+	for i, tokenIndex := range tokenIndexes {
+		if tokenIndex < 0 || tokenIndex >= len(tokens) {
+			continue
+		}
+		partStart := startMS + (span*i)/count
+		partEnd := startMS + (span*(i+1))/count
+		if i == count-1 {
+			partEnd = endMS
+		}
+		if partEnd <= partStart {
+			partEnd = partStart + 1
+		}
+
+		if tokens[tokenIndex].EndMS > tokens[tokenIndex].StartMS {
+			if partStart < tokens[tokenIndex].StartMS {
+				tokens[tokenIndex].StartMS = partStart
+			}
+			if partEnd > tokens[tokenIndex].EndMS {
+				tokens[tokenIndex].EndMS = partEnd
+			}
+			continue
+		}
+		tokens[tokenIndex].StartMS = partStart
+		tokens[tokenIndex].EndMS = partEnd
+	}
 }
 
 func chineseTokenIndexByRune(seg dto.PodcastSegment, tokens []dto.PodcastToken) map[int]int {
@@ -707,49 +758,6 @@ func (a *blockAligner) alignBlockHeuristically(language string, block dto.Podcas
 		cursor += span
 	}
 	return aligned
-}
-
-func fillJapaneseTokenTimingGaps(tokens []dto.PodcastToken, segmentStartMS, segmentEndMS int) {
-	if len(tokens) == 0 {
-		return
-	}
-	start := maxInt(0, segmentStartMS)
-	end := maxInt(start+1, segmentEndMS)
-
-	for i := 0; i < len(tokens); {
-		if tokens[i].EndMS > tokens[i].StartMS {
-			i++
-			continue
-		}
-		j := i
-		for j < len(tokens) && tokens[j].EndMS <= tokens[j].StartMS {
-			j++
-		}
-
-		windowStart := start
-		if i > 0 && tokens[i-1].EndMS > tokens[i-1].StartMS {
-			windowStart = tokens[i-1].EndMS
-		}
-		windowEnd := end
-		if j < len(tokens) && tokens[j].EndMS > tokens[j].StartMS {
-			windowEnd = tokens[j].StartMS
-		}
-		if windowEnd <= windowStart {
-			windowEnd = windowStart + (j - i)
-		}
-		step := maxInt(1, (windowEnd-windowStart)/maxInt(1, j-i))
-		cursor := windowStart
-		for k := i; k < j; k++ {
-			tokens[k].StartMS = cursor
-			if k == j-1 {
-				tokens[k].EndMS = maxInt(cursor+1, windowEnd)
-			} else {
-				tokens[k].EndMS = maxInt(cursor+1, cursor+step)
-			}
-			cursor = tokens[k].EndMS
-		}
-		i = j
-	}
 }
 
 func chunkWorkingDir(baseDir string) string {

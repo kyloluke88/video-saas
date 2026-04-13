@@ -285,7 +285,16 @@ func estimateConversationBytes(request googlecloud.SynthesizeConversationRequest
 	return total
 }
 
-func tryReuseCachedBlock(ctx context.Context, aligner *blockAligner, language string, artifacts audioArtifacts, index int, block dto.PodcastBlock) (blockSynthesisResult, bool, error) {
+func tryReuseCachedBlock(
+	ctx context.Context,
+	aligner *blockAligner,
+	projectID string,
+	language string,
+	artifacts audioArtifacts,
+	index int,
+	block dto.PodcastBlock,
+	suppressLog bool,
+) (blockSynthesisResult, bool, error) {
 	blockID := strings.TrimSpace(block.BlockID)
 	for _, candidate := range reusableBlockAudioCandidates(artifacts, index, blockID) {
 		state, stateOK, err := loadBlockCheckpoint(candidate.stateDir, index, blockID)
@@ -314,14 +323,16 @@ func tryReuseCachedBlock(ctx context.Context, aligner *blockAligner, language st
 			if err := persistBlockCheckpoint(artifacts.blockStatesDir, index, alignedBlock, durationMS); err != nil {
 				return blockSynthesisResult{}, false, err
 			}
-			log.Printf("♻️ podcast block reuse cached tts block=%s source=%s audio=%s duration_ms=%d", blockID, candidate.audioPath, audioPath, durationMS)
+			if !suppressLog {
+				log.Printf("♻️ podcast block reuse cached tts block=%s duration_ms=%d project_id=%s", blockID, durationMS, projectID)
+			}
 			return blockSynthesisResult{
 				AudioPath:    audioPath,
 				DurationMS:   durationMS,
 				AlignedBlock: alignedBlock,
 			}, true, nil
 		}
-		log.Printf("🔁 cached tts audio ignored block=%s reason=script_changed source=%s", blockID, candidate.audioPath)
+		log.Printf("🔁 cached tts audio ignored block=%s reason=script_changed source=%s project_id=%s", blockID, candidate.audioPath, projectID)
 	}
 	return blockSynthesisResult{}, false, nil
 }
@@ -329,10 +340,13 @@ func tryReuseCachedBlock(ctx context.Context, aligner *blockAligner, language st
 func tryReuseCompletedBlockWithoutMFA(
 	ttsType int,
 	providerLabel string,
+	projectID string,
 	language string,
 	artifacts audioArtifacts,
 	index int,
 	block dto.PodcastBlock,
+	requireAligned bool,
+	suppressLog bool,
 ) (blockSynthesisResult, bool, error) {
 	blockID := strings.TrimSpace(block.BlockID)
 	for _, candidate := range reusableBlockAudioCandidates(artifacts, index, blockID) {
@@ -340,11 +354,18 @@ func tryReuseCompletedBlockWithoutMFA(
 		if err != nil {
 			return blockSynthesisResult{}, false, err
 		}
-		if !stateOK || !blockCheckpointComplete(language, state, candidate.audioPath) {
+		if !stateOK {
+			continue
+		}
+		if requireAligned {
+			if !blockCheckpointComplete(language, state, candidate.audioPath) {
+				continue
+			}
+		} else if !blockCheckpointHasAudio(state, candidate.audioPath) {
 			continue
 		}
 		if !canReuseCachedBlockAudio(ttsType, language, block, state.Block) {
-			log.Printf("🔁 cached tts audio ignored block=%s reason=script_changed source=%s", blockID, candidate.audioPath)
+			log.Printf("🔁 cached tts audio ignored block=%s reason=script_changed source=%s project_id=%s", blockID, candidate.audioPath, projectID)
 			continue
 		}
 
@@ -365,8 +386,10 @@ func tryReuseCompletedBlockWithoutMFA(
 		if err := persistBlockCheckpoint(artifacts.blockStatesDir, index, state.Block, durationMS); err != nil {
 			return blockSynthesisResult{}, false, err
 		}
-		log.Printf("♻️ podcast block reuse cached tts provider=%s block=%s source=%s audio=%s duration_ms=%d",
-			providerLabel, blockID, candidate.audioPath, audioPath, durationMS)
+		if !suppressLog {
+			log.Printf("♻️ podcast block reuse cached tts provider=%s block=%s duration_ms=%d project_id=%s",
+				providerLabel, blockID, durationMS, projectID)
+		}
 		return blockSynthesisResult{
 			AudioPath:    audioPath,
 			DurationMS:   durationMS,

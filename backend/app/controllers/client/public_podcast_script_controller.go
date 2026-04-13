@@ -2,6 +2,7 @@ package client
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	contentModel "api/app/models/content"
@@ -15,6 +16,25 @@ import (
 
 type PublicPodcastScriptController struct {
 	BaseAPIController
+}
+
+func (ctrl *PublicPodcastScriptController) ListPages(c *gin.Context) {
+	language, ok := normalizePublicLocale(c.Query("language"))
+	if !ok {
+		response.BadRequest(c, fmt.Errorf("invalid language"), "language must be zh or ja")
+		return
+	}
+
+	limit := parsePositiveIntQuery(c.Query("limit"), 24, 1, 120)
+	pages, err := listPublishedPodcastScripts(language, limit)
+	if err != nil {
+		response.Abort500(c, err.Error())
+		return
+	}
+
+	response.JSON(c, gin.H{
+		"pages": pages,
+	})
 }
 
 func (ctrl *PublicPodcastScriptController) ShowPage(c *gin.Context) {

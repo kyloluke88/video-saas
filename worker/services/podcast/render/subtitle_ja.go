@@ -831,7 +831,7 @@ func japaneseSubtitlePresetStyle1() subtitlePreset {
 	preset.BottomSectionTopInset = 0
 	preset.RubyColor = assColorRGB(255, 255, 255)
 	preset.HanziColor = assColorRGB(255, 255, 255)
-	preset.HighlightColor = assColorRGB(196, 236, 121)
+	preset.HighlightColor = assColorRGB(255, 222, 89)
 	preset.EnglishColor = assColorRGB(183, 236, 70)
 	preset.OutlineColor = assColorRGB(0, 0, 0)
 	applyJapaneseDesignType1Typography(&preset)
@@ -868,7 +868,7 @@ func japaneseSubtitlePresetStyle2() subtitlePreset {
 		BoxColor:              "&HFF000000",              // 底框颜色
 		RubyColor:             "&H00000000",              // 假名颜色
 		HanziColor:            "&H00000000",              // 日文正文颜色
-		HighlightColor:        "&H00CC66CC",              // 高亮颜色
+		HighlightColor:        assColorRGB(255, 222, 89), // 高亮颜色
 		EnglishColor:          assColorRGB(183, 236, 70), // 英文字幕颜色
 		OutlineColor:          "&H00DDD6CF",              // 轮廓/描边颜色
 		RubyBold:              0,                         // 假名是否粗体
