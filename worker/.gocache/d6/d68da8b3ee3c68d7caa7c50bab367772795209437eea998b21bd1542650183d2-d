@@ -1,4 +1,0 @@
-./bootstrap.go
-./database.go
-./rabbitmq.go
-./redis.go
