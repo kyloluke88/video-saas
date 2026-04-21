@@ -48,31 +48,31 @@ func TestBuildComposePayloadFromSavedAndCurrentUsesCurrentVisualOverrides(t *tes
 
 func TestBuildGeneratePayloadFromSavedAndCurrentUsesCurrentVisualOverrides(t *testing.T) {
 	saved := dto.PodcastAudioGeneratePayload{
-		ProjectID:       "proj_123",
-		Lang:            "zh",
-		Title:           "old title",
-		ScriptFilename:  "old.json",
-		BgImgFilenames:  []string{"old-a.png", "old-b.png"},
-		TargetPlatform:  "youtube",
-		AspectRatio:     "16:9",
-		Resolution:      "720p",
-		DesignStyle:     1,
-		TTSType:         2,
-		Seed:            11,
-		OnlyCurrentStep: 1,
-		BlockNums:       []int{1, 2},
+		ProjectID:      "proj_123",
+		Lang:           "zh",
+		Title:          "old title",
+		ScriptFilename: "old.json",
+		BgImgFilenames: []string{"old-a.png", "old-b.png"},
+		TargetPlatform: "youtube",
+		AspectRatio:    "16:9",
+		Resolution:     "720p",
+		DesignStyle:    1,
+		TTSType:        2,
+		Seed:           11,
+		SpecifyTasks:   []string{"generate", "render"},
+		BlockNums:      []int{1, 2},
 	}
 	current := dto.PodcastAudioGeneratePayload{
-		ProjectID:       "proj_123__rm1__20260409120000",
-		BgImgFilenames:  []string{"new-a.png"},
-		Resolution:      "1080p",
-		DesignStyle:     2,
-		AspectRatio:     "9:16",
-		TargetPlatform:  "bilibili",
-		Title:           "new title",
-		BlockNums:       []int{3, 4},
-		RunMode:         4,
-		OnlyCurrentStep: 0,
+		ProjectID:      "proj_123__rm1__20260409120000",
+		BgImgFilenames: []string{"new-a.png"},
+		Resolution:     "1080p",
+		DesignStyle:    2,
+		AspectRatio:    "9:16",
+		TargetPlatform: "bilibili",
+		Title:          "new title",
+		BlockNums:      []int{3, 4},
+		RunMode:        1,
+		SpecifyTasks:   []string{"render", "persist"},
 	}
 
 	payload, err := BuildGeneratePayloadFromSavedAndCurrent(saved, current)
@@ -109,11 +109,11 @@ func TestBuildGeneratePayloadFromSavedAndCurrentUsesCurrentVisualOverrides(t *te
 	if payload.ScriptFilename != "old.json" {
 		t.Fatalf("expected saved script filename preserved, got %s", payload.ScriptFilename)
 	}
-	if payload.RunMode != 4 {
+	if payload.RunMode != 1 {
 		t.Fatalf("expected current run mode preserved, got %d", payload.RunMode)
 	}
-	if payload.OnlyCurrentStep != 0 {
-		t.Fatalf("expected current only_current_step override, got %d", payload.OnlyCurrentStep)
+	if len(payload.SpecifyTasks) != 2 || payload.SpecifyTasks[0] != "render" {
+		t.Fatalf("expected current specify_tasks override, got %#v", payload.SpecifyTasks)
 	}
 }
 
@@ -192,5 +192,47 @@ func TestResolveSourceProjectIDPrefersExplicitSourceProjectID(t *testing.T) {
 	}
 	if sourceProjectID != "zh_podcast_20260408154607__rm1__20260409171630" {
 		t.Fatalf("unexpected source project id: %s", sourceProjectID)
+	}
+}
+
+func TestValidateSpecifyTasksAllowsType2WithoutAlign(t *testing.T) {
+	tasks, err := ValidateSpecifyTasks(2, 1, []string{"render", "generate"})
+	if err != nil {
+		t.Fatalf("ValidateSpecifyTasks returned err: %v", err)
+	}
+	if len(tasks) != 2 || tasks[0] != "generate" || tasks[1] != "render" {
+		t.Fatalf("unexpected normalized tasks: %#v", tasks)
+	}
+}
+
+func TestValidateSpecifyTasksRejectsEmptyReplaySelection(t *testing.T) {
+	if _, err := ValidateSpecifyTasks(1, 1, nil); err == nil {
+		t.Fatalf("expected empty replay selection error")
+	}
+}
+
+func TestNextPodcastStageSkipsAlignForType2(t *testing.T) {
+	next, ok, err := NextPodcastStage(2, string(PodcastStageGenerate), nil)
+	if err != nil {
+		t.Fatalf("NextPodcastStage returned err: %v", err)
+	}
+	if !ok {
+		t.Fatalf("expected next stage after generate")
+	}
+	if next != string(PodcastStageRender) {
+		t.Fatalf("expected type2 generate to flow into render, got %s", next)
+	}
+}
+
+func TestNextPodcastStageUsesPipelineOrderInsteadOfSpecifyTaskOrder(t *testing.T) {
+	next, ok, err := NextPodcastStage(1, string(PodcastStageGenerate), []string{"persist", "render"})
+	if err != nil {
+		t.Fatalf("NextPodcastStage returned err: %v", err)
+	}
+	if !ok {
+		t.Fatalf("expected next stage after generate")
+	}
+	if next != string(PodcastStageRender) {
+		t.Fatalf("expected generate to flow into render, got %s", next)
 	}
 }

@@ -89,6 +89,7 @@
 {
   "language": "ja",
   "title": "日语播客主标题",
+  "en_title": "English Podcast Title",
   "target_duration_minutes": 15,
   "difficulty_level":"N2",
   "tts_type":"google",

@@ -117,6 +117,10 @@
 {
   "language": "zh",
   "title": "中文播客主标题",
+  "en_title": "English Podcast Title",
+  "target_duration_minutes": 15,
+  "difficulty_level":"N2",
+  "tts_type":"google",
   "youtube": {
     "publish_title": "English Title | 中文标题",
     "chapters": [

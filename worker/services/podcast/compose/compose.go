@@ -15,6 +15,8 @@ import (
 	ffmpegpodcast "worker/services/podcast/render"
 )
 
+var composeBaseVideoContext = ffmpegpodcast.ComposeBaseVideoContext
+
 type ComposeInput struct {
 	ProjectID      string
 	Language       string
@@ -42,13 +44,14 @@ func Render(ctx context.Context, input ComposeInput) (ComposeRenderResult, error
 	if err != nil {
 		return ComposeRenderResult{}, err
 	}
-	log.Printf("📦 podcast compose assets project_id=%s dialogue=%s script=%s background=%s", input.ProjectID, paths.DialoguePath, paths.ScriptPath, paths.BackgroundPath)
-	if err := ffmpegpodcast.ComposeBaseVideoContext(ctx, ffmpegpodcast.ComposeInput{
+
+	if err := composeBaseVideoContext(ctx, ffmpegpodcast.ComposeInput{
 		BackgroundImagePath: paths.BackgroundPath,
 		DialogueAudioPath:   paths.DialoguePath,
+		Language:            input.Language,
 		Resolution:          paths.Resolution,
 		DesignStyle:         input.DesignStyle,
-		OutputPath:          paths.FinalVideoPath,
+		OutputPath:          paths.BaseVideoPath,
 	}); err != nil {
 		return ComposeRenderResult{}, err
 	}

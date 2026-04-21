@@ -17,7 +17,10 @@ import (
 	podcastspeaker "worker/services/podcast/speaker"
 )
 
-const youtubeTranscriptFilename = "youtube_transcript.srt"
+const (
+	youtubeTranscriptFilename        = "youtube_transcript.srt"
+	youtubeTranscriptEnglishFilename = "youtube_transcript_en.srt"
+)
 
 type publishVocabularyItem struct {
 	Term    string `json:"term"`
@@ -49,7 +52,12 @@ func exportYouTubeAssets(projectDir string, source podcastpageservice.PageSource
 	}
 
 	transcriptContent := buildYouTubeTranscriptSRTWithLeadIn(script, youtubePublishLeadInMS(script.Language))
-	return writeOptionalFile(filepath.Join(projectDir, youtubeTranscriptFilename), transcriptContent)
+	if err := writeOptionalFile(filepath.Join(projectDir, youtubeTranscriptFilename), transcriptContent); err != nil {
+		return err
+	}
+
+	englishTranscriptContent := buildYouTubeEnglishTranscriptSRTWithLeadIn(script, youtubePublishLeadInMS(script.Language))
+	return writeOptionalFile(filepath.Join(projectDir, youtubeTranscriptEnglishFilename), englishTranscriptContent)
 }
 
 func writeOptionalFile(path, content string) error {
@@ -780,6 +788,38 @@ func buildYouTubeTranscriptSRTWithLeadIn(script dto.PodcastScript, leadInMS int)
 	return strings.TrimSpace(b.String()) + "\n"
 }
 
+func buildYouTubeEnglishTranscriptSRT(script dto.PodcastScript) string {
+	return buildYouTubeEnglishTranscriptSRTWithLeadIn(script, 0)
+}
+
+func buildYouTubeEnglishTranscriptSRTWithLeadIn(script dto.PodcastScript, leadInMS int) string {
+	segments := englishTranscriptSegments(script)
+	if len(segments) == 0 {
+		return ""
+	}
+
+	var b strings.Builder
+	index := 1
+	for _, seg := range segments {
+		if seg.EndMS <= seg.StartMS {
+			continue
+		}
+		text := englishTranscriptCueText(seg)
+		if text == "" {
+			continue
+		}
+		b.WriteString(fmt.Sprintf(
+			"%d\n%s --> %s\n%s\n\n",
+			index,
+			formatSRTTimestampMS(seg.StartMS+leadInMS),
+			formatSRTTimestampMS(seg.EndMS+leadInMS),
+			text,
+		))
+		index++
+	}
+	return strings.TrimSpace(b.String()) + "\n"
+}
+
 func transcriptSegments(script dto.PodcastScript) []dto.PodcastSegment {
 	if len(script.Segments) == 0 && len(script.Blocks) > 0 {
 		script.RefreshSegmentsFromBlocks()
@@ -813,6 +853,30 @@ func youtubeTranscriptDisplayText(language string, seg dto.PodcastSegment) strin
 		return strings.TrimSpace(seg.Text)
 	}
 	return strings.TrimSpace(seg.Text)
+}
+
+func englishTranscriptSegments(script dto.PodcastScript) []dto.PodcastSegment {
+	if len(script.Segments) == 0 && len(script.Blocks) > 0 {
+		script.RefreshSegmentsFromBlocks()
+	}
+	if len(script.Segments) == 0 {
+		return nil
+	}
+	out := make([]dto.PodcastSegment, 0, len(script.Segments))
+	for _, seg := range script.Segments {
+		if seg.EndMS <= seg.StartMS {
+			continue
+		}
+		if strings.TrimSpace(seg.EnglishTranslation()) == "" {
+			continue
+		}
+		out = append(out, seg)
+	}
+	return out
+}
+
+func englishTranscriptCueText(seg dto.PodcastSegment) string {
+	return strings.Join(strings.Fields(strings.TrimSpace(seg.EnglishTranslation())), " ")
 }
 
 func formatSRTTimestampMS(ms int) string {

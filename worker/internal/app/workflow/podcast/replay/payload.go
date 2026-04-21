@@ -44,18 +44,30 @@ func LoadGeneratePayload(projectID string) (dto.PodcastAudioGeneratePayload, err
 }
 
 func ResolveSourceProjectID(current dto.PodcastAudioGeneratePayload) (string, error) {
-	if sourceProjectID := strings.TrimSpace(current.SourceProjectID); sourceProjectID != "" {
-		return sourceProjectID, nil
-	}
-	return workspace.ReplaySourceProjectID(current.ProjectID)
+	return ResolveReplaySourceProjectID(current.ProjectID, current.SourceProjectID)
 }
 
-func PrepareGeneratePayload(current dto.PodcastAudioGeneratePayload, requestPayloadPatch ...map[string]interface{}) (dto.PodcastAudioGeneratePayload, error) {
+func ResolveReplaySourceProjectID(projectID, sourceProjectID string) (string, error) {
+	if sourceProjectID = strings.TrimSpace(sourceProjectID); sourceProjectID != "" {
+		return sourceProjectID, nil
+	}
+	return workspace.ReplaySourceProjectID(projectID)
+}
+
+func EnsureReplayProjectDirForProject(projectID, sourceProjectID string) error {
+	resolvedSourceProjectID, err := ResolveReplaySourceProjectID(projectID, sourceProjectID)
+	if err != nil {
+		return err
+	}
+	return workspace.EnsureReplayProjectDir(resolvedSourceProjectID, strings.TrimSpace(projectID))
+}
+
+func PrepareReplayPayload(current dto.PodcastAudioGeneratePayload, requestPayloadPatch ...map[string]interface{}) (dto.PodcastAudioGeneratePayload, error) {
 	sourceProjectID, err := ResolveSourceProjectID(current)
 	if err != nil {
 		return dto.PodcastAudioGeneratePayload{}, err
 	}
-	if err := workspace.EnsureReplayProjectDir(sourceProjectID, current.ProjectID); err != nil {
+	if err := EnsureReplayProjectDirForProject(current.ProjectID, sourceProjectID); err != nil {
 		return dto.PodcastAudioGeneratePayload{}, err
 	}
 
@@ -78,6 +90,10 @@ func PrepareGeneratePayload(current dto.PodcastAudioGeneratePayload, requestPayl
 		return dto.PodcastAudioGeneratePayload{}, err
 	}
 	return replayPayload, nil
+}
+
+func PrepareGeneratePayload(current dto.PodcastAudioGeneratePayload, requestPayloadPatch ...map[string]interface{}) (dto.PodcastAudioGeneratePayload, error) {
+	return PrepareReplayPayload(current, requestPayloadPatch...)
 }
 
 func persistReplayRequestPayloadPatch(projectID string, patch map[string]interface{}) error {
@@ -124,9 +140,10 @@ func BuildGeneratePayloadFromSavedAndCurrent(saved, current dto.PodcastAudioGene
 		Lang:            lang,
 		ContentProfile:  firstNonEmpty(saved.ContentProfile, current.ContentProfile),
 		TTSType:         firstPositive(saved.TTSType, current.TTSType, 1),
+		IsMultiple:      firstOptionalInt(current.IsMultiple, saved.IsMultiple, intPtr(1)),
 		Seed:            firstPositive(current.Seed, saved.Seed),
 		RunMode:         firstPositive(current.RunMode, saved.RunMode),
-		OnlyCurrentStep: normalizeOnlyCurrentStep(current.OnlyCurrentStep),
+		SpecifyTasks:    firstNonEmptyStrings(current.SpecifyTasks, saved.SpecifyTasks),
 		BlockNums:       firstPositiveInts(current.BlockNums, saved.BlockNums),
 		Title:           firstNonEmpty(current.Title, saved.Title),
 		ScriptFilename:  firstNonEmpty(saved.ScriptFilename, current.ScriptFilename),
@@ -136,6 +153,20 @@ func BuildGeneratePayloadFromSavedAndCurrent(saved, current dto.PodcastAudioGene
 		Resolution:      firstNonEmpty(current.Resolution, saved.Resolution),
 		DesignStyle:     normalizePodcastDesignStyle(firstPositive(current.DesignStyle, saved.DesignStyle, 1)),
 	}, nil
+}
+
+func firstOptionalInt(values ...*int) *int {
+	for _, value := range values {
+		if value != nil {
+			return value
+		}
+	}
+	return nil
+}
+
+func intPtr(value int) *int {
+	v := value
+	return &v
 }
 
 func BuildComposePayloadFromGenerate(generate dto.PodcastAudioGeneratePayload) (dto.PodcastComposePayload, error) {
@@ -157,8 +188,9 @@ func BuildComposePayloadFromGenerate(generate dto.PodcastAudioGeneratePayload) (
 		ProjectID:       projectID,
 		SourceProjectID: strings.TrimSpace(generate.SourceProjectID),
 		Lang:            lang,
+		TTSType:         firstPositive(generate.TTSType, 1),
 		RunMode:         generate.RunMode,
-		OnlyCurrentStep: normalizeOnlyCurrentStep(generate.OnlyCurrentStep),
+		SpecifyTasks:    compactNonEmptyStrings(generate.SpecifyTasks),
 		Title:           strings.TrimSpace(generate.Title),
 		BgImgFilenames:  backgrounds,
 		TargetPlatform:  strings.TrimSpace(generate.TargetPlatform),
@@ -182,13 +214,6 @@ func normalizePodcastDesignStyle(value int) int {
 		return 2
 	}
 	return 1
-}
-
-func normalizeOnlyCurrentStep(value int) int {
-	if value == 1 {
-		return 1
-	}
-	return 0
 }
 
 func firstNonEmpty(values ...string) string {

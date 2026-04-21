@@ -62,29 +62,39 @@ male 更沉稳，负责用清楚、温和、自然的方式解释概念、补充
 - chapter 之间必须有明显推进，不能只是换一种说法重复前面的内容
 - youtube.chapters 中的 block_ids 必须与下方 blocks 实际对应
 
-【block 的作用】
-- block 是 chapter 内部的内容推进单元，用于组织一小段连续对话
-- 每个 block 都必须有明确作用，例如：引入、解释、举例、追问、补充、比较、收束
-- 一个 block 应当围绕一个小重点展开，不要同时承担过多功能
+【block】
+- block 是请求 TTS 的单位
+- block 中的所有的 segment.text 的字符总和不能超过3600个
 
 【chapter 与 block 的关系】
 - 一个 chapter 由 1 个或多个 block 组成
-- chapter 负责大层次推进，block 负责小层次展开
-- 同一个 chapter 下的多个 block 应当围绕同一个核心方向展开
 
 【en 规则】
-- 根据 text，补全对应的 en
-- en 必须是自然流畅、便于英语用户理解的意译
+- 根据 text，补全对应的英文翻译，写入 translations.en
+- translations.en 必须是自然流畅、便于英语用户理解的意译
 - 不要逐词硬译
 - 要传达说话人的语气和真实意思
 - 英文要像真实 podcast transcript 的自然英文
-- 每个 segment 都必须补上 en
+
+【多语言字幕翻译规则】
+- 每个 segment 都必须补充一个 translations 字段
+- translations 必须是对象，专门用于后续生成 YouTube SRT 字幕文件
+- translations 中必须包含 en
+- 日文播客需要补充以下翻译语言：
+  - 西班牙语（拉丁美洲）
+  - 中文简体
+  - 越南语
+  - 韩国语
+  - 印尼语
+- translations 的内容必须和原句语义一致，适合字幕阅读，表达自然、简洁、口语化
+- translations 里的每种语言都必须完整覆盖当前 segment 的意思，不要只翻一半
+- translations 不用于 TTS，不要加入任何 [] 标签
 
 【按 target_duration_minutes 的推荐内容体量】
-- 5 分钟内容：建议 3 到 4 个 chapter、4 到 5 个 block、28 到 40 个 segments
-- 10 分钟内容：建议 6 到 7 个 chapter、6 到 8 个 block、55 到 70 个 segments
-- 15 分钟内容：建议 8 到 10 个 chapter、8 到 10 个 block、80 到 90 个 segments
-- 20 分钟内容：建议 10 到 13 个 chapter、10 到 12 个 block、95 到 115 个 segments
+- 5 分钟内容：建议 3 到 4 个 chapter、2 到 3 个 block、28 到 40 个 segments
+- 10 分钟内容：建议 3 到 4 个 chapter、4 到 5 个 block、55 到 70 个 segments
+- 15 分钟内容：建议 6 到 7 个 chapter、7 到 8 个 block、90 到 100 个 segments
+- 20 分钟内容：建议 9 到 10 个 chapter、10 到 11 个 block、115 到 130 个 segments
 
 【segment 规则】
 - segment_id 必须按 seg_001、seg_002、seg_003 递增
@@ -139,6 +149,7 @@ Audio events / special（播客场景一般不建议使用）:
 - summary_cta block 的结尾还必须自然告诉听众：本次聊天内容的脚本可以从置顶评论获取
 - 这段“置顶评论获取脚本”的提示必须属于实际会说出来的正文，表达要自然、口语化，不要生硬广告腔
 - 最后的 segment.summary=true，所有其他 segment 的 summary 必须为 false
+- 总结不能太啰嗦。
 
 【第一阶段特别规则】
 - 本阶段不要生成任何 segment.tokens
@@ -147,11 +158,11 @@ Audio events / special（播客场景一般不建议使用）:
 在输出最终 JSON 之前，必须先自行检查以下内容：
 - chapter、block、segment 的数量是否达到 target_duration_minutes 对应的推荐范围
 - 每个 chapter 是否都对应清晰的讨论阶段，而不是形式上的分组
-- 每个 block 是否都承担明确作用，例如引入、解释、举例、追问、补充、比较或收束
 - 不同 chapter 之间是否有明显推进，而不是重复前文
 - segment 是否保持真实聊天感，而不是为了凑数量被拆得像逐句对台词
 - 是否存在内容明显偏短、过早总结、过早进入 summary_cta 的情况
 - youtube.chapters 的 block_ids 是否与 blocks 实际对应
+- 每个 block 的所有的 segment.text 的字符总和不能超过 3600 个
 
 如果任一项不满足，必须继续扩展和调整结构后再输出。
 
@@ -200,10 +211,17 @@ Audio events / special（播客场景一般不建议使用）:
         {
           "segment_id": "seg_001",
           "speaker": "female",
-          "speaker_name":"ユイ"
+          "speaker_name":"ユイ",
           "text": "この話題、最近ほんとうによく聞きますよね。",
           "speech_text": "この話題、最近ほんとうによく聞きますよね。",
-          "en": "This is something I've been hearing about a lot lately.",
+          "translations": {
+            "en": "This is something I've been hearing about a lot lately.",
+            "es-419": "Este es un tema del que he estado oyendo mucho últimamente.",
+            "zh-Hans": "这个话题，我最近真的常常听到。",
+            "vi": "Đây là chủ đề mà gần đây tôi nghe rất nhiều.",
+            "ko": "이 주제는 요즘 정말 자주 듣게 돼요.",
+            "id": "Topik ini belakangan ini sering sekali saya dengar."
+          },
           "summary": false
         }
       ]
@@ -212,10 +230,30 @@ Audio events / special（播客场景一般不建议使用）:
 }
 
 现在根据以下输入生成内容：
-topic：今の日本、若い人は本当に余裕がない？
-方向：钱、时间、情绪、工作压力等等、为什么大家看起来都很累。
+topic：请围绕“为什么日本会出现这些特殊服务”创作一段20分钟左右的双人日语聊天播客。
+
+主题核心不是单纯介绍“日本奇怪的服务”，而是讨论：
+为什么在日本，连辞职、拒绝、出席婚礼、扮演家人或朋友这类事情，都能发展成付费服务？
+这些服务背后反映了哪些日本社会文化现象？
+
+节目必须围绕以下主线展开：
+1. 先从一个强钩子例子切入，比如退職代行
+2. 简单提到2到4种有代表性的服务
+3. 重点讨论这些服务为什么会出现
+4. 讨论背后的原因，例如怕冲突、怕麻烦别人、重视关系和场面、职场压力、人际疲劳、孤独与尴尬被商业化
+5. 讨论这些服务到底是在帮助人，还是让人逃避问题
+6. 最后把话题拉高到：这是不是日本特有现象，还是现代社会都会越来越出现的趋势
+
+整体风格要求：
+- 两位主持人是关系很熟的朋友，自然闲聊，不是新闻播报
+- 开头要有吸引力
+- 中间要有观点来回，不只是解释
+- 不要做成“日本真奇怪”的浅层猎奇内容
+- 要让听众从“这服务好奇怪”慢慢听到“其实可以理解”
+- 语气自然、成熟、有生活感
+- 适合YouTube播客
 difficulty_level：N3
 target_duration_minutes：15
 tts_type: google
 
-请按照规则要求给我生成内容并且给我可以下载的json文件
+请按照规则要求给我生成内容并且给我可以下载的json文件，内容要丰富，chapter，block，segment 数量要足够要求

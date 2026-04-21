@@ -66,31 +66,41 @@ male 更沉稳，负责用清楚、温和、自然的方式解释概念、补充
 - chapter 应概括这一段的核心内容，适合给用户阅读
 - youtube.chapters 中的 block_ids 必须与下方 blocks 实际对应
 
-【block 的作用】
-- block 是 chapter 内部的内容推进单元，用于组织一小段连续对话
-- 每个 block 都必须有明确作用，例如：引入、解释、举例、追问、补充、比较、收束
-- 一个 block 应当围绕一个小重点展开，不要同时承担过多功能
+【block】
+- block 是请求 TTS 的单位
+- block 中的所有的 segment.text 的字符总和不能超过3600个
 
 【chapter 与 block 的关系】
 - 一个 chapter 由 1 个或多个 block 组成
-- chapter 负责大层次推进，block 负责小层次展开
-- 同一个 chapter 下的多个 block 应当围绕同一个核心方向展开
 
 【en 规则】
-- en 必须是自然流畅、便于英语用户理解的意译
+- 根据 text，补全对应的英文翻译，写入 translations.en
+- translations.en 必须自然流畅、便于英语用户理解
 - 不要逐词硬译
 - 要传达说话人的语气和真实意思
 - 英文要像真实 podcast transcript 的自然英文
-- en 应该听起来自然、口语化、易懂，适合语言学习频道的字幕和说明使用
 - 可以适度意译，但不能偏离原文意思
-- 每个 segment 都必须补上 en
 - 不要改写原始中文 text，只根据它补全对应英文
 
+【多语言字幕翻译规则】
+- 每个 segment 都必须补充一个 translations 字段
+- translations 必须是对象，专门用于后续生成 YouTube SRT 字幕文件
+- translations 中必须包含 en
+- 中文播客需要补充以下翻译语言：
+  - 西班牙语（拉丁美洲）
+  - 越南语
+  - 缅甸语
+  - 日语
+  - 葡萄牙语（巴西）
+- translations 的内容必须和原句语义一致，适合字幕阅读，表达自然、简洁、口语化
+- translations 里的每种语言都必须完整覆盖当前 segment 的意思，不要只翻一半
+- translations 不用于 TTS，不要加入任何 [] 标签
+
 【按 target_duration_minutes 的推荐内容体量】
-- 5 分钟内容：建议 3 到 4 个 chapter、4 到 5 个 block、28 到 40 个 segments
-- 10 分钟内容：建议 6 到 7 个 chapter、7 到 9 个 block、55 到 70 个 segments
-- 15 分钟内容：建议 8 到 10 个 chapter、9 到 12 个 block、80 到 90 个 segments
-- 20 分钟内容：建议 10 到 13 个 chapter、10 到 12 个 block、95 到 115 个 segments
+- 5 分钟内容：建议 3 到 4 个 chapter、2 到 3 个 block、28 到 40 个 segments
+- 10 分钟内容：建议 3 到 4 个 chapter、4 到 5 个 block、55 到 70 个 segments
+- 15 分钟内容：建议 6 到 7 个 chapter、7 到 8 个 block、90 到 100 个 segments
+- 20 分钟内容：建议 10 到 10 个 chapter、10 到 11 个 block、115 到 130 个 segments
 
 【segment 规则】
 - segment_id 必须按 seg_001、seg_002、seg_003 递增
@@ -151,6 +161,7 @@ Audio events / special（播客场景一般不建议使用）:
 - summary_cta block 的结尾还必须自然告诉听众：本次聊天内容的脚本可以从置顶评论获取
 - 这段“置顶评论获取脚本”的提示必须属于实际会说出来的正文，表达要自然、口语化，不要生硬广告腔
 - 最后的 segment.summary=true，所有其他 segment 的 summary 必须为 false
+- 总结不能太啰嗦。
 
 【第一阶段特别规则】
 - 本阶段不要生成任何 segment.tokens
@@ -159,11 +170,11 @@ Audio events / special（播客场景一般不建议使用）:
 在输出最终 JSON 之前，必须先自行检查以下内容：
 - chapter、block、segment 的数量是否达到 target_duration_minutes 对应的推荐范围
 - 每个 chapter 是否都对应清晰的讨论阶段，而不是形式上的分组
-- 每个 block 是否都承担明确作用，例如引入、解释、举例、追问、补充、比较或收束
 - 不同 chapter 之间是否有明显推进，而不是重复前文
 - segment 是否保持真实聊天感，而不是为了凑数量被拆得像逐句对台词
 - 是否存在内容明显偏短、过早总结、过早进入 summary_cta 的情况
 - youtube.chapters 的 block_ids 是否与 blocks 实际对应
+- 每个 block 的所有的 segment.text 的字符总和不能超过 3600 个
 
 如果任一项不满足，必须继续扩展和调整结构后再输出。
 
@@ -182,6 +193,7 @@ Audio events / special（播客场景一般不建议使用）:
   "en_title": "English Podcast Title",
   "target_duration_minutes": 15,
   "difficulty_level":"N2",
+  "tts_type":"google",
   "youtube": {
     "publish_title": "English Title | 中文标题",
     "chapters": [
@@ -223,8 +235,15 @@ Audio events / special（播客场景一般不建议使用）:
           "speaker": "female",
           "text": "今天这个话题，我最近真的常常听到。",
           "speech_text": "",
-          "en": "This is a topic I've been hearing a lot lately.",
-          "summary": false
+          "summary": false,
+          "translations": {
+            "en": "This is a topic I've been hearing a lot lately.",
+            "es-419": "Este es un tema del que he estado oyendo mucho últimamente.",
+            "vi": "Đây là một chủ đề mà gần đây tôi nghe rất nhiều.",
+            "my": "ဒီအကြောင်းအရာကို မကြာသေးခင်က တော်တော်လေး ကြားနေရပါတယ်။",
+            "ja": "この話題、最近ほんとうによく聞きますよね。",
+            "pt-BR": "Esse é um assunto que eu tenho ouvido muito ultimamente."
+          }
         }
       ]
     }
@@ -232,10 +251,9 @@ Audio events / special（播客场景一般不建议使用）:
 }
 
 现在根据以下输入生成内容：
-topic：年轻人为什么一边想稳定，一边又想自由？
-现在中国年轻人就业压力仍然是强情绪话题，2025 年 11 月 16–24 岁青年失业率为 16.9%；同时，居民消费还在增长，说明大家并不是不花钱，而是在更谨慎地安排未来。这个矛盾感很适合播客：想要编制、想要大厂、想要副业、又想保留自由和尊严。
+topic：现在的年轻人，还想结婚吗？
 difficulty_level：HSK3
 target_duration_minutes：15
-tts_type: eleven
+tts_type: google
 
 请按照规则要求给我生成内容并且给我可以下载的json文件。

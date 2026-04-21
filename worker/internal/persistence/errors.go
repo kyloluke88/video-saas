@@ -11,6 +11,10 @@ func (e FatalError) Error() string {
 	return e.Err.Error()
 }
 
+func (e FatalError) Unwrap() error {
+	return e.Err
+}
+
 func wrapFatal(err error) error {
 	if err == nil {
 		return nil

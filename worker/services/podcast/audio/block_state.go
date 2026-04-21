@@ -14,6 +14,7 @@ import (
 type blockCheckpoint struct {
 	Block      dto.PodcastBlock `json:"block"`
 	DurationMS int              `json:"duration_ms"`
+	IsMultiple *int             `json:"is_multiple,omitempty"`
 }
 
 func blockStatePath(dir string, index int, blockID string) string {
@@ -38,7 +39,7 @@ func loadBlockCheckpoint(dir string, index int, blockID string) (blockCheckpoint
 	return state, true, nil
 }
 
-func persistBlockCheckpoint(dir string, index int, block dto.PodcastBlock, durationMS int) error {
+func persistBlockCheckpoint(dir string, index int, block dto.PodcastBlock, durationMS int, isMultiple *int) error {
 	path := blockStatePath(dir, index, block.BlockID)
 	if err := validateBlockStateSegments(path, block); err != nil {
 		return err
@@ -46,6 +47,7 @@ func persistBlockCheckpoint(dir string, index int, block dto.PodcastBlock, durat
 	state := blockCheckpoint{
 		Block:      block,
 		DurationMS: durationMS,
+		IsMultiple: isMultiple,
 	}
 	return writeJSON(path, state)
 }
@@ -54,15 +56,60 @@ func blockCheckpointComplete(language string, state blockCheckpoint, audioPath s
 	if !blockCheckpointHasAudio(state, audioPath) {
 		return false
 	}
+	if len(state.Block.Segments) == 0 {
+		return false
+	}
+
+	prevEnd := 0
 	for _, seg := range state.Block.Segments {
-		if seg.EndMS <= seg.StartMS {
+		if seg.StartMS < 0 || seg.EndMS <= seg.StartMS {
 			return false
 		}
-		if len(seg.Tokens) == 0 {
+		if seg.StartMS < prevEnd {
+			return false
+		}
+		if isJapaneseLanguage(language) {
+			if !blockCheckpointJapaneseSegmentHasTiming(seg) {
+				return false
+			}
+		} else if !blockCheckpointChineseSegmentHasTiming(seg) {
+			return false
+		}
+		prevEnd = seg.EndMS
+	}
+	return true
+}
+
+func blockCheckpointChineseSegmentHasTiming(seg dto.PodcastSegment) bool {
+	if len(seg.Tokens) == 0 {
+		return false
+	}
+	for _, token := range seg.Tokens {
+		if token.StartMS < 0 || token.EndMS <= token.StartMS {
 			return false
 		}
 	}
 	return true
+}
+
+func blockCheckpointJapaneseSegmentHasTiming(seg dto.PodcastSegment) bool {
+	hasTokenTiming := false
+	for _, token := range seg.Tokens {
+		if token.StartMS < 0 || token.EndMS <= token.StartMS {
+			return false
+		}
+		hasTokenTiming = true
+	}
+
+	hasHighlightTiming := false
+	for _, span := range seg.HighlightSpans {
+		if span.StartMS < 0 || span.EndMS <= span.StartMS {
+			return false
+		}
+		hasHighlightTiming = true
+	}
+
+	return hasTokenTiming || hasHighlightTiming
 }
 
 func blockCheckpointHasAudio(state blockCheckpoint, audioPath string) bool {

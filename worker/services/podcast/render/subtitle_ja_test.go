@@ -139,6 +139,52 @@ func TestJapaneseSubtitleLayout_Style2MatchesType1Typography(t *testing.T) {
 	}
 }
 
+func TestChooseJapanesePageBreak_ExtendsToNextPunctuationWhenOverLimit(t *testing.T) {
+	layout := subtitleLayout{
+		MaxTextWidth: 9999,
+		MaxLineChars: 4,
+		HanziSize:    40,
+		HanziSpacing: 8,
+	}
+	groups := []japaneseTokenGroup{
+		{Cells: []japaneseCharCell{{Char: "こ", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "れ", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "は", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "テ", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "ス", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "ト", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "、", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "続", Width: 20}}},
+		{Cells: []japaneseCharCell{{Char: "き", Width: 20}}},
+	}
+	if got, want := chooseJapanesePageBreak(groups, 0, layout), 7; got != want {
+		t.Fatalf("unexpected extended punctuation break: got %d want %d", got, want)
+	}
+}
+
+func TestComputeJapaneseRows_TwoLineSpacing(t *testing.T) {
+	layout := subtitleLayout{
+		TopSectionTop:    100,
+		TopSectionHeight: 200,
+		BottomSectionHeight: 0,
+		HanziSize:       40,
+		RubySize:        20,
+		RowGap:          10,
+		TokenLineGap:    18,
+	}
+
+	rows := computeJapaneseRows(layout, 2)
+	if len(rows) != 2 {
+		t.Fatalf("unexpected row count: got %d want 2", len(rows))
+	}
+	if rows[1].BaseY <= rows[0].BaseY {
+		t.Fatalf("expected second row below first row, got %d <= %d", rows[1].BaseY, rows[0].BaseY)
+	}
+	if gap := rows[1].BaseY - rows[0].BaseY; gap < 40 {
+		t.Fatalf("expected visible spacing between rows, got gap %d", gap)
+	}
+}
+
 func TestBuildJapaneseLayoutCells_PreservesSpaceBetweenEnglishWords(t *testing.T) {
 	layout := subtitleLayout{
 		HanziSize:    40,

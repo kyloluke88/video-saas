@@ -108,7 +108,7 @@ func synthesizeWithElevenLabs(
 			ttsResult.VoiceSegments,
 			blockDurationMS,
 		)
-		if err := persistBlockCheckpoint(artifacts.blockStatesDir, blockIndex, alignedBlock, blockDurationMS); err != nil {
+		if err := persistBlockCheckpoint(artifacts.blockStatesDir, blockIndex, alignedBlock, blockDurationMS, nil); err != nil {
 			return nil, err
 		}
 
@@ -279,6 +279,7 @@ func tryReuseCachedBlockWithoutMFA(
 		artifacts,
 		index,
 		block,
+		nil,
 		true,
 		false,
 	)

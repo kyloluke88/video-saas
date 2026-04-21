@@ -257,22 +257,69 @@ func (ctrl *VideoController) CreatePodcastDialogue(c *gin.Context) {
 		response.BadRequest(c, err, err.Error())
 		return
 	}
-	if err := validatePodcastCreateRequest(req, runMode); err != nil {
-		response.BadRequest(c, err, err.Error())
-		return
-	}
 
 	bgImgFilenames := compactStringSlice(req.BgImgFilenames)
-	blockNums := mergePodcastBlockNums(req.BlockNums, req.BlockNum)
+	blockNums := compactPositiveInts(req.BlockNums)
+	if runMode == 0 {
+		if strings.TrimSpace(req.Lang) == "" {
+			response.BadRequest(c, fmt.Errorf("lang is required when run_mode is 0"), "lang is required when run_mode is 0")
+			return
+		}
+		if strings.TrimSpace(req.ContentProfile) == "" {
+			response.BadRequest(c, fmt.Errorf("content_profile is required when run_mode is 0"), "content_profile is required when run_mode is 0")
+			return
+		}
+		if strings.TrimSpace(req.ScriptFilename) == "" {
+			response.BadRequest(c, fmt.Errorf("script_filename is required when run_mode is 0"), "script_filename is required when run_mode is 0")
+			return
+		}
+		if len(bgImgFilenames) == 0 {
+			response.BadRequest(c, fmt.Errorf("bg_img_filenames is required when run_mode is 0"), "bg_img_filenames is required when run_mode is 0")
+			return
+		}
+	}
 	podcastSeed := 0
 	if runMode == 0 {
 		podcastSeed = buildPodcastSeed(projectID)
 	} else if req.Seed > 0 {
 		podcastSeed = req.Seed
 	}
-	payload := buildPodcastTaskPayload(req, projectID, runMode, blockNums, bgImgFilenames, podcastSeed)
 
-	taskType := podcastTaskTypeForRunMode(runMode)
+	requestPayload := buildPodcastRequestPayload(req, projectID, runMode, blockNums, bgImgFilenames, podcastSeed)
+	trackedPayload := buildTrackedPodcastPayload(runMode, requestPayload)
+
+	ttsType := normalizePodcastTTSType(payloadInt(trackedPayload, "tts_type", req.TTSType))
+	requestSpecifyTasks := compactStringSlice(req.SpecifyTasks)
+	if runMode == 1 {
+		specifyTasks, err := normalizePodcastSpecifyTasks(ttsType, requestSpecifyTasks)
+		if err != nil {
+			response.BadRequest(c, err, err.Error())
+			return
+		}
+		if len(specifyTasks) == 0 {
+			response.BadRequest(c, fmt.Errorf("specify_tasks is required when run_mode is 1"), "specify_tasks is required when run_mode is 1")
+			return
+		}
+		if podcastSpecifiesStage(specifyTasks, podcastStageGenerate) && len(blockNums) == 0 {
+			response.BadRequest(c, fmt.Errorf("block_nums is required when specify_tasks includes generate"), "block_nums is required when specify_tasks includes generate")
+			return
+		}
+		trackedPayload["specify_tasks"] = specifyTasks
+		trackedPayload["source_project_id"] = strings.TrimSpace(req.ProjectID)
+	} else {
+		delete(trackedPayload, "specify_tasks")
+		delete(trackedPayload, "source_project_id")
+	}
+	trackedPayload["tts_type"] = ttsType
+	trackedPayload["run_mode"] = runMode
+	trackedPayload["project_id"] = projectID
+
+	taskType, err := podcastTaskTypeForInitialStage(ttsType, runMode, payloadStringSlice(trackedPayload, "specify_tasks"))
+	if err != nil {
+		response.BadRequest(c, err, err.Error())
+		return
+	}
+	payload := buildPodcastTaskPayload(trackedPayload)
 
 	trackPodcastProject(projectID, runMode, taskType, payload)
 
@@ -326,88 +373,20 @@ func buildPodcastSeed(projectID string) int {
 	return 1
 }
 
-func normalizePodcastRunMode(value int) int {
-	switch value {
-	case 1, 2, 3, 4:
-		return value
-	default:
-		return 0
-	}
-}
-
-func normalizeOnlyCurrentStep(value int) int {
-	if value == 1 {
-		return 1
-	}
-	return 0
-}
-
-func podcastTaskTypeForRunMode(runMode int) string {
-	switch runMode {
-	case 2:
-		return "podcast.compose.render.v1"
-	case 3:
-		return "podcast.page.persist.v1"
-	case 4:
-		return "podcast.audio.align.v1"
-	default:
-		return "podcast.audio.generate.v1"
-	}
-}
-
 func resolvePodcastProjectID(req video.CreatePodcastDialogueRequest, runMode int) (string, error) {
-	if runMode == 1 || runMode == 2 || runMode == 3 || runMode == 4 {
+	if runMode == 1 {
 		sourceProjectID := strings.TrimSpace(req.ProjectID)
 		if sourceProjectID == "" {
-			return "", fmt.Errorf("project_id is required when run_mode is 1, 2, 3 or 4")
+			return "", fmt.Errorf("project_id is required when run_mode is 1")
 		}
-		return buildPodcastReplayProjectID(sourceProjectID, runMode), nil
+		return buildPodcastReplayProjectID(sourceProjectID), nil
 	}
 
 	lang := normalizePodcastLang(req.Lang)
 	return buildPodcastProjectID(lang), nil
 }
 
-func validatePodcastCreateRequest(req video.CreatePodcastDialogueRequest, runMode int) error {
-	switch runMode {
-	case 1:
-		if strings.TrimSpace(req.ProjectID) == "" {
-			return fmt.Errorf("project_id is required when run_mode is 1")
-		}
-		return nil
-	case 2:
-		if strings.TrimSpace(req.ProjectID) == "" {
-			return fmt.Errorf("project_id is required when run_mode is 2")
-		}
-		return nil
-	case 3:
-		if strings.TrimSpace(req.ProjectID) == "" {
-			return fmt.Errorf("project_id is required when run_mode is 3")
-		}
-		return nil
-	case 4:
-		if strings.TrimSpace(req.ProjectID) == "" {
-			return fmt.Errorf("project_id is required when run_mode is 4")
-		}
-		return nil
-	default:
-		if strings.TrimSpace(req.Lang) == "" {
-			return fmt.Errorf("lang is required when run_mode is 0")
-		}
-		if strings.TrimSpace(req.ContentProfile) == "" {
-			return fmt.Errorf("content_profile is required when run_mode is 0")
-		}
-		if strings.TrimSpace(req.ScriptFilename) == "" {
-			return fmt.Errorf("script_filename is required when run_mode is 0")
-		}
-		if !hasPodcastBackgroundInput(req.BgImgFilenames) {
-			return fmt.Errorf("bg_img_filenames is required when run_mode is 0")
-		}
-		return nil
-	}
-}
-
-func buildPodcastTaskPayload(
+func buildPodcastRequestPayload(
 	req video.CreatePodcastDialogueRequest,
 	projectID string,
 	runMode int,
@@ -416,10 +395,9 @@ func buildPodcastTaskPayload(
 	podcastSeed int,
 ) map[string]interface{} {
 	payload := map[string]interface{}{
-		"content_type":      "podcast",
-		"project_id":        projectID,
-		"run_mode":          runMode,
-		"only_current_step": normalizeOnlyCurrentStep(req.OnlyCurrentStep),
+		"content_type": "podcast",
+		"project_id":   projectID,
+		"run_mode":     runMode,
 	}
 	if title := strings.TrimSpace(req.Title); title != "" {
 		payload["title"] = title
@@ -445,9 +423,12 @@ func buildPodcastTaskPayload(
 	if req.DesignStyle > 0 {
 		payload["design_style"] = req.DesignStyle
 	}
-	if runMode == 1 || runMode == 2 || runMode == 3 || runMode == 4 {
+	if runMode == 1 {
 		if sourceProjectID := strings.TrimSpace(req.ProjectID); sourceProjectID != "" {
 			payload["source_project_id"] = sourceProjectID
+		}
+		if tasks := compactStringSlice(req.SpecifyTasks); len(tasks) > 0 {
+			payload["specify_tasks"] = tasks
 		}
 	}
 	if podcastSeed > 0 {
@@ -455,6 +436,9 @@ func buildPodcastTaskPayload(
 	}
 	if req.TTSType == 1 || req.TTSType == 2 {
 		payload["tts_type"] = req.TTSType
+	}
+	if req.IsMultiple != nil {
+		payload["is_multiple"] = *req.IsMultiple
 	}
 	if len(blockNums) > 0 {
 		payload["block_nums"] = blockNums
@@ -465,8 +449,63 @@ func buildPodcastTaskPayload(
 	return payload
 }
 
-func buildPodcastReplayProjectID(sourceProjectID string, runMode int) string {
-	return fmt.Sprintf("%s__rm%d__%s", normalizePodcastReplayRootProjectID(sourceProjectID), runMode, time.Now().Format("20060102150405"))
+func buildPodcastTaskPayload(payload map[string]interface{}) map[string]interface{} {
+	out := map[string]interface{}{
+		"content_type": "podcast",
+		"project_id":   strings.TrimSpace(payloadString(payload, "project_id")),
+		"run_mode":     normalizePodcastRunMode(payloadInt(payload, "run_mode", 0)),
+	}
+	if sourceProjectID := strings.TrimSpace(payloadString(payload, "source_project_id")); sourceProjectID != "" && payloadInt(payload, "run_mode", 0) == 1 {
+		out["source_project_id"] = sourceProjectID
+	}
+	ttsType := normalizePodcastTTSType(payloadInt(payload, "tts_type", 1))
+	out["tts_type"] = ttsType
+	if tasks := compactStringSlice(payloadStringSlice(payload, "specify_tasks")); len(tasks) > 0 && payloadInt(payload, "run_mode", 0) == 1 {
+		out["specify_tasks"] = tasks
+	}
+	if title := strings.TrimSpace(payloadString(payload, "title")); title != "" {
+		out["title"] = title
+	}
+	if lang := strings.TrimSpace(payloadString(payload, "lang")); lang != "" {
+		out["lang"] = lang
+	}
+	if profile := strings.TrimSpace(payloadString(payload, "content_profile")); profile != "" {
+		out["content_profile"] = profile
+	}
+	if scriptFile := strings.TrimSpace(payloadString(payload, "script_filename")); scriptFile != "" {
+		out["script_filename"] = scriptFile
+	}
+	if platform := strings.TrimSpace(payloadString(payload, "target_platform")); platform != "" {
+		out["target_platform"] = platform
+	}
+	if aspect := strings.TrimSpace(payloadString(payload, "aspect_ratio")); aspect != "" {
+		out["aspect_ratio"] = aspect
+	}
+	if resolution := strings.TrimSpace(payloadString(payload, "resolution")); resolution != "" {
+		out["resolution"] = resolution
+	}
+	if designStyle := payloadInt(payload, "design_style", 0); designStyle > 0 {
+		out["design_style"] = designStyle
+	}
+	if seed := payloadInt(payload, "seed", 0); seed > 0 {
+		out["seed"] = seed
+	}
+	if isMultiple, ok := payloadIntWithPresence(payload, "is_multiple"); ok {
+		out["is_multiple"] = isMultiple
+	} else if ttsType == 1 {
+		out["is_multiple"] = 1
+	}
+	if blockNums := compactPositiveInts(payloadIntSlice(payload, "block_nums")); len(blockNums) > 0 {
+		out["block_nums"] = blockNums
+	}
+	if backgrounds := compactStringSlice(payloadStringSlice(payload, "bg_img_filenames")); len(backgrounds) > 0 {
+		out["bg_img_filenames"] = backgrounds
+	}
+	return out
+}
+
+func buildPodcastReplayProjectID(sourceProjectID string) string {
+	return fmt.Sprintf("%s__rm1__%s", normalizePodcastReplayRootProjectID(sourceProjectID), time.Now().Format("20060102150405"))
 }
 
 func normalizePodcastReplayRootProjectID(projectID string) string {
@@ -491,26 +530,200 @@ func compactStringSlice(values []string) []string {
 	return out
 }
 
-func mergePodcastBlockNums(groups ...[]int) []int {
-	seen := make(map[int]struct{})
-	out := make([]int, 0)
-	for _, group := range groups {
-		for _, value := range group {
-			if value <= 0 {
-				continue
-			}
-			if _, exists := seen[value]; exists {
-				continue
-			}
-			seen[value] = struct{}{}
-			out = append(out, value)
+func compactPositiveInts(values []int) []int {
+	seen := make(map[int]struct{}, len(values))
+	out := make([]int, 0, len(values))
+	for _, value := range values {
+		if value <= 0 {
+			continue
 		}
+		if _, exists := seen[value]; exists {
+			continue
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
 	}
 	return out
 }
 
-func hasPodcastBackgroundInput(many []string) bool {
-	return len(compactStringSlice(many)) > 0
+func payloadString(payload map[string]interface{}, key string) string {
+	if payload == nil {
+		return ""
+	}
+	value, ok := payload[key]
+	if !ok || value == nil {
+		return ""
+	}
+	if text, ok := value.(string); ok {
+		return strings.TrimSpace(text)
+	}
+	text := strings.TrimSpace(fmt.Sprint(value))
+	if text == "<nil>" {
+		return ""
+	}
+	return text
+}
+
+func payloadInt(payload map[string]interface{}, key string, fallback int) int {
+	if value, ok := payloadIntWithPresence(payload, key); ok {
+		return value
+	}
+	return fallback
+}
+
+func payloadIntWithPresence(payload map[string]interface{}, key string) (int, bool) {
+	if payload == nil {
+		return 0, false
+	}
+	value, ok := payload[key]
+	if !ok || value == nil {
+		return 0, false
+	}
+	switch typed := value.(type) {
+	case int:
+		return typed, true
+	case int8:
+		return int(typed), true
+	case int16:
+		return int(typed), true
+	case int32:
+		return int(typed), true
+	case int64:
+		return int(typed), true
+	case float32:
+		return int(typed), true
+	case float64:
+		return int(typed), true
+	case json.Number:
+		if num, err := typed.Int64(); err == nil {
+			return int(num), true
+		}
+		if num, err := typed.Float64(); err == nil {
+			return int(num), true
+		}
+		return 0, false
+	default:
+		text := strings.TrimSpace(fmt.Sprint(typed))
+		if text == "" || text == "<nil>" {
+			return 0, false
+		}
+		var parsed int
+		if _, err := fmt.Sscanf(text, "%d", &parsed); err == nil {
+			return parsed, true
+		}
+		return 0, false
+	}
+}
+
+func payloadStringSlice(payload map[string]interface{}, key string) []string {
+	if payload == nil {
+		return nil
+	}
+	value, ok := payload[key]
+	if !ok || value == nil {
+		return nil
+	}
+	clean := func(raw string) string {
+		text := strings.TrimSpace(raw)
+		if text == "" || text == "<nil>" {
+			return ""
+		}
+		return text
+	}
+	switch typed := value.(type) {
+	case []string:
+		out := make([]string, 0, len(typed))
+		for _, item := range typed {
+			if text := clean(item); text != "" {
+				out = append(out, text)
+			}
+		}
+		return out
+	case []interface{}:
+		out := make([]string, 0, len(typed))
+		for _, item := range typed {
+			if text := clean(fmt.Sprint(item)); text != "" {
+				out = append(out, text)
+			}
+		}
+		return out
+	default:
+		if text := clean(fmt.Sprint(typed)); text != "" {
+			return []string{text}
+		}
+		return nil
+	}
+}
+
+func payloadIntSlice(payload map[string]interface{}, key string) []int {
+	if payload == nil {
+		return nil
+	}
+	value, ok := payload[key]
+	if !ok || value == nil {
+		return nil
+	}
+	out := make([]int, 0)
+	switch typed := value.(type) {
+	case []int:
+		out = append(out, typed...)
+	case []int64:
+		for _, item := range typed {
+			out = append(out, int(item))
+		}
+	case []float64:
+		for _, item := range typed {
+			out = append(out, int(item))
+		}
+	case []interface{}:
+		for _, item := range typed {
+			if num, ok := payloadIntFromValue(item); ok {
+				out = append(out, num)
+			}
+		}
+	default:
+		if num, ok := payloadIntFromValue(typed); ok {
+			out = append(out, num)
+		}
+	}
+	return compactPositiveInts(out)
+}
+
+func payloadIntFromValue(value interface{}) (int, bool) {
+	switch typed := value.(type) {
+	case int:
+		return typed, true
+	case int8:
+		return int(typed), true
+	case int16:
+		return int(typed), true
+	case int32:
+		return int(typed), true
+	case int64:
+		return int(typed), true
+	case float32:
+		return int(typed), true
+	case float64:
+		return int(typed), true
+	case json.Number:
+		if num, err := typed.Int64(); err == nil {
+			return int(num), true
+		}
+		if num, err := typed.Float64(); err == nil {
+			return int(num), true
+		}
+		return 0, false
+	default:
+		text := strings.TrimSpace(fmt.Sprint(typed))
+		if text == "" || text == "<nil>" {
+			return 0, false
+		}
+		var parsed int
+		if _, err := fmt.Sscanf(text, "%d", &parsed); err == nil {
+			return parsed, true
+		}
+		return 0, false
+	}
 }
 
 func normalizePodcastLang(value string) string {

@@ -27,6 +27,7 @@ import (
 )
 
 const cloudPlatformScope = "https://www.googleapis.com/auth/cloud-platform"
+const generativeLanguageScope = "https://www.googleapis.com/auth/generative-language.retriever"
 
 var ttsRequestRetryDelays = []time.Duration{
 	3 * time.Second,
@@ -45,10 +46,7 @@ type Config struct {
 
 	TTSURL string
 
-	TTSModel         string
-	TTSAudioEncoding string
-	TTSSampleRateHz  int
-	TTSSpeakingRate  float64
+	TTSModel string
 
 	MaleVoiceID        string
 	FemaleVoiceID      string
@@ -96,6 +94,7 @@ type SynthesizeConversationRequest struct {
 	LanguageCode  string
 	Prompt        string
 	Turns         []ConversationTurn
+	SpeakerNames   map[string]string
 	MaleVoiceID   string
 	FemaleVoiceID string
 	SpeakingRate  float64
@@ -125,19 +124,10 @@ func New(cfg Config) (*Client, error) {
 		cfg.TokenURL = "https://oauth2.googleapis.com/token"
 	}
 	if strings.TrimSpace(cfg.TTSURL) == "" {
-		cfg.TTSURL = "https://texttospeech.googleapis.com/v1/text:synthesize"
+		cfg.TTSURL = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent"
 	}
 	if strings.TrimSpace(cfg.TTSModel) == "" {
-		cfg.TTSModel = "gemini-2.5-pro-tts"
-	}
-	if strings.TrimSpace(cfg.TTSAudioEncoding) == "" {
-		cfg.TTSAudioEncoding = "MP3"
-	}
-	if cfg.TTSSampleRateHz <= 0 {
-		cfg.TTSSampleRateHz = 24000
-	}
-	if cfg.TTSSpeakingRate <= 0 {
-		cfg.TTSSpeakingRate = 1.0
+		cfg.TTSModel = DefaultTTSModel
 	}
 	if cfg.HTTPTimeoutSeconds <= 0 {
 		cfg.HTTPTimeoutSeconds = 180
@@ -173,68 +163,42 @@ func (c *Client) SynthesizeConversation(ctx context.Context, req SynthesizeConve
 		return AudioResult{}, errors.New("gemini multi-speaker voice ids are required")
 	}
 
-	turns := make([]map[string]string, 0, len(req.Turns))
+	turns := make([]ConversationTurn, 0, len(req.Turns))
 	for _, turn := range req.Turns {
 		text := strings.TrimSpace(turn.Text)
 		if text == "" {
 			continue
 		}
 		speaker := normalizeSpeaker(turn.Speaker)
-		turns = append(turns, map[string]string{
-			"speaker": speaker,
-			"text":    text,
+		turns = append(turns, ConversationTurn{
+			Speaker: speaker,
+			Text:    text,
 		})
 	}
 	if len(turns) == 0 {
 		return AudioResult{}, errors.New("gemini multi-speaker turns are empty")
 	}
 
-	body := map[string]any{
-		"input": map[string]any{
-			"multiSpeakerMarkup": map[string]any{
-				"turns": turns,
-			},
-		},
-		"voice": map[string]any{
-			"languageCode": normalizeLanguageCode(req.LanguageCode),
-			"modelName":    c.cfg.TTSModel,
-			"multiSpeakerVoiceConfig": map[string]any{
-				"speakerVoiceConfigs": []map[string]string{
-					{"speakerAlias": "male", "speakerId": maleVoice},
-					{"speakerAlias": "female", "speakerId": femaleVoice},
-				},
-			},
-		},
-		"audioConfig": map[string]any{
-			"audioEncoding":   strings.ToUpper(strings.TrimSpace(c.cfg.TTSAudioEncoding)),
-			"sampleRateHertz": c.cfg.TTSSampleRateHz,
-		},
-	}
-	if speakingRate := firstPositiveFloat(req.SpeakingRate, c.cfg.TTSSpeakingRate); speakingRate > 0 {
-		body["audioConfig"].(map[string]any)["speakingRate"] = speakingRate
-	}
-	if prompt := strings.TrimSpace(req.Prompt); prompt != "" {
-		body["input"].(map[string]any)["prompt"] = prompt
-	}
+	body := BuildConversationGenerateContentRequestBody(c.cfg.TTSModel, SynthesizeConversationRequest{
+		Prompt:       req.Prompt,
+		Turns:        turns,
+		SpeakerNames: req.SpeakerNames,
+		MaleVoiceID:  maleVoice,
+		FemaleVoiceID: femaleVoice,
+	})
 
-	var resp struct {
-		AudioContent string `json:"audioContent"`
-	}
-	raw, err := c.doJSONWithRetry(ctx, http.MethodPost, c.cfg.TTSURL, body, &resp)
+	requestURL := buildGenerateContentURL(c.cfg.TTSURL, c.cfg.TTSModel)
+	raw, err := c.doJSONWithRetry(ctx, http.MethodPost, requestURL, body, nil)
 	if err != nil {
 		return AudioResult{}, err
 	}
-	if strings.TrimSpace(resp.AudioContent) == "" {
-		return AudioResult{}, errors.New("gemini tts returned empty audio_content")
-	}
-
-	audio, err := base64.StdEncoding.DecodeString(resp.AudioContent)
+	audio, err := decodeInlineAudioFromResponse(raw)
 	if err != nil {
 		return AudioResult{}, err
 	}
 	return AudioResult{
 		Audio:       audio,
-		Ext:         audioExtForEncoding(c.cfg.TTSAudioEncoding),
+		Ext:         "wav",
 		RawResponse: raw,
 	}, nil
 }
@@ -249,44 +213,24 @@ func (c *Client) SynthesizeSingle(ctx context.Context, req SynthesizeSingleReque
 		return AudioResult{}, errors.New("gemini single-speaker voice id is required")
 	}
 
-	body := map[string]any{
-		"input": map[string]any{
-			"text": strings.TrimSpace(req.Text),
-		},
-		"voice": map[string]any{
-			"languageCode": normalizeLanguageCode(req.LanguageCode),
-			"name":         voiceID,
-			"modelName":    c.cfg.TTSModel,
-		},
-		"audioConfig": map[string]any{
-			"audioEncoding":   strings.ToUpper(strings.TrimSpace(c.cfg.TTSAudioEncoding)),
-			"sampleRateHertz": c.cfg.TTSSampleRateHz,
-		},
-	}
-	if speakingRate := firstPositiveFloat(req.SpeakingRate, c.cfg.TTSSpeakingRate); speakingRate > 0 {
-		body["audioConfig"].(map[string]any)["speakingRate"] = speakingRate
-	}
-	if prompt := strings.TrimSpace(req.Prompt); prompt != "" {
-		body["input"].(map[string]any)["prompt"] = prompt
-	}
+	body := BuildSingleGenerateContentRequestBody(c.cfg.TTSModel, SynthesizeSingleRequest{
+		Prompt:  req.Prompt,
+		Text:    strings.TrimSpace(req.Text),
+		VoiceID: voiceID,
+	})
 
-	var resp struct {
-		AudioContent string `json:"audioContent"`
-	}
-	raw, err := c.doJSONWithRetry(ctx, http.MethodPost, c.cfg.TTSURL, body, &resp)
+	requestURL := buildGenerateContentURL(c.cfg.TTSURL, c.cfg.TTSModel)
+	raw, err := c.doJSONWithRetry(ctx, http.MethodPost, requestURL, body, nil)
 	if err != nil {
 		return AudioResult{}, err
 	}
-	if strings.TrimSpace(resp.AudioContent) == "" {
-		return AudioResult{}, errors.New("gemini tts returned empty audio_content")
-	}
-	audio, err := base64.StdEncoding.DecodeString(resp.AudioContent)
+	audio, err := decodeInlineAudioFromResponse(raw)
 	if err != nil {
 		return AudioResult{}, err
 	}
 	return AudioResult{
 		Audio:       audio,
-		Ext:         audioExtForEncoding(c.cfg.TTSAudioEncoding),
+		Ext:         "wav",
 		RawResponse: raw,
 	}, nil
 }
@@ -370,7 +314,7 @@ func (s *serviceAccountTokenSource) fetchToken(ctx context.Context) (string, tim
 	expiry := now.Add(55 * time.Minute)
 	claims := map[string]any{
 		"iss":   s.creds.ClientEmail,
-		"scope": cloudPlatformScope,
+		"scope": strings.Join([]string{cloudPlatformScope, generativeLanguageScope}, " "),
 		"aud":   firstNonEmpty(strings.TrimSpace(s.creds.TokenURI), strings.TrimSpace(s.tokenURL)),
 		"iat":   now.Unix(),
 		"exp":   expiry.Unix(),
@@ -487,6 +431,9 @@ func (c *Client) doJSON(ctx context.Context, method, requestURL string, body any
 	raw, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode >= 300 {
 		err := fmt.Errorf("google api failed status=%d body=%s", resp.StatusCode, string(raw))
+		if resp.StatusCode == http.StatusTooManyRequests && isGoogleQuotaExceededResponse(raw) {
+			return raw, services.NonRetryableError{Err: err}
+		}
 		if isNonRetryableStatus(resp.StatusCode) {
 			return raw, services.NonRetryableError{Err: err}
 		}
@@ -570,6 +517,38 @@ func isRetryableStatus(status int) bool {
 	}
 }
 
+func isGoogleQuotaExceededResponse(raw []byte) bool {
+	if len(raw) == 0 {
+		return false
+	}
+	var parsed struct {
+		Error struct {
+			Details []struct {
+				Type       string `json:"@type"`
+				Violations []struct {
+					QuotaMetric string `json:"quotaMetric"`
+					QuotaID     string `json:"quotaId"`
+				} `json:"violations"`
+			} `json:"details"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(raw, &parsed); err != nil {
+		return false
+	}
+	for _, detail := range parsed.Error.Details {
+		if strings.Contains(strings.ToLower(detail.Type), "quotafailure") {
+			return true
+		}
+		for _, violation := range detail.Violations {
+			metric := strings.ToLower(strings.TrimSpace(violation.QuotaMetric))
+			if metric != "" && strings.Contains(metric, "generate_requests_per_model_per_day") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func isRetryableGoogleRequestError(err error) bool {
 	if err == nil {
 		return false
@@ -613,37 +592,6 @@ func sleepWithContext(ctx context.Context, delay time.Duration) error {
 		return ctx.Err()
 	case <-timer.C:
 		return nil
-	}
-}
-
-func audioExtForEncoding(encoding string) string {
-	switch strings.ToUpper(strings.TrimSpace(encoding)) {
-	case "OGG_OPUS":
-		return "ogg"
-	case "LINEAR16", "PCM":
-		return "wav"
-	default:
-		return "mp3"
-	}
-}
-
-func firstPositiveFloat(values ...float64) float64 {
-	for _, value := range values {
-		if value > 0 {
-			return value
-		}
-	}
-	return 0
-}
-
-func normalizeLanguageCode(language string) string {
-	switch strings.ToLower(strings.TrimSpace(language)) {
-	case "zh", "zh-cn":
-		return "cmn-CN"
-	case "ja", "ja-jp":
-		return "ja-JP"
-	default:
-		return strings.TrimSpace(language)
 	}
 }
 

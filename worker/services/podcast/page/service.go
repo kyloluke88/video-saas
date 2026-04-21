@@ -31,16 +31,19 @@ type PersistResult struct {
 
 type PageSource struct {
 	ProjectDir string
+	RunMode    int
 	Script     dto.PodcastScript
 	Upsert     persistence.ScriptPageUpsert
 }
 
 type requestPayload struct {
-	Lang           string   `json:"lang"`
-	Title          string   `json:"title"`
-	ScriptFilename string   `json:"script_filename"`
-	TargetPlatform string   `json:"target_platform"`
-	BgImgFilenames []string `json:"bg_img_filenames"`
+	Lang            string   `json:"lang"`
+	Title           string   `json:"title"`
+	ScriptFilename  string   `json:"script_filename"`
+	TargetPlatform  string   `json:"target_platform"`
+	BgImgFilenames  []string `json:"bg_img_filenames"`
+	RunMode         int      `json:"run_mode,omitempty"`
+	SourceProjectID string   `json:"source_project_id,omitempty"`
 }
 
 type scriptDocument struct {
@@ -80,14 +83,34 @@ func PersistSource(source PageSource) (PersistResult, error) {
 		return PersistResult{}, err
 	}
 
-	pageID, err := store.UpsertPodcastScriptPage(source.Upsert)
-	if err != nil {
-		return PersistResult{}, err
+	var (
+		pageID    uint64
+		finalSlug = source.Upsert.Slug
+	)
+	switch source.RunMode {
+	case 0:
+		pageID, err = store.CreatePodcastScriptPage(source.Upsert)
+		if err != nil {
+			if isUniqueConstraintError(err) {
+				return PersistResult{}, services.NonRetryableError{Err: fmt.Errorf("podcast script page already exists for slug=%q project_id=%q: %w", source.Upsert.Slug, source.Upsert.ProjectID, err)}
+			}
+			return PersistResult{}, err
+		}
+	case 1:
+		pageID, finalSlug, err = persistReplayPodcastScriptPage(store, source.Upsert)
+		if err != nil {
+			return PersistResult{}, err
+		}
+	default:
+		pageID, err = store.UpsertPodcastScriptPage(source.Upsert)
+		if err != nil {
+			return PersistResult{}, err
+		}
 	}
 
 	return PersistResult{
 		PageID: pageID,
-		Slug:   source.Upsert.Slug,
+		Slug:   finalSlug,
 	}, nil
 }
 
@@ -169,6 +192,7 @@ func BuildPageSourceFromProjectDir(projectDir string, input PersistInput) (PageS
 
 	return PageSource{
 		ProjectDir: projectDir,
+		RunMode:    request.RunMode,
 		Script:     script,
 		Upsert:     upsert,
 	}, nil
@@ -296,7 +320,7 @@ func buildLine(language string, seg dto.PodcastSegment) lineDocument {
 		SpeakerName: podcastspeaker.PreferredDisplayName(seg.SpeakerName),
 		Text:        text,
 		Ruby:        buildRuby(language, seg, text),
-		Translation: strings.TrimSpace(seg.EN),
+		Translation: strings.TrimSpace(seg.EnglishTranslation()),
 	}
 }
 
@@ -419,7 +443,62 @@ func buildKeywords(script dto.PodcastScript) []string {
 }
 
 func buildPageSlug(script dto.PodcastScript) string {
-	return slugify(script.EnTitle)
+	base := slugify(script.EnTitle)
+	if base == "" {
+		return ""
+	}
+	return base
+}
+
+func persistReplayPodcastScriptPage(store *persistence.Store, input persistence.ScriptPageUpsert) (uint64, string, error) {
+	baseSlug := strings.TrimSpace(input.Slug)
+	if baseSlug == "" {
+		return 0, "", services.NonRetryableError{Err: fmt.Errorf("slug is required for replay persist")}
+	}
+
+	language := strings.TrimSpace(input.Language)
+	if language == "" {
+		return 0, "", services.NonRetryableError{Err: fmt.Errorf("language is required for replay slug generation")}
+	}
+
+	finalSlug := buildReplayPageSlug(baseSlug, input.Language)
+	if finalSlug == "" {
+		return 0, "", services.NonRetryableError{Err: fmt.Errorf("language is required for replay slug generation")}
+	}
+
+	if existing, found, err := store.FindPodcastScriptPageBySlugAndLanguage(finalSlug, language); err != nil {
+		return 0, "", err
+	} else if found {
+		input.Slug = finalSlug
+		if err := store.UpdatePodcastScriptPageByID(existing.ID, input); err != nil {
+			return 0, "", err
+		}
+		return existing.ID, finalSlug, nil
+	}
+
+	if _, found, err := store.FindPodcastScriptPageBySlug(baseSlug); err != nil {
+		return 0, "", err
+	} else if found {
+		input.Slug = finalSlug
+		pageID, err := store.CreatePodcastScriptPage(input)
+		if err != nil {
+			if isUniqueConstraintError(err) {
+				return 0, "", services.NonRetryableError{Err: fmt.Errorf("podcast script page already exists for slug=%q project_id=%q: %w", finalSlug, input.ProjectID, err)}
+			}
+			return 0, "", err
+		}
+		return pageID, finalSlug, nil
+	}
+
+	input.Slug = finalSlug
+	pageID, err := store.CreatePodcastScriptPage(input)
+	if err != nil {
+		if isUniqueConstraintError(err) {
+			return 0, "", services.NonRetryableError{Err: fmt.Errorf("podcast script page already exists for slug=%q project_id=%q: %w", finalSlug, input.ProjectID, err)}
+		}
+		return 0, "", err
+	}
+	return pageID, finalSlug, nil
 }
 
 func BuildCanonicalURL(slug string) string {
@@ -458,6 +537,58 @@ func slugify(value string) string {
 		result = strings.Trim(result[:120], "-")
 	}
 	return result
+}
+
+func isUniqueConstraintError(err error) bool {
+	msg := strings.ToLower(strings.TrimSpace(err.Error()))
+	if msg == "" {
+		return false
+	}
+	return strings.Contains(msg, "duplicate key value violates unique constraint") ||
+		(strings.Contains(msg, "unique constraint") && strings.Contains(msg, "duplicate")) ||
+		strings.Contains(msg, "sqlstate 23505")
+}
+
+func buildReplayPageSlug(baseSlug, language string) string {
+	baseSlug = strings.TrimSpace(baseSlug)
+	if baseSlug == "" {
+		return ""
+	}
+
+	suffix := slugify(language)
+	if suffix == "" {
+		return baseSlug
+	}
+
+	const maxSlugLen = 160
+	candidate := baseSlug + "-" + suffix
+	if len(candidate) <= maxSlugLen {
+		return candidate
+	}
+
+	maxBaseLen := maxSlugLen - len(suffix) - 1
+	if maxBaseLen <= 0 {
+		if len(suffix) > maxSlugLen {
+			return suffix[:maxSlugLen]
+		}
+		return suffix
+	}
+
+	if len(baseSlug) > maxBaseLen {
+		baseSlug = strings.Trim(baseSlug[:maxBaseLen], "-")
+	}
+	if baseSlug == "" {
+		if len(suffix) > maxSlugLen {
+			return suffix[:maxSlugLen]
+		}
+		return suffix
+	}
+
+	candidate = baseSlug + "-" + suffix
+	if len(candidate) > maxSlugLen {
+		candidate = strings.Trim(candidate[:maxSlugLen], "-")
+	}
+	return candidate
 }
 
 func extractYouTubeVideoID(rawURL string) string {

@@ -27,6 +27,12 @@ function metadataTitle(locale: Locale) {
   return locale === "zh" ? "Chinese Product Catalog" : "Japanese Product Catalog";
 }
 
+function metadataDescription(locale: Locale) {
+  return locale === "zh"
+    ? "Chinese product catalog with podcast recommendations, localized browsing, and curated product discovery."
+    : "Japanese product catalog with podcast recommendations, localized browsing, and curated product discovery.";
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const normalizedLocale = normalizeLocale(locale);
@@ -37,8 +43,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   return {
+    // 列表页是聚合入口，SEO 以语言维度为主，不绑定具体实体。
     title: metadataTitle(normalizedLocale),
-    description: "Localized product catalog with podcast recommendations.",
+    description: metadataDescription(normalizedLocale),
+    alternates: {
+      canonical: `/product/${normalizedLocale}`,
+    },
+    keywords:
+      normalizedLocale === "zh"
+        ? ["Chinese product catalog", "podcast recommendations", "localized products"]
+        : ["Japanese product catalog", "podcast recommendations", "localized products"],
+    openGraph: {
+      title: metadataTitle(normalizedLocale),
+      description: metadataDescription(normalizedLocale),
+      type: "website",
+      url: `/product/${normalizedLocale}`,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: metadataTitle(normalizedLocale),
+      description: metadataDescription(normalizedLocale),
+    },
   };
 }
 

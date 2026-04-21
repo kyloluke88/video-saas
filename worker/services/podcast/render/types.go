@@ -6,6 +6,7 @@ type ComposeInput struct {
 	BackgroundImagePath string
 	DialogueAudioPath   string
 	Script              *dto.PodcastScript
+	Language            string
 	Resolution          string
 	DesignStyle         int
 	OutputPath          string

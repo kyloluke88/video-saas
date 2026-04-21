@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	commerceModel "api/app/models/commerce"
+	contentModel "api/app/models/content"
 	"api/pkg/database"
 	"api/pkg/response"
 
@@ -42,8 +43,13 @@ type PublicProductSKUItem struct {
 
 type PublicProductDetail struct {
 	PublicProductListItem
-	Metadata json.RawMessage        `json:"metadata,omitempty"`
-	SKUs     []PublicProductSKUItem `json:"skus,omitempty"`
+	// 详情页返回显式 SEO 列，前端 metadata 不需要再去解析 metadata JSON。
+	SEOTitle       *string                  `json:"seo_title,omitempty"`
+	SEODescription *string                  `json:"seo_description,omitempty"`
+	SEOKeywords    contentModel.StringArray `json:"seo_keywords,omitempty"`
+	CanonicalURL   *string                  `json:"canonical_url,omitempty"`
+	Metadata       json.RawMessage          `json:"metadata,omitempty"`
+	SKUs           []PublicProductSKUItem   `json:"skus,omitempty"`
 }
 
 type PublicProductController struct {
@@ -62,6 +68,7 @@ func (ctrl *PublicProductController) ListProducts(c *gin.Context) {
 
 	query := database.DB.
 		Model(&commerceModel.Product{}).
+		// 列表页只拿展示所需字段，避免把 SEO 字段和 JSON metadata 一起拉出。
 		Select("id", "slug", "product_code", "name", "locale", "product_type", "status", "currency", "min_price", "max_price", "cover_image_url", "description").
 		Where("locale = ?", locale)
 	if excludeSlug != "" {
@@ -107,7 +114,8 @@ func (ctrl *PublicProductController) ShowProduct(c *gin.Context) {
 	var product PublicProductDetail
 	if err := database.DB.
 		Model(&commerceModel.Product{}).
-		Select("id", "slug", "product_code", "name", "locale", "product_type", "status", "currency", "min_price", "max_price", "cover_image_url", "description", "metadata").
+		// 详情页把 SEO 字段一并取出，供前端 generateMetadata 直接使用。
+		Select("id", "slug", "product_code", "name", "locale", "product_type", "status", "currency", "min_price", "max_price", "cover_image_url", "description", "seo_title", "seo_description", "seo_keywords", "canonical_url", "metadata").
 		Where("locale = ?", locale).
 		Where("slug = ?", slug).
 		First(&product).
@@ -138,6 +146,7 @@ func (ctrl *PublicProductController) ShowProduct(c *gin.Context) {
 	var recommendProducts []PublicProductListItem
 	if err := database.DB.
 		Model(&commerceModel.Product{}).
+		// 推荐位和主详情页解耦，只保留轻量列表字段。
 		Select("id", "slug", "product_code", "name", "locale", "product_type", "status", "currency", "min_price", "max_price", "cover_image_url", "description").
 		Where("locale = ?", locale).
 		Where("slug <> ?", slug).

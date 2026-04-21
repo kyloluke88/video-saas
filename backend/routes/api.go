@@ -45,6 +45,15 @@ func RegisterApiRoutes(r *gin.Engine) {
 		publicGroup.GET("/products/:locale/:slug", publicProductCtrl.ShowProduct)
 	}
 
+	analyticsCtrl := new(clientCtrl.AnalyticsController)
+	analyticsGroup := v1.Group("/analytics")
+	// 单独分组是为了把公开埋点的跨域策略和限流策略隔离开。
+	analyticsGroup.Use(middlewares.PublicCORS(), middlewares.LimitIP("10000-H"))
+	{
+		analyticsGroup.OPTIONS("/page-view", analyticsCtrl.TrackPageView)
+		analyticsGroup.POST("/page-view", analyticsCtrl.TrackPageView)
+	}
+
 	videoCtrl := new(clientCtrl.VideoController)
 	videoGroup := v1.Group("/video")
 	videoGroup.Use(middlewares.LimitIP("300-H"))

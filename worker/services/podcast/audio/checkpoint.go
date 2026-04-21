@@ -3,9 +3,9 @@ package podcast_audio_service
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	services "worker/services"
 	dto "worker/services/podcast/model"
@@ -16,6 +16,7 @@ type audioArtifacts struct {
 	dialoguePath   string
 	alignedPath    string
 	blocksDir      string
+	segmentsDir    string
 	blockStatesDir string
 	blockGapPath   string
 	reuseBlocksDir string
@@ -28,10 +29,14 @@ func prepareAudioArtifacts(projectDir string) (audioArtifacts, error) {
 		dialoguePath:   filepath.Join(projectDir, "dialogue.mp3"),
 		alignedPath:    filepath.Join(projectDir, "script_aligned.json"),
 		blocksDir:      filepath.Join(projectDir, "blocks"),
+		segmentsDir:    filepath.Join(projectDir, "segments"),
 		blockStatesDir: filepath.Join(projectDir, "block_states"),
-		blockGapPath:   filepath.Join(projectDir, "block_gap.mp3"),
+		blockGapPath:   filepath.Join(projectDir, "block_gap.wav"),
 	}
 	if err := os.MkdirAll(artifacts.blocksDir, 0o755); err != nil {
+		return audioArtifacts{}, err
+	}
+	if err := os.MkdirAll(artifacts.segmentsDir, 0o755); err != nil {
 		return audioArtifacts{}, err
 	}
 	if err := os.MkdirAll(artifacts.blockStatesDir, 0o755); err != nil {
@@ -54,9 +59,6 @@ func finalizeAlignedScript(projectID, alignedPath, dialoguePath string, script d
 	if err := writeJSON(alignedPath, finalScript); err != nil {
 		return dto.PodcastScript{}, err
 	}
-	timedSegments, totalSegments, timedTokens, totalTokens := alignedStats(finalScript)
-	log.Printf("🎧 podcast audio ready project_id=%s segments_timed=%d/%d tokens_timed=%d/%d",
-		projectID, timedSegments, totalSegments, timedTokens, totalTokens)
 	return finalScript, nil
 }
 
@@ -102,4 +104,32 @@ func markAlignedTimelineNonRetryable(err error) error {
 		return err
 	}
 	return services.NonRetryableError{Err: err}
+}
+
+func cleanupGoogleTTSDebugArtifacts(projectDir string) error {
+	if strings.TrimSpace(projectDir) == "" {
+		return nil
+	}
+
+	blockStatesDir := filepath.Join(projectDir, "block_states")
+	patterns := []string{
+		filepath.Join(blockStatesDir, "*.google_request.json"),
+		filepath.Join(blockStatesDir, "*.pre_tempo.*"),
+	}
+
+	var errs []error
+	for _, pattern := range patterns {
+		matches, err := filepath.Glob(pattern)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("glob %s: %w", pattern, err))
+			continue
+		}
+		for _, path := range matches {
+			if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+				errs = append(errs, fmt.Errorf("remove %s: %w", path, err))
+			}
+		}
+	}
+
+	return errors.Join(errs...)
 }

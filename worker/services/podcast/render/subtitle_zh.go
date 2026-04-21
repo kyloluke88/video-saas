@@ -14,8 +14,8 @@ import (
 const (
 	designType1ReferenceHeight    = 775.0
 	designType1TopBandTopRatio    = 55.0 / designType1ReferenceHeight
-	designType1TopBandBottomRatio = 185.0 / designType1ReferenceHeight
-	designType1ENBandBottomRatio  = 270.0 / designType1ReferenceHeight
+	designType1TopBandBottomRatio = 146.25 / designType1ReferenceHeight
+	designType1ENBandBottomRatio  = 231.25 / designType1ReferenceHeight
 	designType1BoxHeightRatio     = designType1ENBandBottomRatio - designType1TopBandTopRatio
 	designType1TopSectionRatio    = (designType1TopBandBottomRatio - designType1TopBandTopRatio) / designType1BoxHeightRatio
 	designType1BottomSectionRatio = (designType1ENBandBottomRatio - designType1TopBandBottomRatio) / designType1BoxHeightRatio
@@ -38,13 +38,12 @@ func writeChineseASS(script dto.PodcastScript, projectDir, resolution string, st
 		}
 
 		tokens := segmentTokens(seg)
-		if len(tokens) == 0 && strings.TrimSpace(seg.EN) == "" {
+		if len(tokens) == 0 {
 			continue
 		}
 
 		start := formatASSTimestampMS(seg.StartMS)
 		end := formatASSTimestampMS(seg.EndMS)
-		hasEnglish := strings.TrimSpace(seg.EN) != ""
 
 		tokenPages := paginateTokenCells(buildTokenCells(tokens, layout), layout)
 		pageStartTimes := chinesePageStartTimes(tokenPages)
@@ -82,19 +81,6 @@ func writeChineseASS(script dto.PodcastScript, projectDir, resolution string, st
 				if strings.TrimSpace(cell.Ruby) != "" {
 					b.WriteString(dialogueLine("Ruby", pageStart, pageEnd, posText(x, row.RubyY, cell.Ruby)))
 				}
-			}
-		}
-
-		if hasEnglish {
-			englishPages := splitEnglishPagesSynced(strings.TrimSpace(seg.EN), layout, len(pageWindows))
-			englishRows := computeBottomSectionRows(layout, 1)
-			for i, line := range englishPages {
-				if i >= len(pageWindows) || len(englishRows) == 0 || strings.TrimSpace(line) == "" {
-					break
-				}
-				pageStart := formatASSTimestampMS(pageWindows[i].StartMS)
-				pageEnd := formatASSTimestampMS(pageWindows[i].EndMS)
-				b.WriteString(dialogueLine("English", pageStart, pageEnd, posText(playW/2, englishRows[0], line)))
 			}
 		}
 	}
@@ -588,9 +574,16 @@ func chooseChinesePageBreak(cells []tokenCell, start int, layout subtitleLayout)
 	if bestEnd == start {
 		return start + 1
 	}
-	candidateEnd := bestEnd
+	candidateEnd := len(cells)
 	if bestPunctEnd > start {
 		candidateEnd = bestPunctEnd
+	} else {
+		for i := bestEnd; i < len(cells); i++ {
+			if subtitleEndsWithPunctuation(cells[i].Hanzi) && !isOpeningWrapperText(cells[i].Hanzi) {
+				candidateEnd = i + 1
+				break
+			}
+		}
 	}
 	texts := make([]string, len(cells))
 	for i := range cells {
@@ -899,7 +892,10 @@ func computeTopSectionRows(layout subtitleLayout, lineCount int, hasRuby bool) [
 	if lineCount > 1 {
 		total += (lineCount - 1) * layout.TokenLineGap
 	}
-	start := layout.TopSectionTop + (layout.TopSectionHeight-total)/2
+	// The English band is no longer rendered, so let the main subtitle body
+	// use the full reserved vertical space.
+	availableHeight := layout.TopSectionHeight + layout.BottomSectionHeight
+	start := layout.TopSectionTop + (availableHeight-total)/2
 	rows := make([]topSectionRow, 0, lineCount)
 	cursor := start
 	for i := 0; i < lineCount; i++ {

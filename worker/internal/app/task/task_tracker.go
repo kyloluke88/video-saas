@@ -3,9 +3,11 @@ package task
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
+	podcastreplay "worker/internal/app/workflow/podcast/replay"
 	"worker/internal/persistence"
 	"worker/pkg/x/mapx"
 )
@@ -165,19 +167,10 @@ func taskContentType(task VideoTaskMessage) string {
 }
 
 func taskStage(taskType string) string {
+	if stage, ok := podcastreplay.PodcastStageForTaskType(taskType); ok {
+		return string(stage)
+	}
 	switch taskType {
-	case "podcast.audio.generate.v1":
-		return "audio_generate"
-	case "podcast.audio.align.v1":
-		return "audio_align"
-	case "podcast.compose.render.v1":
-		return "compose"
-	case "podcast.compose.finalize.v1":
-		return "compose"
-	case "upload.v1":
-		return "upload"
-	case "podcast.page.persist.v1":
-		return "script_persist"
 	case "plan.v1":
 		return "plan"
 	case "scene.generate.v1":
@@ -199,34 +192,22 @@ func taskRunMode(task VideoTaskMessage) *int {
 }
 
 func isTerminalProjectTask(task VideoTaskMessage) bool {
-	if taskOnlyCurrentStep(task) {
-		return true
-	}
 	switch taskContentType(task) {
 	case "podcast":
-		return task.TaskType == "upload.v1"
+		stage := taskStage(task.TaskType)
+		if stage == "" || stage == "unknown" {
+			return false
+		}
+		nextStage, ok, err := podcastreplay.NextPodcastStage(taskTTSType(task), stage, taskSpecifyTasks(task))
+		if err != nil {
+			return false
+		}
+		return !ok || strings.TrimSpace(nextStage) == ""
 	case "idiom":
 		return task.TaskType == "upload.v1"
 	default:
 		return false
 	}
-}
-
-func taskOnlyCurrentStep(task VideoTaskMessage) bool {
-	if task.Payload == nil {
-		return false
-	}
-	if mapx.GetInt(task.Payload, "only_current_step", 0) != 1 {
-		return false
-	}
-	// run_mode=2 should execute compose.render + compose.finalize as one
-	// compose stage when only_current_step=1, so render is not terminal.
-	if taskContentType(task) == "podcast" &&
-		mapx.GetInt(task.Payload, "run_mode", 0) == 2 &&
-		task.TaskType == "podcast.compose.render.v1" {
-		return false
-	}
-	return true
 }
 
 func projectCancelled(store *persistence.Store, projectID string) (bool, error) {
@@ -260,7 +241,7 @@ func MarkPodcastProjectPersisted(projectID string) error {
 		ContentType:     "podcast",
 		RetryNum:        &retryNum,
 		Status:          persistence.ProjectStatusRunning,
-		CurrentStage:    "script_persist",
+		CurrentStage:    "persist",
 		CurrentTaskType: "podcast.page.persist.v1",
 		LastError:       "",
 	})
@@ -315,4 +296,45 @@ func FinalizePodcastProjectUpload(projectID string) error {
 		LastError:       "",
 		FinishedAt:      &now,
 	})
+}
+
+func taskTTSType(task VideoTaskMessage) int {
+	if task.Payload == nil {
+		return 1
+	}
+	ttsType := mapx.GetInt(task.Payload, "tts_type", 1)
+	if ttsType == 2 {
+		return 2
+	}
+	return 1
+}
+
+func taskSpecifyTasks(task VideoTaskMessage) []string {
+	if task.Payload == nil {
+		return nil
+	}
+	value := task.Payload["specify_tasks"]
+	switch typed := value.(type) {
+	case []string:
+		out := make([]string, 0, len(typed))
+		for _, item := range typed {
+			if trimmed := strings.TrimSpace(item); trimmed != "" {
+				out = append(out, trimmed)
+			}
+		}
+		return out
+	case []interface{}:
+		out := make([]string, 0, len(typed))
+		for _, item := range typed {
+			if trimmed := strings.TrimSpace(fmt.Sprint(item)); trimmed != "" {
+				out = append(out, trimmed)
+			}
+		}
+		return out
+	default:
+		if text := strings.TrimSpace(mapx.GetString(task.Payload, "specify_tasks")); text != "" {
+			return []string{text}
+		}
+		return nil
+	}
 }

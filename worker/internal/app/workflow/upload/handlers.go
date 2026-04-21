@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"worker/internal/app/task"
+	podcastreplay "worker/internal/app/workflow/podcast/replay"
 	"worker/internal/persistence"
 	conf "worker/pkg/config"
 	storageS3 "worker/pkg/storage/s3"
@@ -19,9 +20,13 @@ import (
 )
 
 type payload struct {
-	ProjectID   string `json:"project_id"`
-	FilePath    string `json:"file_path,omitempty"`
-	ContentType string `json:"content_type"`
+	ProjectID       string   `json:"project_id"`
+	SourceProjectID string   `json:"source_project_id,omitempty"`
+	RunMode         int      `json:"run_mode,omitempty"`
+	TTSType         int      `json:"tts_type,omitempty"`
+	SpecifyTasks    []string `json:"specify_tasks,omitempty"`
+	FilePath        string   `json:"file_path,omitempty"`
+	ContentType     string   `json:"content_type"`
 }
 
 type downloadAsset struct {
@@ -69,6 +74,22 @@ func handlePodcastUpload(ctx context.Context, payload payload) error {
 	if projectID == "" {
 		return fmt.Errorf("project_id is required")
 	}
+	if payload.RunMode != 0 && payload.RunMode != 1 {
+		return fmt.Errorf("podcast upload only supports run_mode 0 or 1")
+	}
+	if payload.RunMode == 1 || strings.TrimSpace(payload.SourceProjectID) != "" {
+		if payload.RunMode != 1 {
+			return fmt.Errorf("upload replay entry requires run_mode=1")
+		}
+		normalizedTasks, err := podcastreplay.ValidateSpecifyTasks(payload.TTSType, payload.RunMode, payload.SpecifyTasks)
+		if err != nil {
+			return err
+		}
+		payload.SpecifyTasks = normalizedTasks
+		if err := podcastreplay.EnsureReplayProjectDirForProject(payload.ProjectID, payload.SourceProjectID); err != nil {
+			return err
+		}
+	}
 
 	projectDir := filepath.Join(conf.Get[string]("worker.ffmpeg_work_dir"), "projects", projectID)
 	pdfPath := filepath.Join(projectDir, "chat_script.pdf")
@@ -93,7 +114,6 @@ func handlePodcastUpload(ctx context.Context, payload payload) error {
 		}
 		downloads[0].URL = result
 		downloads[0].Ready = true
-		log.Printf("☁️ podcast PDF 上传完成 project_id=%s url=%s", projectID, result)
 	} else {
 		log.Printf("📦 S3 未启用，保留本地 chat pdf project_id=%s path=%s", projectID, pdfPath)
 	}

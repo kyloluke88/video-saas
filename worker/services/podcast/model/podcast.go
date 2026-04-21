@@ -13,9 +13,10 @@ type PodcastAudioGeneratePayload struct {
 	Lang            string   `json:"lang"`
 	ContentProfile  string   `json:"content_profile"`
 	TTSType         int      `json:"tts_type,omitempty"`
+	IsMultiple      *int     `json:"is_multiple,omitempty"`
 	Seed            int      `json:"seed,omitempty"`
-	RunMode         int      `json:"run_mode,omitempty"`
-	OnlyCurrentStep int      `json:"only_current_step,omitempty"`
+	RunMode         int      `json:"run_mode"`
+	SpecifyTasks    []string `json:"specify_tasks,omitempty"`
 	BlockNums       []int    `json:"block_nums,omitempty"`
 	Title           string   `json:"title,omitempty"`
 	ScriptFilename  string   `json:"script_filename"`
@@ -30,8 +31,9 @@ type PodcastComposePayload struct {
 	ProjectID       string   `json:"project_id"`
 	SourceProjectID string   `json:"source_project_id,omitempty"`
 	Lang            string   `json:"lang"`
-	RunMode         int      `json:"run_mode,omitempty"`
-	OnlyCurrentStep int      `json:"only_current_step,omitempty"`
+	TTSType         int      `json:"tts_type,omitempty"`
+	RunMode         int      `json:"run_mode"`
+	SpecifyTasks    []string `json:"specify_tasks,omitempty"`
 	Title           string   `json:"title,omitempty"`
 	BgImgFilenames  []string `json:"bg_img_filenames,omitempty"`
 	TargetPlatform  string   `json:"target_platform,omitempty"`
@@ -76,15 +78,16 @@ type PodcastYouTubeChapter struct {
 }
 
 type PodcastSegment struct {
-	SegmentID   string `json:"segment_id"`
-	Speaker     string `json:"speaker,omitempty"`
-	SpeakerName string `json:"speaker_name,omitempty"`
-	Text        string `json:"text,omitempty"`
-	SpeechText  string `json:"speech_text,omitempty"`
-	EN          string `json:"en,omitempty"`
-	Summary     bool   `json:"summary,omitempty"`
-	StartMS     int    `json:"start_ms,omitempty"`
-	EndMS       int    `json:"end_ms,omitempty"`
+	SegmentID    string            `json:"segment_id"`
+	Speaker      string            `json:"speaker,omitempty"`
+	SpeakerName  string            `json:"speaker_name,omitempty"`
+	Text         string            `json:"text,omitempty"`
+	SpeechText   string            `json:"speech_text,omitempty"`
+	EN           string            `json:"-"`
+	Translations map[string]string `json:"translations,omitempty"`
+	Summary      bool              `json:"summary,omitempty"`
+	StartMS      int               `json:"start_ms,omitempty"`
+	EndMS        int               `json:"end_ms,omitempty"`
 
 	Tokens         []PodcastToken         `json:"tokens,omitempty"`
 	HighlightSpans []PodcastHighlightSpan `json:"highlight_spans,omitempty"`
@@ -196,6 +199,7 @@ func (s *PodcastSegment) UnmarshalJSON(data []byte) error {
 		TTSText        string                 `json:"tts_text"`
 		DisplayJA      string                 `json:"display_ja"`
 		EN             string                 `json:"en"`
+		Translations   map[string]string      `json:"translations"`
 		Summary        bool                   `json:"summary"`
 		StartMS        int                    `json:"start_ms"`
 		EndMS          int                    `json:"end_ms"`
@@ -212,7 +216,8 @@ func (s *PodcastSegment) UnmarshalJSON(data []byte) error {
 	s.SpeakerName = strings.TrimSpace(raw.SpeakerName)
 	s.Text = firstNonEmpty(raw.Text, raw.DisplayJA)
 	s.SpeechText = firstNonEmpty(raw.SpeechText, raw.TTSText)
-	s.EN = strings.TrimSpace(raw.EN)
+	s.EN = firstNonEmpty(raw.Translations["en"], raw.EN)
+	s.Translations = normalizePodcastTranslations(raw.Translations, s.EN)
 	s.Summary = raw.Summary
 	s.StartMS = raw.StartMS
 	s.EndMS = raw.EndMS
@@ -222,6 +227,64 @@ func (s *PodcastSegment) UnmarshalJSON(data []byte) error {
 		s.Tokens = raw.RubyTokens
 	}
 	return nil
+}
+
+func (s PodcastSegment) MarshalJSON() ([]byte, error) {
+	type rawSegment struct {
+		SegmentID      string                 `json:"segment_id"`
+		Speaker        string                 `json:"speaker,omitempty"`
+		SpeakerName    string                 `json:"speaker_name,omitempty"`
+		Text           string                 `json:"text,omitempty"`
+		SpeechText     string                 `json:"speech_text,omitempty"`
+		Translations   map[string]string      `json:"translations,omitempty"`
+		Summary        bool                   `json:"summary,omitempty"`
+		StartMS        int                    `json:"start_ms,omitempty"`
+		EndMS          int                    `json:"end_ms,omitempty"`
+		Tokens         []PodcastToken         `json:"tokens,omitempty"`
+		HighlightSpans []PodcastHighlightSpan `json:"highlight_spans,omitempty"`
+	}
+
+	translations := normalizePodcastTranslations(s.Translations, s.EN)
+	return json.Marshal(rawSegment{
+		SegmentID:      s.SegmentID,
+		Speaker:        s.Speaker,
+		SpeakerName:    s.SpeakerName,
+		Text:           s.Text,
+		SpeechText:     s.SpeechText,
+		Translations:   translations,
+		Summary:        s.Summary,
+		StartMS:        s.StartMS,
+		EndMS:          s.EndMS,
+		Tokens:         s.Tokens,
+		HighlightSpans: s.HighlightSpans,
+	})
+}
+
+func (s PodcastSegment) EnglishTranslation() string {
+	if text := strings.TrimSpace(s.Translations["en"]); text != "" {
+		return text
+	}
+	return strings.TrimSpace(s.EN)
+}
+
+func normalizePodcastTranslations(values map[string]string, english string) map[string]string {
+	out := make(map[string]string)
+	for key, value := range values {
+		key = strings.TrimSpace(key)
+		value = strings.TrimSpace(value)
+		if key == "" || value == "" {
+			continue
+		}
+		out[key] = value
+	}
+	english = strings.TrimSpace(english)
+	if english != "" {
+		out["en"] = english
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 func (t *PodcastToken) UnmarshalJSON(data []byte) error {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -24,15 +25,17 @@ type GenerateInput struct {
 	ProjectID      string
 	Language       string
 	TTSType        int
+	IsMultiple     int
 	Seed           int
 	BlockNums      []int
 	ScriptFilename string
 }
 
 type AlignInput struct {
-	ProjectID string
-	Language  string
-	BlockNums []int
+	ProjectID  string
+	Language   string
+	IsMultiple int
+	BlockNums  []int
 }
 
 type GenerateResult struct {
@@ -46,8 +49,6 @@ type blockSynthesisResult struct {
 	DurationMS   int
 	AlignedBlock dto.PodcastBlock
 }
-
-const googleTTSInputFieldLimitBytes = 4000
 
 const (
 	podcastTTSTypeGoogle     = 1
@@ -80,9 +81,10 @@ func Generate(ctx context.Context, input GenerateInput) (GenerateResult, error) 
 			return GenerateResult{}, err
 		}
 		return AlignGoogle(ctx, AlignInput{
-			ProjectID: input.ProjectID,
-			Language:  language,
-			BlockNums: input.BlockNums,
+			ProjectID:  input.ProjectID,
+			Language:   language,
+			IsMultiple: input.IsMultiple,
+			BlockNums:  input.BlockNums,
 		})
 	case podcastTTSTypeElevenLabs:
 		artifacts, err := prepareAudioArtifacts(projectDir)
@@ -155,7 +157,6 @@ func Generate(ctx context.Context, input GenerateInput) (GenerateResult, error) 
 func loadScriptForGeneration(projectDir, language, scriptFilename string) (dto.PodcastScript, error) {
 	projectScriptPath := projectScriptInputPath(projectDir)
 	if fileExists(projectScriptPath) {
-		log.Printf("📘 podcast script reuse project_id=%s path=%s", filepath.Base(projectDir), projectScriptPath)
 		return loadScriptFromPath(language, projectScriptPath)
 	}
 
@@ -236,47 +237,6 @@ func normalizeScriptForSpeech(script dto.PodcastScript) dto.PodcastScript {
 	return script
 }
 
-func validateGoogleBlocks(language string, blocks []dto.PodcastBlock) error {
-	promptBytes := len([]byte(strings.TrimSpace(buildGeminiBlockPrompt(language))))
-	if promptBytes > googleTTSInputFieldLimitBytes {
-		return services.NonRetryableError{
-			Err: fmt.Errorf(
-				"tts prompt exceeds google 4000-byte limit: prompt_bytes=%d limit=%d",
-				promptBytes,
-				googleTTSInputFieldLimitBytes,
-			),
-		}
-	}
-	for blockIndex, block := range blocks {
-		for segIndex, seg := range block.Segments {
-			text := strings.TrimSpace(spokenTextForGoogleSynthesis(language, seg))
-			if text == "" {
-				continue
-			}
-			textBytes := len([]byte(text))
-			if textBytes <= googleTTSInputFieldLimitBytes {
-				continue
-			}
-			segID := strings.TrimSpace(seg.SegmentID)
-			if segID == "" {
-				segID = fmt.Sprintf("segment_%03d", segIndex+1)
-			}
-			return services.NonRetryableError{
-				Err: fmt.Errorf(
-					"segment text exceeds google 4000-byte limit: block=%s block_index=%d segment=%s segment_index=%d text_bytes=%d limit=%d",
-					strings.TrimSpace(block.BlockID),
-					blockIndex+1,
-					segID,
-					segIndex+1,
-					textBytes,
-					googleTTSInputFieldLimitBytes,
-				),
-			}
-		}
-	}
-	return nil
-}
-
 func estimateConversationBytes(request googlecloud.SynthesizeConversationRequest) int {
 	total := 0
 	for _, turn := range request.Turns {
@@ -293,6 +253,7 @@ func tryReuseCachedBlock(
 	artifacts audioArtifacts,
 	index int,
 	block dto.PodcastBlock,
+	currentTTSMode *int,
 	suppressLog bool,
 ) (blockSynthesisResult, bool, error) {
 	blockID := strings.TrimSpace(block.BlockID)
@@ -320,7 +281,7 @@ func tryReuseCachedBlock(
 			if err != nil {
 				return blockSynthesisResult{}, false, err
 			}
-			if err := persistBlockCheckpoint(artifacts.blockStatesDir, index, alignedBlock, durationMS); err != nil {
+			if err := persistBlockCheckpoint(artifacts.blockStatesDir, index, alignedBlock, durationMS, currentTTSMode); err != nil {
 				return blockSynthesisResult{}, false, err
 			}
 			if !suppressLog {
@@ -345,6 +306,7 @@ func tryReuseCompletedBlockWithoutMFA(
 	artifacts audioArtifacts,
 	index int,
 	block dto.PodcastBlock,
+	currentTTSMode *int,
 	requireAligned bool,
 	suppressLog bool,
 ) (blockSynthesisResult, bool, error) {
@@ -383,12 +345,16 @@ func tryReuseCompletedBlockWithoutMFA(
 				return blockSynthesisResult{}, false, err
 			}
 		}
-		if err := persistBlockCheckpoint(artifacts.blockStatesDir, index, state.Block, durationMS); err != nil {
+		if err := persistBlockCheckpoint(artifacts.blockStatesDir, index, state.Block, durationMS, state.IsMultiple); err != nil {
 			return blockSynthesisResult{}, false, err
 		}
 		if !suppressLog {
-			log.Printf("♻️ podcast block reuse cached tts provider=%s block=%s duration_ms=%d project_id=%s",
-				providerLabel, blockID, durationMS, projectID)
+			if requireAligned {
+				log.Printf("♻️ podcast aligned_block reuse cached tts block=%s project_id=%s", blockID, projectID)
+			} else {
+				log.Printf("♻️ podcast block reuse cached tts provider=%s block=%s duration_ms=%d project_id=%s",
+					providerLabel, blockID, durationMS, projectID)
+			}
 		}
 		return blockSynthesisResult{
 			AudioPath:    audioPath,
@@ -397,6 +363,11 @@ func tryReuseCompletedBlockWithoutMFA(
 		}, true, nil
 	}
 	return blockSynthesisResult{}, false, nil
+}
+
+func intPtr(value int) *int {
+	v := value
+	return &v
 }
 
 func buildRequestedBlockSet(blockNums []int, totalBlocks int) (map[int]struct{}, error) {
@@ -431,6 +402,12 @@ func isRequestedBlock(requested map[int]struct{}, index int) bool {
 }
 
 func canReuseCachedBlockAudio(ttsType int, language string, current, cached dto.PodcastBlock) bool {
+	if strings.TrimSpace(current.BlockID) == "" || strings.TrimSpace(cached.BlockID) == "" {
+		return false
+	}
+	if strings.TrimSpace(current.BlockID) != strings.TrimSpace(cached.BlockID) {
+		return false
+	}
 	if len(current.Segments) != len(cached.Segments) {
 		return false
 	}
@@ -529,6 +506,7 @@ func shiftSegmentTiming(seg *dto.PodcastSegment, offsetMS int) {
 }
 
 func buildConversationRequest(language string, block dto.PodcastBlock) googlecloud.SynthesizeConversationRequest {
+	femaleName, maleName := geminiPromptSpeakerNames(language)
 	maleVoiceID, femaleVoiceID := googleVoiceIDs(language)
 	turns := make([]googlecloud.ConversationTurn, 0, len(block.Segments))
 	for _, seg := range block.Segments {
@@ -542,19 +520,23 @@ func buildConversationRequest(language string, block dto.PodcastBlock) googleclo
 		})
 	}
 	return googlecloud.SynthesizeConversationRequest{
-		LanguageCode:  language,
-		Prompt:        buildGeminiBlockPrompt(language),
-		Turns:         turns,
+		LanguageCode: language,
+		Prompt:       buildGeminiBlockPrompt(language, femaleName, maleName),
+		Turns:        turns,
+		SpeakerNames: map[string]string{
+			"female": femaleName,
+			"male":   maleName,
+		},
 		MaleVoiceID:   maleVoiceID,
 		FemaleVoiceID: femaleVoiceID,
 		SpeakingRate:  ttsSpeakingRate(language),
 	}
 }
 
-func buildGeminiBlockPrompt(language string) string {
-	base := strings.TrimSpace(geminiJapaneseBasePrompt())
+func buildGeminiBlockPrompt(language string, femaleName, maleName string) string {
+	base := strings.TrimSpace(geminiJapaneseBasePrompt(femaleName, maleName))
 	if !isJapaneseLanguage(language) {
-		base = strings.TrimSpace(geminiChineseBasePrompt())
+		base = strings.TrimSpace(geminiChineseBasePrompt(femaleName, maleName))
 	}
 	appendParts := []string{strings.TrimSpace(conf.Get[string]("worker.google_tts_prompt_append"))}
 	if isJapaneseLanguage(language) {
@@ -571,41 +553,10 @@ func buildGeminiBlockPrompt(language string) string {
 		extras = append(extras, part)
 	}
 	prompt := base
-	maxBytes := ttsPromptMaxBytes()
 	for _, part := range extras {
-		next := strings.TrimSpace(prompt + " " + part)
-		if maxBytes > 0 && len([]byte(next)) > maxBytes {
-			log.Printf("⚠️ google tts prompt append truncated lang=%s max_bytes=%d", language, maxBytes)
-			break
-		}
-		prompt = next
-	}
-	if maxBytes > 0 && len([]byte(prompt)) > maxBytes {
-		return truncateUTF8ByBytes(prompt, maxBytes)
+		prompt = strings.TrimSpace(prompt + " " + part)
 	}
 	return prompt
-}
-
-func geminiChineseBasePrompt() string {
-	return `Two-speaker Mandarin Chinese learning podcast. The speakers are longtime close friends having a relaxed, lightly humorous conversation. Male voice: calm, steady, clear everyday Mandarin. Female voice: bright but natural, clear everyday Mandarin. Keep each speaker's voice identity stable and consistent throughout the entire block. Do not let the same speaker's timbre, age impression, or vocal placement drift mid-block. Keep the delivery natural, easy to follow, and learner-friendly, with clear sentence boundaries and natural pauses. Allow light warmth, light humor, and natural emotional movement when the text supports it. Natural laughter is allowed and should sound relaxed, human, and spontaneous. If the text contains laughter markers such as 哈哈, 呵呵, [笑], or (笑), render a short natural laugh or amused chuckle instead of reading the markers literally.`
-}
-
-func geminiJapaneseBasePrompt() string {
-	return `Two-speaker Japanese learning podcast. The speakers are longtime close friends having a relaxed, lightly humorous conversation. Male voice: calm, steady, clear everyday Japanese. Female voice: bright but natural, clear everyday Japanese. Keep each speaker's voice identity stable and consistent throughout the entire block. Do not let the same speaker's timbre, age impression, or vocal placement drift mid-block. Keep the delivery natural, easy to follow, and learner-friendly, with clear sentence boundaries and natural pauses. Allow light warmth, light humor, and natural emotional movement when the text supports it. Natural laughter is allowed and should sound relaxed, human, and spontaneous. If the text contains laughter markers such as はは, ふふ, [笑], (笑), or w, render a short natural laugh or amused chuckle instead of reading the markers literally.`
-}
-
-func ttsSpeakingRate(language string) float64 {
-	base := conf.Get[float64]("worker.google_tts_speaking_rate")
-	if isJapaneseLanguage(language) {
-		if value := conf.Get[float64]("worker.google_tts_ja_speaking_rate"); value > 0 {
-			return value
-		}
-	}
-	return base
-}
-
-func ttsPromptMaxBytes() int {
-	return firstPositive(conf.Get[int]("worker.google_tts_prompt_max_bytes"), 1200)
 }
 
 func truncateUTF8ByBytes(text string, maxBytes int) string {
@@ -625,6 +576,104 @@ func truncateUTF8ByBytes(text string, maxBytes int) string {
 		}
 	}
 	return ""
+}
+
+func geminiChineseBasePrompt(femaleName, maleName string) string {
+	return buildGeminiBlockPromptBody("zh", femaleName, maleName)
+}
+
+func geminiJapaneseBasePrompt(femaleName, maleName string) string {
+	return buildGeminiBlockPromptBody("ja", femaleName, maleName)
+}
+
+func buildGeminiBlockPromptBody(language, femaleName, maleName string) string {
+	podcastTitle := geminiPromptPodcastTitle(language)
+	sceneDescription := geminiPromptSceneDescription(language)
+	directorNotes := geminiPromptDirectorNotes(language, femaleName, maleName)
+
+	return strings.TrimSpace(strings.Join([]string{
+		fmt.Sprintf("# AUDIO PROFILE: %s & %s", femaleName, maleName),
+		fmt.Sprintf("## \"%s\"", podcastTitle),
+		fmt.Sprintf("## THE SCENE: %s", geminiPromptSceneTitle(language)),
+		sceneDescription,
+		"### DIRECTOR'S NOTES",
+		directorNotes,
+		"#### TRANSCRIPT",
+		"Read only the dialogue supplied in this request.",
+		"Do not add narration, summaries, or new lines.",
+	}, "\n"))
+}
+
+func geminiPromptLanguageLabel(language string) string {
+	if isJapaneseLanguage(language) {
+		return "Japanese"
+	}
+	return "Mandarin Chinese"
+}
+
+func geminiPromptSpeakerNames(language string) (femaleName, maleName string) {
+	if isJapaneseLanguage(language) {
+		return "Yui", "Akira"
+	}
+	return "Panpan", "Laolu"
+}
+
+func geminiPromptPodcastTitle(language string) string {
+	if isJapaneseLanguage(language) {
+		return "Natural Japanese Learning Podcast"
+	}
+	return "Natural Mandarin Learning Podcast"
+}
+
+func geminiPromptSceneTitle(language string) string {
+	if isJapaneseLanguage(language) {
+		return "Quiet Home Podcast Studio"
+	}
+	return "Quiet Home Podcast Studio"
+}
+
+func geminiPromptSceneDescription(language string) string {
+	return strings.TrimSpace(strings.Join([]string{
+		"Two close friends are recording a natural learning podcast in a quiet home studio.",
+		"Close-mic, intimate conversational distance, warm and dry room sound.",
+	}, "\n"))
+}
+
+func geminiPromptDirectorNotes(language, femaleName, maleName string) string {
+	languageLabel := geminiPromptLanguageLabel(language)
+	return strings.TrimSpace(strings.Join([]string{
+		"Style:",
+		"* Natural, subtle, realistic, and grounded.",
+		"* Keep both voices clearly distinct and stable.",
+		"",
+		"Pace: Slow, relaxed, and easy to follow. Use clear pauses between clauses and slightly longer pauses between sentences. Do not rush any line.",
+		"",
+		fmt.Sprintf("Accent: Clear standard %s pronunciation, no strong regional accent.", languageLabel),
+		"",
+		fmt.Sprintf("%s is warm, natural, slightly lively, and more emotionally present.", femaleName),
+		fmt.Sprintf("%s is calm, steady, thoughtful, responsive, conversational, and human.", maleName),
+	}, "\n"))
+}
+
+func normalizeConversationSpeaker(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "female", "f", "woman", "girl", "女":
+		return "female"
+	case "male", "m", "man", "boy", "男":
+		return "male"
+	default:
+		return strings.ToLower(strings.TrimSpace(value))
+	}
+}
+
+func ttsSpeakingRate(language string) float64 {
+	base := conf.Get[float64]("worker.google_tts_speaking_rate")
+	if isJapaneseLanguage(language) {
+		if value := conf.Get[float64]("worker.google_tts_ja_speaking_rate"); value > 0 {
+			return value
+		}
+	}
+	return base
 }
 
 func synthesisTextForProvider(ttsType int, language string, seg dto.PodcastSegment) string {
@@ -672,10 +721,8 @@ func newGoogleSpeechClient() (*googlecloud.Client, error) {
 		ServiceAccountPath: conf.Get[string]("worker.google_service_account_json_path"),
 		ServiceAccountJSON: conf.Get[string]("worker.google_service_account_json"),
 		TokenURL:           conf.Get[string]("worker.google_oauth_token_url"),
-		TTSURL:             conf.Get[string]("worker.google_tts_url"),
-		TTSModel:           conf.Get[string]("worker.google_tts_model"),
-		TTSAudioEncoding:   conf.Get[string]("worker.google_tts_audio_encoding"),
-		TTSSampleRateHz:    conf.Get[int]("worker.google_tts_sample_rate_hz"),
+		TTSURL:             "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent",
+		TTSModel:           googlecloud.DefaultTTSModel,
 		HTTPTimeoutSeconds: firstPositive(conf.Get[int]("worker.ffmpeg_timeout_sec"), 300),
 	})
 }
@@ -807,10 +854,74 @@ func createSilenceAudio(ctx context.Context, path string, durationMs int) error 
 		"-f", "lavfi",
 		"-i", "anullsrc=r=24000:cl=mono",
 		"-t", fmt.Sprintf("%.3f", float64(durationMs)/1000.0),
-		"-c:a", "libmp3lame",
-		"-q:a", "4",
+		"-c:a", "pcm_s16le",
 		path,
 	)
+}
+
+func applyAudioTempoToFile(ctx context.Context, path string, tempo float64) error {
+	if tempo <= 0 || math.Abs(tempo-1.0) <= 0.001 {
+		return nil
+	}
+	filter := buildAtempoFilter(tempo)
+	if strings.TrimSpace(filter) == "" {
+		return nil
+	}
+
+	dir := filepath.Dir(path)
+	ext := filepath.Ext(path)
+	if strings.TrimSpace(ext) == "" {
+		ext = ".wav"
+	}
+	tmpFile, err := os.CreateTemp(dir, "tempo_*.tmp"+ext)
+	if err != nil {
+		return err
+	}
+	tmpPath := tmpFile.Name()
+	if err := tmpFile.Close(); err != nil {
+		_ = os.Remove(tmpPath)
+		return err
+	}
+
+	if err := ffmpegcommon.RunFFmpegContext(
+		ctx,
+		"-y",
+		"-i", path,
+		"-filter:a", filter,
+		"-c:a", "pcm_s16le",
+		tmpPath,
+	); err != nil {
+		_ = os.Remove(tmpPath)
+		return err
+	}
+	if err := os.Rename(tmpPath, path); err != nil {
+		_ = os.Remove(tmpPath)
+		return err
+	}
+	return nil
+}
+
+func buildAtempoFilter(speed float64) string {
+	if speed <= 0 {
+		return ""
+	}
+	speed = math.Round(speed*1000) / 1000
+	if speed <= 0 || math.Abs(speed-1.0) <= 0.001 {
+		return ""
+	}
+
+	parts := make([]string, 0, 4)
+	remaining := speed
+	for remaining < 0.5 {
+		parts = append(parts, "atempo=0.5")
+		remaining /= 0.5
+	}
+	for remaining > 2.0 {
+		parts = append(parts, "atempo=2.0")
+		remaining /= 2.0
+	}
+	parts = append(parts, fmt.Sprintf("atempo=%.3f", remaining))
+	return strings.Join(parts, ",")
 }
 
 func concatAudioFiles(ctx context.Context, projectDir string, files []string, outputPath string) error {

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -76,7 +77,7 @@ func HandleMessage(ch *amqp.Channel, msg amqp.Delivery, scheduler map[string]Tas
 			return err
 		}
 
-		materials := buildTaskMaterials(task, projectID)
+		materials := buildTaskMaterials(task)
 		log.Printf("🎬 收到任务 task_id=%s type=%s retries=%d project_id=%s 所需材料=[%s]",
 			task.TaskID, task.TaskType, retries, projectID, strings.Join(materials, ","))
 		if err := taskTracker.OnTaskStart(task, retries); err != nil {
@@ -224,7 +225,7 @@ func taskProjectID(task VideoTaskMessage) string {
 	return fmt.Sprint(requestProjectID)
 }
 
-func buildTaskMaterials(task VideoTaskMessage, projectID string) []string {
+func buildTaskMaterials(task VideoTaskMessage) []string {
 	materials := make([]string, 0, 16)
 	seen := make(map[string]struct{}, 16)
 	appendMaterial := func(name string) {
@@ -239,32 +240,38 @@ func buildTaskMaterials(task VideoTaskMessage, projectID string) []string {
 		materials = append(materials, text)
 	}
 
-	payload := task.Payload
-
-	if projectID != "" {
-		appendMaterial(projectID)
-		if strings.HasPrefix(strings.TrimSpace(task.TaskType), "podcast.") {
-			appendMaterial("script_input.json")
-			appendMaterial("script_aligned.json")
-			appendMaterial("dialogue.mp3")
-			appendMaterial("blocks")
-			appendMaterial("block_states")
-			if strings.HasPrefix(strings.TrimSpace(task.TaskType), "podcast.compose.") {
-				appendMaterial("podcast_final.mp4")
+	switch strings.TrimSpace(task.TaskType) {
+	case "upload.v1":
+		appendMaterial("chat_script.pdf")
+	case "podcast.audio.generate.v1":
+		if scriptName := payloadString(task.Payload, "script_filename"); scriptName != "" {
+			appendMaterial(filepath.Base(scriptName))
+		}
+	case "podcast.page.persist.v1":
+		appendMaterial("request_payload.json")
+		appendMaterial("script_aligned.json")
+	case "podcast.audio.align.v1":
+		appendMaterial("script_input.json")
+		appendMaterial("blocks")
+		appendMaterial("block_states")
+	case "podcast.compose.render.v1":
+		appendMaterial(firstBackgroundAsset(task.Payload))
+		appendMaterial(podcastAnimationAsset(task.Payload))
+		appendMaterial(podcastLogoAsset(task.Payload))
+		appendMaterial("dialogue.mp3")
+	case "podcast.compose.finalize.v1":
+		appendMaterial("podcast_base.mp4")
+		appendMaterial("script_aligned.json")
+		appendMaterial("dialogue.mp3")
+	default:
+		if scriptName := payloadString(task.Payload, "script_filename"); scriptName != "" {
+			appendMaterial(scriptName)
+		}
+		if backgrounds := payloadStringSlice(task.Payload, "bg_img_filenames"); len(backgrounds) > 0 {
+			for _, bg := range backgrounds {
+				appendMaterial(bg)
 			}
 		}
-	}
-
-	if sourceProjectID := payloadString(payload, "source_project_id"); sourceProjectID != "" {
-		appendMaterial(sourceProjectID)
-	}
-	if scriptName := payloadString(payload, "script_filename"); scriptName != "" {
-		appendMaterial(scriptName)
-	}
-
-	backgrounds := payloadStringSlice(payload, "bg_img_filenames")
-	for _, bg := range backgrounds {
-		appendMaterial(bg)
 	}
 
 	return materials
@@ -325,4 +332,34 @@ func payloadStringSlice(payload map[string]interface{}, key string) []string {
 		}
 	}
 	return out
+}
+
+func firstBackgroundAsset(payload map[string]interface{}) string {
+	backgrounds := payloadStringSlice(payload, "bg_img_filenames")
+	if len(backgrounds) == 0 {
+		return ""
+	}
+	return filepath.Base(backgrounds[0])
+}
+
+func podcastAnimationAsset(payload map[string]interface{}) string {
+	lang := strings.ToLower(strings.TrimSpace(payloadString(payload, "lang")))
+	switch lang {
+	case "ja":
+		return "headphone.gif"
+	case "zh":
+		return "design2_480x480.gif"
+	default:
+		return ""
+	}
+}
+
+func podcastLogoAsset(payload map[string]interface{}) string {
+	lang := strings.ToLower(strings.TrimSpace(payloadString(payload, "lang")))
+	switch lang {
+	case "ja":
+		return "ja_logo.png"
+	default:
+		return ""
+	}
 }

@@ -35,12 +35,8 @@ type ScriptPageUpsert struct {
 	PublishedAt      *time.Time
 }
 
-func (s *Store) UpsertPodcastScriptPage(input ScriptPageUpsert) (uint64, error) {
-	if input.ProjectID == "" {
-		return 0, wrapFatal(errors.New("project_id is required"))
-	}
-
-	record := contentmodels.PodcastScriptPage{
+func buildPodcastScriptPageRecord(input ScriptPageUpsert) contentmodels.PodcastScriptPage {
+	return contentmodels.PodcastScriptPage{
 		Slug:             input.Slug,
 		ProjectID:        input.ProjectID,
 		Language:         input.Language,
@@ -64,6 +60,73 @@ func (s *Store) UpsertPodcastScriptPage(input ScriptPageUpsert) (uint64, error) 
 		Status:           defaultString(input.Status, "published"),
 		PublishedAt:      input.PublishedAt,
 	}
+}
+
+func (s *Store) CreatePodcastScriptPage(input ScriptPageUpsert) (uint64, error) {
+	if input.ProjectID == "" {
+		return 0, wrapFatal(errors.New("project_id is required"))
+	}
+
+	record := buildPodcastScriptPageRecord(input)
+	if err := s.db.Create(&record).Error; err != nil {
+		return 0, wrapFatal(err)
+	}
+	return record.ID, nil
+}
+
+func (s *Store) FindPodcastScriptPageBySlug(slug string) (contentmodels.PodcastScriptPage, bool, error) {
+	var page contentmodels.PodcastScriptPage
+	result := s.db.Where("slug = ?", strings.TrimSpace(slug)).Limit(1).Find(&page)
+	if result.Error != nil {
+		return contentmodels.PodcastScriptPage{}, false, wrapFatal(result.Error)
+	}
+	return page, result.RowsAffected > 0, nil
+}
+
+func (s *Store) FindPodcastScriptPageBySlugAndLanguage(slug string, language string) (contentmodels.PodcastScriptPage, bool, error) {
+	var page contentmodels.PodcastScriptPage
+	result := s.db.Where("slug = ? AND language = ?", strings.TrimSpace(slug), strings.TrimSpace(language)).Limit(1).Find(&page)
+	if result.Error != nil {
+		return contentmodels.PodcastScriptPage{}, false, wrapFatal(result.Error)
+	}
+	return page, result.RowsAffected > 0, nil
+}
+
+func (s *Store) UpdatePodcastScriptPageByID(id uint64, input ScriptPageUpsert) error {
+	if id == 0 {
+		return wrapFatal(errors.New("page_id is required"))
+	}
+
+	var existing contentmodels.PodcastScriptPage
+	result := s.db.Where("id = ?", id).Limit(1).Find(&existing)
+	if result.Error != nil {
+		return wrapFatal(result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return wrapFatal(fmt.Errorf("podcast script page not found for id: %d", id))
+	}
+
+	record := buildPodcastScriptPageRecord(input)
+	updates := buildPodcastScriptPageUpdates(existing, record)
+
+	result = s.db.Model(&contentmodels.PodcastScriptPage{}).
+		Where("id = ?", id).
+		Updates(updates)
+	if result.Error != nil {
+		return wrapFatal(result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return wrapFatal(fmt.Errorf("podcast script page update affected 0 rows for page_id: %d", id))
+	}
+	return nil
+}
+
+func (s *Store) UpsertPodcastScriptPage(input ScriptPageUpsert) (uint64, error) {
+	if input.ProjectID == "" {
+		return 0, wrapFatal(errors.New("project_id is required"))
+	}
+
+	record := buildPodcastScriptPageRecord(input)
 
 	existing, found, err := s.findPodcastScriptPageForUpsert(input.ProjectID, input.Slug)
 	if err != nil {
@@ -77,40 +140,7 @@ func (s *Store) UpsertPodcastScriptPage(input ScriptPageUpsert) (uint64, error) 
 	}
 
 	record.ID = existing.ID
-	updates := map[string]interface{}{
-		"slug":              coalesceString(record.Slug, existing.Slug),
-		"project_id":        record.ProjectID,
-		"language":          coalesceString(record.Language, existing.Language),
-		"audience_language": coalesceString(record.AudienceLanguage, existing.AudienceLanguage),
-		"title":             coalesceString(record.Title, existing.Title),
-		"en_title":          coalesceString(record.EnTitle, existing.EnTitle),
-		"subtitle":          coalesceString(record.Subtitle, existing.Subtitle),
-		"summary":           coalesceString(record.Summary, existing.Summary),
-		"cover_image_url":   coalesceString(record.CoverImageURL, existing.CoverImageURL),
-		"video_url":         coalesceString(record.VideoURL, existing.VideoURL),
-		"youtube_video_id":  coalesceString(record.YouTubeVideoID, existing.YouTubeVideoID),
-		"youtube_video_url": coalesceString(record.YouTubeVideoURL, existing.YouTubeVideoURL),
-		"seo_title":         coalesceString(record.SEOTitle, existing.SEOTitle),
-		"seo_description":   coalesceString(record.SEODescription, existing.SEODescription),
-		"canonical_url":     coalesceString(record.CanonicalURL, existing.CanonicalURL),
-		"status":            defaultString(record.Status, existing.Status),
-		"published_at":      coalesceTimePtr(record.PublishedAt, existing.PublishedAt),
-	}
-	if len(record.SEOKeywords) > 0 {
-		updates["seo_keywords"] = record.SEOKeywords
-	}
-	if len(record.Script) > 0 {
-		updates["script_json"] = record.Script
-	}
-	if len(record.Vocabulary) > 0 {
-		updates["vocabulary_json"] = record.Vocabulary
-	}
-	if len(record.Grammar) > 0 {
-		updates["grammar_json"] = record.Grammar
-	}
-	if len(record.Downloads) > 0 {
-		updates["downloads_json"] = record.Downloads
-	}
+	updates := buildPodcastScriptPageUpdates(existing, record)
 
 	result := s.db.Model(&contentmodels.PodcastScriptPage{}).
 		Where("id = ?", existing.ID).
@@ -155,6 +185,44 @@ func (s *Store) findPodcastScriptPageForUpsert(projectID string, slug string) (c
 	default:
 		return contentmodels.PodcastScriptPage{}, false, nil
 	}
+}
+
+func buildPodcastScriptPageUpdates(existing contentmodels.PodcastScriptPage, record contentmodels.PodcastScriptPage) map[string]interface{} {
+	updates := map[string]interface{}{
+		"slug":              coalesceString(record.Slug, existing.Slug),
+		"project_id":        record.ProjectID,
+		"language":          coalesceString(record.Language, existing.Language),
+		"audience_language": coalesceString(record.AudienceLanguage, existing.AudienceLanguage),
+		"title":             coalesceString(record.Title, existing.Title),
+		"en_title":          coalesceString(record.EnTitle, existing.EnTitle),
+		"subtitle":          coalesceString(record.Subtitle, existing.Subtitle),
+		"summary":           coalesceString(record.Summary, existing.Summary),
+		"cover_image_url":   coalesceString(record.CoverImageURL, existing.CoverImageURL),
+		"video_url":         coalesceString(record.VideoURL, existing.VideoURL),
+		"youtube_video_id":  coalesceString(record.YouTubeVideoID, existing.YouTubeVideoID),
+		"youtube_video_url": coalesceString(record.YouTubeVideoURL, existing.YouTubeVideoURL),
+		"seo_title":         coalesceString(record.SEOTitle, existing.SEOTitle),
+		"seo_description":   coalesceString(record.SEODescription, existing.SEODescription),
+		"canonical_url":     coalesceString(record.CanonicalURL, existing.CanonicalURL),
+		"status":            defaultString(record.Status, existing.Status),
+		"published_at":      coalesceTimePtr(record.PublishedAt, existing.PublishedAt),
+	}
+	if len(record.SEOKeywords) > 0 {
+		updates["seo_keywords"] = record.SEOKeywords
+	}
+	if len(record.Script) > 0 {
+		updates["script_json"] = record.Script
+	}
+	if len(record.Vocabulary) > 0 {
+		updates["vocabulary_json"] = record.Vocabulary
+	}
+	if len(record.Grammar) > 0 {
+		updates["grammar_json"] = record.Grammar
+	}
+	if len(record.Downloads) > 0 {
+		updates["downloads_json"] = record.Downloads
+	}
+	return updates
 }
 
 func (s *Store) UpdatePodcastScriptPageDownloads(projectID string, downloads json.RawMessage) error {

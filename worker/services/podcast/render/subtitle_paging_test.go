@@ -60,6 +60,48 @@ func TestAdjustSubtitlePageBreak_KeepsAsciiQuotedSpanTogether(t *testing.T) {
 	}
 }
 
+func TestChooseChinesePageBreak_ExtendsToNextPunctuationWhenOverLimit(t *testing.T) {
+	layout := subtitleLayout{
+		MaxTextWidth: 9999,
+		MaxLineChars: 4,
+		HanziSize:    40,
+		HanziSpacing: 8,
+	}
+	cells := []tokenCell{
+		{Hanzi: "我", Width: 20},
+		{Hanzi: "想", Width: 20},
+		{Hanzi: "去", Width: 20},
+		{Hanzi: "看", Width: 20},
+		{Hanzi: "电", Width: 20},
+		{Hanzi: "影", Width: 20},
+		{Hanzi: "，", Width: 20},
+		{Hanzi: "然", Width: 20},
+		{Hanzi: "后", Width: 20},
+	}
+	if got, want := chooseChinesePageBreak(cells, 0, layout), 7; got != want {
+		t.Fatalf("unexpected extended punctuation break: got %d want %d", got, want)
+	}
+}
+
+func TestComputeTopSectionRows_UsesBottomSectionSpace(t *testing.T) {
+	layout := subtitleLayout{
+		TopSectionTop:       10,
+		TopSectionHeight:    100,
+		BottomSectionHeight: 50,
+		HanziSize:           10,
+		RubySize:            0,
+		RowGap:              0,
+	}
+
+	rows := computeTopSectionRows(layout, 1, false)
+	if len(rows) != 1 {
+		t.Fatalf("unexpected row count: got %d want 1", len(rows))
+	}
+	if got, want := rows[0].HanziY, 85; got != want {
+		t.Fatalf("unexpected hanzi row position: got %d want %d", got, want)
+	}
+}
+
 func TestJapaneseBuildLayoutCells_MergesInlineEnglishWord(t *testing.T) {
 	layout := subtitleLayout{
 		HanziSize: 40,

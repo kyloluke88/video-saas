@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import PageViewTracker from "@/components/page-view-tracker";
 import PodcastScriptPageView from "@/components/podcast-script-page";
 import { getPodcastScriptList, getPodcastScriptPage } from "@/lib/api";
+import { PAGE_VIEW_PAGE_TYPE } from "@/lib/page-view";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -36,6 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   return {
+    // 详情页优先使用内容里维护的 SEO 字段，避免和页面标题逻辑分叉。
     title: page.seo_title || page.title,
     description: page.seo_description || page.summary,
     keywords: page.seo_keywords,
@@ -84,6 +87,8 @@ export default async function PodcastScriptDetailPage({ params }: Props) {
         type="application/ld+json"
       />
       <main className="page-shell">
+        {/* 详情页按实体 ID 上报，方便后端按页面粒度统计。 */}
+        <PageViewTracker pageEntityId={page.id} pageType={PAGE_VIEW_PAGE_TYPE.PODCAST_SCRIPT_DETAIL} />
         <PodcastScriptPageView page={page} sidebarPages={sidebarPages} />
       </main>
     </>

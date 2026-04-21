@@ -67,3 +67,5 @@ frontend/out/
 **/*.test
 **/main
 **/.air.toml
+
+.codex/

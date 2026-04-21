@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 
 	"worker/internal/app/task"
@@ -32,14 +31,11 @@ func HandleComposeRender(ctx context.Context, ch *amqp.Channel, msg task.VideoTa
 	if err != nil {
 		return err
 	}
-	if shouldStopAfterRender(payload) {
-		return nil
-	}
-	return publishFinalizeTask(ch, payload)
+	return publishNextPodcastTaskFromComposePayload(ch, payload, string(podcastreplay.PodcastStageRender))
 }
 
 func HandleComposeFinalize(ctx context.Context, ch *amqp.Channel, msg task.VideoTaskMessage) error {
-	payload, err := decodePayload(msg.Payload)
+	payload, err := resolveComposePayload(msg.Payload)
 	if err != nil {
 		return err
 	}
@@ -51,19 +47,21 @@ func resolveComposePayload(raw map[string]interface{}) (dto.PodcastComposePayloa
 	if err != nil {
 		return dto.PodcastComposePayload{}, err
 	}
-	if strings.TrimSpace(payload.SourceProjectID) != "" {
-		if payload.RunMode != 2 {
-			return dto.PodcastComposePayload{}, services.NonRetryableError{Err: fmt.Errorf("compose replay entry requires run_mode=2")}
+	if payload.RunMode != 0 && payload.RunMode != 1 {
+		return dto.PodcastComposePayload{}, services.NonRetryableError{Err: fmt.Errorf("podcast.compose only supports run_mode 0 or 1")}
+	}
+	if payload.RunMode == 1 || strings.TrimSpace(payload.SourceProjectID) != "" {
+		if payload.RunMode != 1 {
+			return dto.PodcastComposePayload{}, services.NonRetryableError{Err: fmt.Errorf("compose replay entry requires run_mode=1")}
 		}
-		generatePayload, err := podcastreplay.DecodeGeneratePayload(raw)
+		if err := podcastreplay.EnsureReplayProjectDirForProject(payload.ProjectID, payload.SourceProjectID); err != nil {
+			return dto.PodcastComposePayload{}, err
+		}
+		normalizedTasks, err := podcastreplay.ValidateSpecifyTasks(payload.TTSType, payload.RunMode, payload.SpecifyTasks)
 		if err != nil {
 			return dto.PodcastComposePayload{}, err
 		}
-		replayPayload, err := podcastreplay.PrepareGeneratePayload(generatePayload, raw)
-		if err != nil {
-			return dto.PodcastComposePayload{}, err
-		}
-		return podcastreplay.BuildComposePayloadFromGenerate(replayPayload)
+		payload.SpecifyTasks = normalizedTasks
 	}
 	if strings.TrimSpace(payload.ProjectID) == "" {
 		return dto.PodcastComposePayload{}, fmt.Errorf("project_id is required")
@@ -78,15 +76,11 @@ func resolveComposePayload(raw map[string]interface{}) (dto.PodcastComposePayloa
 }
 
 func finalizeAndContinue(ctx context.Context, ch *amqp.Channel, payload dto.PodcastComposePayload) error {
-	result, err := podcastcomposeservice.Finalize(ctx, composeInputFromPayload(payload))
+	_, err := podcastcomposeservice.Finalize(ctx, composeInputFromPayload(payload))
 	if err != nil {
 		return err
 	}
-	log.Printf("🎙️ podcast compose done project_id=%s final=%s", payload.ProjectID, result.FinalVideoPath)
-	if shouldStopAfterCurrentStep(payload.OnlyCurrentStep) {
-		return nil
-	}
-	return publishPersistTask(ch, payload)
+	return publishNextPodcastTaskFromComposePayload(ch, payload, string(podcastreplay.PodcastStageFinalize))
 }
 
 func composeInputFromPayload(payload dto.PodcastComposePayload) podcastcomposeservice.ComposeInput {
@@ -100,30 +94,11 @@ func composeInputFromPayload(payload dto.PodcastComposePayload) podcastcomposese
 }
 
 func publishFinalizeTask(ch *amqp.Channel, payload dto.PodcastComposePayload) error {
-	return task.PublishTask(ch, "podcast.compose.finalize.v1", map[string]interface{}{
-		"content_type":      "podcast",
-		"project_id":        payload.ProjectID,
-		"lang":              payload.Lang,
-		"run_mode":          payload.RunMode,
-		"only_current_step": payload.OnlyCurrentStep,
-		"title":             payload.Title,
-		"bg_img_filenames":  payload.BgImgFilenames,
-		"target_platform":   payload.TargetPlatform,
-		"aspect_ratio":      payload.AspectRatio,
-		"resolution":        payload.Resolution,
-		"design_style":      payload.DesignStyle,
-	})
+	return task.PublishTask(ch, "podcast.compose.finalize.v1", buildPodcastComposeTaskPayload(payload))
 }
 
 func publishPersistTask(ch *amqp.Channel, payload dto.PodcastComposePayload) error {
-	return task.PublishTask(ch, "podcast.page.persist.v1", map[string]interface{}{
-		"content_type":      "podcast",
-		"project_id":        payload.ProjectID,
-		"run_mode":          payload.RunMode,
-		"only_current_step": payload.OnlyCurrentStep,
-		"lang":              payload.Lang,
-		"title":             payload.Title,
-	})
+	return task.PublishTask(ch, "podcast.page.persist.v1", buildPodcastComposeTaskPayload(payload))
 }
 
 func decodePayload(raw map[string]interface{}) (dto.PodcastComposePayload, error) {
@@ -138,15 +113,87 @@ func decodePayload(raw map[string]interface{}) (dto.PodcastComposePayload, error
 	return payload, nil
 }
 
-func shouldStopAfterCurrentStep(value int) bool {
-	return value == 1
+func publishNextPodcastTaskFromComposePayload(ch *amqp.Channel, payload dto.PodcastComposePayload, currentStage string) error {
+	nextStage, ok, err := podcastreplay.NextPodcastStage(normalizePodcastTTSType(payload.TTSType), currentStage, payload.SpecifyTasks)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return nil
+	}
+	taskType, err := podcastreplay.PodcastTaskTypeForStage(normalizePodcastTTSType(payload.TTSType), podcastreplay.PodcastStage(nextStage))
+	if err != nil {
+		return err
+	}
+	switch taskType {
+	case "podcast.compose.finalize.v1":
+		return publishFinalizeTask(ch, payload)
+	case "podcast.page.persist.v1":
+		return publishPersistTask(ch, payload)
+	case "upload.v1":
+		return task.PublishTask(ch, taskType, buildPodcastComposeTaskPayload(payload))
+	default:
+		return task.PublishTask(ch, taskType, buildPodcastComposeTaskPayload(payload))
+	}
 }
 
-func shouldStopAfterRender(payload dto.PodcastComposePayload) bool {
-	if payload.OnlyCurrentStep != 1 {
-		return false
+func buildPodcastComposeTaskPayload(payload dto.PodcastComposePayload) map[string]interface{} {
+	out := map[string]interface{}{
+		"content_type": "podcast",
+		"project_id":   strings.TrimSpace(payload.ProjectID),
+		"run_mode":     payload.RunMode,
+		"tts_type":     normalizePodcastTTSType(payload.TTSType),
 	}
-	// run_mode=2 means compose-stage replay. User expectation is:
-	// "only_current_step=1" should still run render + finalize, then stop.
-	return payload.RunMode != 2
+	if sourceProjectID := strings.TrimSpace(payload.SourceProjectID); sourceProjectID != "" {
+		out["source_project_id"] = sourceProjectID
+	}
+	if tasks := compactNonEmptyStrings(payload.SpecifyTasks); len(tasks) > 0 && payload.RunMode == 1 {
+		out["specify_tasks"] = tasks
+	}
+	if lang := strings.TrimSpace(payload.Lang); lang != "" {
+		out["lang"] = lang
+	}
+	if title := strings.TrimSpace(payload.Title); title != "" {
+		out["title"] = title
+	}
+	if len(payload.BgImgFilenames) > 0 {
+		out["bg_img_filenames"] = compactNonEmptyStrings(payload.BgImgFilenames)
+	}
+	if targetPlatform := strings.TrimSpace(payload.TargetPlatform); targetPlatform != "" {
+		out["target_platform"] = targetPlatform
+	}
+	if aspectRatio := strings.TrimSpace(payload.AspectRatio); aspectRatio != "" {
+		out["aspect_ratio"] = aspectRatio
+	}
+	if resolution := strings.TrimSpace(payload.Resolution); resolution != "" {
+		out["resolution"] = resolution
+	}
+	if designStyle := normalizePodcastDesignStyle(payload.DesignStyle); designStyle > 0 {
+		out["design_style"] = designStyle
+	}
+	return out
+}
+
+func normalizePodcastTTSType(value int) int {
+	if value == 2 {
+		return 2
+	}
+	return 1
+}
+
+func compactNonEmptyStrings(values []string) []string {
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	return out
+}
+
+func normalizePodcastDesignStyle(value int) int {
+	if value == 2 {
+		return 2
+	}
+	return 1
 }

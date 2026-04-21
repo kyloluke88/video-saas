@@ -105,7 +105,7 @@ func TestChooseChinesePageBreak_EnglishWordCountsAsSingleUnit(t *testing.T) {
 		{Hanzi: "中", Width: 40},
 	}
 
-	if got, want := chooseChinesePageBreak(cells, 0, layout), 3; got != want {
+	if got, want := chooseChinesePageBreak(cells, 0, layout), 4; got != want {
 		t.Fatalf("unexpected page break: got %d want %d", got, want)
 	}
 }
@@ -128,7 +128,7 @@ func TestChooseChinesePageBreak_AsciiQuotedBlockCanBreakWhenOverLimit(t *testing
 		{Hanzi: "tomorrow"},
 		{Hanzi: "'"},
 	}
-	if got, want := chooseChinesePageBreak(cells, 0, layout), 4; got != want {
+	if got, want := chooseChinesePageBreak(cells, 0, layout), 9; got != want {
 		t.Fatalf("unexpected page break for over-limit quoted block: got %d want %d", got, want)
 	}
 }

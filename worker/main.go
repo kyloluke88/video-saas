@@ -12,6 +12,7 @@ import (
 	podcastcomposepipeline "worker/internal/app/workflow/podcast/compose"
 	podcastpagepipeline "worker/internal/app/workflow/podcast/page"
 	uploadpipeline "worker/internal/app/workflow/upload"
+	"worker/pkg/googlecloud"
 	conf "worker/pkg/config"
 )
 
@@ -25,7 +26,7 @@ func main() {
 	log.Printf("⚙️ SEEDANCE_ENABLED=%t", conf.Get[bool]("worker.seedance_enabled"))
 	log.Printf("⚙️ GOOGLE_TTS_ENABLED=%t GOOGLE_TTS_MODEL=%s",
 		conf.Get[bool]("worker.google_tts_enabled"),
-		conf.Get[string]("worker.google_tts_model"),
+		googlecloud.DefaultTTSModel,
 	)
 	log.Printf("⚙️ ELEVENLABS_TTS_ENABLED=%t ELEVENLABS_TTS_MODEL=%s",
 		conf.Get[bool]("worker.elevenlabs_tts_enabled"),

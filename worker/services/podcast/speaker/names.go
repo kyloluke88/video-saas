@@ -2,6 +2,7 @@ package podcastspeaker
 
 import "strings"
 
+// todo 这个没必要
 func NormalizeRole(value string) string {
 	normalized := strings.ToLower(strings.TrimSpace(value))
 	switch normalized {

@@ -40,19 +40,39 @@ func ComposeBaseVideoContext(ctx context.Context, input ComposeInput) error {
 	wave := waveformPresetFor(input.Resolution, input.DesignStyle, audioInputIndex)
 	x264Preset := podcastX264Preset()
 	ffmpegTimeout := podcastComposeFFmpegTimeout(input.DialogueAudioPath)
+	animPath := podcastDesignAnimationPath(input.Language)
+	logoPath := podcastDesignLogoPath(input.Language)
 
 	baseOutput := filepath.Join(projectDir, "podcast_base.mp4")
 	bgFilter := backgroundGraphFor(input.Resolution)
 	if strings.TrimSpace(wave.BackgroundFilter) != "" {
 		bgFilter += "," + wave.BackgroundFilter
 	}
-	complexFilter := fmt.Sprintf("%s;%s;[bg][sw]overlay=%s[v]", bgFilter, wave.AudioGraph, wave.Overlay)
 	args := []string{"-y"}
 	args = append(args, "-loop", "1", "-i", primaryBackgroundPath)
 	args = append(args,
 		"-i", input.DialogueAudioPath,
+	)
+	complexFilter := fmt.Sprintf("%s;%s;[bg][sw]overlay=%s[v0]", bgFilter, wave.AudioGraph, wave.Overlay)
+	finalVideoLabel := "[v0]"
+	if animPath != "" {
+		if animFilter := podcastDesignType1AnimationFilter(input.Resolution); animFilter != "" {
+			args = append(args, "-stream_loop", "-1", "-i", animPath)
+			complexFilter += ";" + animFilter + "[v]"
+			finalVideoLabel = "[v]"
+		}
+	}
+	if logoPath != "" {
+		args = appendLoopedImageInput(args, logoPath)
+		if logoFilter := podcastDesignLogoOverlayFilter(input.Resolution); logoFilter != "" {
+			marginX, marginY := logoOverlayMargins(input.Resolution)
+			complexFilter += ";" + logoFilter + ";" + fmt.Sprintf("%s[logo]overlay=W-w-%d:%d:shortest=1:eof_action=pass[v1]", finalVideoLabel, marginX, marginY)
+			finalVideoLabel = "[v1]"
+		}
+	}
+	args = append(args,
 		"-filter_complex", complexFilter,
-		"-map", "[v]",
+		"-map", finalVideoLabel,
 		"-map", fmt.Sprintf("%d:a:0", audioInputIndex),
 		"-c:v", "libx264",
 		"-preset", x264Preset,
@@ -219,13 +239,12 @@ func renderFinalPodcastOutput(ctx context.Context, input ComposeInput, assPath, 
 	if input.Script != nil {
 		introPath = podcastIntroAnimationPath(input.Script.Language)
 	}
-	filter := fmt.Sprintf("subtitles=%s:fontsdir=%s", escapeFFmpegPath(assPath), escapeFFmpegPath(podcastFontsDir()))
-
+	subFilter := fmt.Sprintf("subtitles=%s:fontsdir=%s", escapeFFmpegPath(assPath), escapeFFmpegPath(podcastFontsDir()))
 	if strings.TrimSpace(introPath) == "" {
 		return common.RunFFmpegWithTimeoutContext(ctx, ffmpegTimeout,
 			"-y",
 			"-i", baseOutput,
-			"-vf", filter,
+			"-vf", subFilter,
 			"-c:v", "libx264",
 			"-preset", x264Preset,
 			"-pix_fmt", "yuv420p",
@@ -238,7 +257,7 @@ func renderFinalPodcastOutput(ctx context.Context, input ComposeInput, assPath, 
 			return common.RunFFmpegWithTimeoutContext(ctx, ffmpegTimeout,
 				"-y",
 				"-i", baseOutput,
-				"-vf", filter,
+				"-vf", subFilter,
 				"-c:v", "libx264",
 				"-preset", x264Preset,
 				"-pix_fmt", "yuv420p",
@@ -253,7 +272,7 @@ func renderFinalPodcastOutput(ctx context.Context, input ComposeInput, assPath, 
 	complexFilter := fmt.Sprintf(
 		"[0:v]scale=%s,setsar=1[v0];[0:a]aresample=48000,asetpts=N/SR/TB[a0];[1:v]%s,setsar=1[v1];[1:a]aresample=48000,asetpts=N/SR/TB[a1];[v0][a0][v1][a1]concat=n=2:v=1:a=1[v][a]",
 		scale,
-		filter,
+		subFilter,
 	)
 	return common.RunFFmpegWithTimeoutContext(ctx, ffmpegTimeout,
 		"-y",
@@ -323,4 +342,99 @@ func podcastIntroAnimationPath(language string) string {
 		}
 	}
 	return ""
+}
+
+func podcastDesignAnimationPath(language string) string {
+	switch strings.TrimSpace(strings.ToLower(language)) {
+	case "ja":
+		return podcastDesignAnimationPathByFilename("headphone.gif")
+	case "zh":
+		return podcastDesignAnimationPathByFilename("headphone.gif")
+	default:
+		return ""
+	}
+}
+
+func podcastDesignAnimationPathByFilename(filename string) string {
+	candidates := []string{
+		filepath.Join(conf.Get[string]("worker.worker_assets_dir"), "podcast", "animation", filename),
+		filepath.Join("assets", "podcast", "animation", filename),
+		filepath.Join("worker", "assets", "podcast", "animation", filename),
+		filepath.Join("/Users/luca/go/github.com/luca/video-saas/worker/assets/podcast/animation", filename),
+	}
+	for _, candidate := range candidates {
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+	}
+	return ""
+}
+
+func podcastDesignLogoPath(language string) string {
+	switch strings.TrimSpace(strings.ToLower(language)) {
+	case "ja":
+		return podcastDesignAnimationPathByFilename("ja_logo.png")
+	default:
+		return ""
+	}
+}
+
+func podcastDesignType1AnimationFilter(resolution string) string {
+	playW, playH := resolutionSize(resolution)
+	size := playW / 14
+	if size < 42 {
+		size = 42
+	}
+	if size > 88 {
+		size = 88
+	}
+	marginX := playW / 55
+	marginY := playH / 38
+	if marginX < 14 {
+		marginX = 14
+	}
+	if marginY < 14 {
+		marginY = 14
+	}
+	return fmt.Sprintf("[2:v]fps=15,scale=%d:%d:flags=lanczos,format=rgba[anim];[v0][anim]overlay=%d:%d:shortest=1:eof_action=pass", size, size, marginX, marginY)
+}
+
+func podcastDesignLogoOverlayFilter(resolution string) string {
+	playW, playH := resolutionSize(resolution)
+	size := playW / 14
+	if size < 42 {
+		size = 42
+	}
+	if size > 90 {
+		size = 90
+	}
+	marginX := playW / 55
+	marginY := playH / 38
+	if marginX < 14 {
+		marginX = 14
+	}
+	if marginY < 14 {
+		marginY = 14
+	}
+	return fmt.Sprintf("[3:v]scale=%d:%d:flags=lanczos[logo]", size, size)
+}
+
+func appendLoopedImageInput(args []string, path string) []string {
+	if strings.TrimSpace(path) == "" {
+		return args
+	}
+	return append(args, "-loop", "1", "-i", path)
+}
+
+func logoOverlayMargins(resolution string) (int, int) {
+	playW, playH := resolutionSize(resolution)
+	marginX := playW / 55
+	marginY := playH / 38
+	if marginX < 14 {
+		marginX = 14
+	}
+	if marginY < 14 {
+		marginY = 14
+	}
+	return marginX, marginY
 }

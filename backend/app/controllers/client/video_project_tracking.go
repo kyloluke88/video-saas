@@ -56,7 +56,7 @@ func trackPodcastProject(
 ) {
 	runModeValue := runMode
 	payloadForTracking := buildTrackedPodcastPayload(runMode, requestPayload)
-	trackProject(projectID, "podcast", &runModeValue, podcastTriggerStage(runMode), targetTaskType, payloadForTracking)
+	trackProject(projectID, "podcast", &runModeValue, podcastStageForTaskType(targetTaskType), targetTaskType, payloadForTracking)
 }
 
 func trackIdiomProject(projectID string, targetTaskType string, requestPayload map[string]interface{}) {
@@ -86,19 +86,6 @@ func markProjectRequestFailed(projectID string, taskType string, err error) {
 
 func markPodcastProjectRequestFailed(projectID string, taskType string, err error) {
 	markProjectRequestFailed(projectID, taskType, err)
-}
-
-func podcastTriggerStage(runMode int) string {
-	switch runMode {
-	case 2:
-		return "compose"
-	case 3:
-		return "script_persist"
-	case 4:
-		return "audio_align"
-	default:
-		return "audio_generate"
-	}
 }
 
 func buildTrackedPodcastPayload(runMode int, requestPayload map[string]interface{}) map[string]interface{} {

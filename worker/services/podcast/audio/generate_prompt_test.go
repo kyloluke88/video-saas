@@ -8,21 +8,31 @@ import (
 )
 
 func TestBuildGeminiBlockPrompt_ZHUsesFixedSpeakerBible(t *testing.T) {
-	prompt := buildGeminiBlockPrompt("zh")
+	prompt := buildGeminiBlockPrompt("zh", "Panpan", "Laolu")
 
 	for _, want := range []string{
-		"Two-speaker Mandarin Chinese learning podcast.",
-		"Male voice:",
-		"Female voice:",
-		"longtime close friends",
-		"clear everyday Mandarin",
-		"learner-friendly",
+		"# AUDIO PROFILE: Panpan & Laolu",
+		"## \"Natural Mandarin Learning Podcast\"",
+		"## THE SCENE: Quiet Home Podcast Studio",
+		"### DIRECTOR'S NOTES",
+		"Style:",
+		"Pace: Slow",
+		"Accent: Clear standard Mandarin Chinese pronunciation",
+		"Panpan is warm, natural, slightly lively, and more emotionally present.",
+		"Laolu is calm, steady, thoughtful, responsive, conversational, and human.",
+		"#### TRANSCRIPT",
+		"Read only the dialogue supplied in this request.",
 	} {
 		if !strings.Contains(prompt, want) {
 			t.Fatalf("expected zh prompt to contain %q, got %q", want, prompt)
 		}
 	}
-	for _, unwanted := range []string{"Two-speaker Japanese learning podcast.", "Block purpose", "%s"} {
+	for _, unwanted := range []string{
+		"Two-speaker Japanese learning podcast.",
+		"# BLOCK TRANSCRIPT",
+		"SAMPLE CONTEXT",
+		"%s",
+	} {
 		if strings.Contains(prompt, unwanted) {
 			t.Fatalf("expected zh prompt to omit %q, got %q", unwanted, prompt)
 		}
@@ -30,21 +40,31 @@ func TestBuildGeminiBlockPrompt_ZHUsesFixedSpeakerBible(t *testing.T) {
 }
 
 func TestBuildGeminiBlockPrompt_JAUsesFixedSpeakerBible(t *testing.T) {
-	prompt := buildGeminiBlockPrompt("ja")
+	prompt := buildGeminiBlockPrompt("ja", "Yui", "Akira")
 
 	for _, want := range []string{
-		"Two-speaker Japanese learning podcast.",
-		"Male voice:",
-		"Female voice:",
-		"longtime close friends",
-		"clear everyday Japanese",
-		"learner-friendly",
+		"# AUDIO PROFILE: Yui & Akira",
+		"## \"Natural Japanese Learning Podcast\"",
+		"## THE SCENE: Quiet Home Podcast Studio",
+		"### DIRECTOR'S NOTES",
+		"Style:",
+		"Pace: Slow",
+		"Accent: Clear standard Japanese pronunciation",
+		"Yui is warm, natural, slightly lively, and more emotionally present.",
+		"Akira is calm, steady, thoughtful, responsive, conversational, and human.",
+		"#### TRANSCRIPT",
 	} {
 		if !strings.Contains(prompt, want) {
 			t.Fatalf("expected ja prompt to contain %q, got %q", want, prompt)
 		}
 	}
-	for _, unwanted := range []string{"Two-speaker Mandarin Chinese learning podcast.", "Block purpose", "%s"} {
+	for _, unwanted := range []string{
+		"Two-speaker Mandarin Chinese learning podcast.",
+		"# BLOCK TRANSCRIPT",
+		"SPEAKER BINDING",
+		"SAMPLE CONTEXT",
+		"%s",
+	} {
 		if strings.Contains(prompt, unwanted) {
 			t.Fatalf("expected ja prompt to omit %q, got %q", unwanted, prompt)
 		}

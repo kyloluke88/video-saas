@@ -135,5 +135,10 @@ export interface ProductSKUItem {
 
 export interface ProductDetail extends ProductListItem {
   metadata?: Record<string, unknown>;
+  // 产品详情页需要的显式 SEO 字段，和后端 `products` 表一一对应。
+  seo_title?: string;
+  seo_description?: string;
+  seo_keywords?: string[];
+  canonical_url?: string;
   skus?: ProductSKUItem[];
 }

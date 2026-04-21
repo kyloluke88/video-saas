@@ -209,3 +209,60 @@ func TestBuildPageSlugStripsPunctuationFromEnTitle(t *testing.T) {
 		t.Fatalf("unexpected slug: %s", slug)
 	}
 }
+
+func TestBuildPageUpsertFromReplayProjectDirKeepsBaseSlug(t *testing.T) {
+	projectDir := t.TempDir()
+
+	requestPayload := `{
+		"lang":"ja",
+		"title":"テストタイトル",
+		"script_filename":"test.json",
+		"run_mode":1,
+		"source_project_id":"ja_podcast_source"
+	}`
+	scriptInput := `{
+		"language":"ja",
+		"title":"テストタイトル",
+		"en_title":"What Happened in the First Episode?",
+		"segments":[
+			{
+				"segment_id":"seg_001",
+				"speaker":"female",
+				"speaker_name":"盼盼",
+				"text":"テスト内容",
+				"en":"test content"
+			}
+		]
+	}`
+
+	if err := os.WriteFile(filepath.Join(projectDir, "request_payload.json"), []byte(requestPayload), 0o644); err != nil {
+		t.Fatalf("write request_payload.json failed: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(projectDir, "script_input.json"), []byte(scriptInput), 0o644); err != nil {
+		t.Fatalf("write script_input.json failed: %v", err)
+	}
+
+	upsert, err := BuildPageUpsertFromProjectDir(projectDir, PersistInput{
+		ProjectID: "ja_podcast_replay_001",
+	})
+	if err != nil {
+		t.Fatalf("BuildPageUpsertFromProjectDir failed: %v", err)
+	}
+	if upsert.Slug != "what-happened-in-the-first-episode" {
+		t.Fatalf("unexpected slug: %s", upsert.Slug)
+	}
+}
+
+func TestBuildReplayPageSlugUsesLanguageSuffix(t *testing.T) {
+	slug := buildReplayPageSlug("what-happened-in-the-first-episode", "ja")
+	if slug != "what-happened-in-the-first-episode-ja" {
+		t.Fatalf("unexpected slug: %s", slug)
+	}
+}
+
+func TestBuildReplayPageSlugFallsBackToBaseWhenLanguageMissing(t *testing.T) {
+	slug := buildReplayPageSlug("what-happened-in-the-first-episode", "")
+	if slug != "what-happened-in-the-first-episode" {
+		t.Fatalf("unexpected slug: %s", slug)
+	}
+}
