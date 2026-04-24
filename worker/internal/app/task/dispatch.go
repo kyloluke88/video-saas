@@ -263,6 +263,36 @@ func buildTaskMaterials(task VideoTaskMessage) []string {
 		appendMaterial("podcast_base.mp4")
 		appendMaterial("script_aligned.json")
 		appendMaterial("dialogue.mp3")
+	case "practical.audio.generate.v1":
+		if scriptName := payloadString(task.Payload, "script_filename"); scriptName != "" {
+			appendMaterial(filepath.Base(scriptName))
+		}
+	case "practical.audio.align.v1":
+		appendMaterial("script_input.json")
+		appendMaterial("blocks")
+		appendMaterial("block topic audio")
+		appendMaterial("block_gap.wav")
+	case "practical.compose.render.v1":
+		if backgrounds := payloadStringSlice(task.Payload, "bg_img_filenames"); len(backgrounds) > 0 {
+			for _, bg := range backgrounds {
+				appendMaterial(filepath.Base(bg))
+			}
+		}
+		if blockBackgrounds := payloadStringSlice(task.Payload, "block_bg_img_filenames"); len(blockBackgrounds) > 0 {
+			for _, bg := range blockBackgrounds {
+				appendMaterial(filepath.Base(bg))
+			}
+		}
+		appendMaterial("dialogue.wav")
+		appendMaterial("script_aligned.json")
+	case "practical.compose.finalize.v1":
+		appendMaterial("practical_base.mp4")
+		appendMaterial("dialogue.wav")
+		appendMaterial("script_aligned.json")
+	case "practical.page.persist.v1":
+		appendMaterial("request_payload.json")
+		appendMaterial("script_aligned.json")
+		appendMaterial("practical_final.mp4")
 	default:
 		if scriptName := payloadString(task.Payload, "script_filename"); scriptName != "" {
 			appendMaterial(scriptName)

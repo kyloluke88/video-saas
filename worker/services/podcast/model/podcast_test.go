@@ -10,7 +10,6 @@ func TestPodcastSegmentUnmarshalUsesNestedEnglishTranslation(t *testing.T) {
 	raw := []byte(`{
 		"segment_id":"seg_001",
 		"text":"こんにちは",
-		"en":"legacy english",
 		"translations":{
 			"en":"nested english",
 			"ja":"こんにちは"
@@ -24,9 +23,6 @@ func TestPodcastSegmentUnmarshalUsesNestedEnglishTranslation(t *testing.T) {
 	if got, want := seg.EnglishTranslation(), "nested english"; got != want {
 		t.Fatalf("unexpected english translation: got %q want %q", got, want)
 	}
-	if got, want := seg.EN, "nested english"; got != want {
-		t.Fatalf("unexpected EN field: got %q want %q", got, want)
-	}
 	if got, ok := seg.Translations["en"]; !ok || got != "nested english" {
 		t.Fatalf("unexpected translations.en: %q ok=%v", got, ok)
 	}
@@ -36,8 +32,8 @@ func TestPodcastSegmentMarshalOmitsTopLevelEN(t *testing.T) {
 	seg := PodcastSegment{
 		SegmentID: "seg_001",
 		Text:      "こんにちは",
-		EN:        "hello",
 		Translations: map[string]string{
+			"en": "hello",
 			"ja": "こんにちは",
 		},
 	}

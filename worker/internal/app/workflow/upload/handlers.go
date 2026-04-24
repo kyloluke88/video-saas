@@ -44,6 +44,9 @@ func HandleUploadTask(ctx context.Context, ch *amqp.Channel, task task.VideoTask
 	switch strings.ToLower(strings.TrimSpace(payload.ContentType)) {
 	case "podcast":
 		return handlePodcastUpload(ctx, payload)
+	case "practical":
+		log.Printf("📦 practical upload stage deprecated, skipping upload project_id=%s", payload.ProjectID)
+		return nil
 	default:
 		return handleSingleFileUpload(ctx, payload)
 	}

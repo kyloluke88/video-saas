@@ -577,6 +577,8 @@ func isRetryableGoogleRequestError(err error) bool {
 
 	message := strings.ToLower(strings.TrimSpace(err.Error()))
 	return strings.Contains(message, "tls handshake timeout") ||
+		strings.Contains(message, "tls: handshake failure") ||
+		strings.Contains(message, "remote error: tls") ||
 		strings.Contains(message, "bad record mac") ||
 		strings.Contains(message, "unexpected eof") ||
 		strings.Contains(message, "connection reset") ||

@@ -83,7 +83,6 @@ type PodcastSegment struct {
 	SpeakerName  string            `json:"speaker_name,omitempty"`
 	Text         string            `json:"text,omitempty"`
 	SpeechText   string            `json:"speech_text,omitempty"`
-	EN           string            `json:"-"`
 	Translations map[string]string `json:"translations,omitempty"`
 	Summary      bool              `json:"summary,omitempty"`
 	StartMS      int               `json:"start_ms,omitempty"`
@@ -198,7 +197,6 @@ func (s *PodcastSegment) UnmarshalJSON(data []byte) error {
 		SpeechText     string                 `json:"speech_text"`
 		TTSText        string                 `json:"tts_text"`
 		DisplayJA      string                 `json:"display_ja"`
-		EN             string                 `json:"en"`
 		Translations   map[string]string      `json:"translations"`
 		Summary        bool                   `json:"summary"`
 		StartMS        int                    `json:"start_ms"`
@@ -216,8 +214,7 @@ func (s *PodcastSegment) UnmarshalJSON(data []byte) error {
 	s.SpeakerName = strings.TrimSpace(raw.SpeakerName)
 	s.Text = firstNonEmpty(raw.Text, raw.DisplayJA)
 	s.SpeechText = firstNonEmpty(raw.SpeechText, raw.TTSText)
-	s.EN = firstNonEmpty(raw.Translations["en"], raw.EN)
-	s.Translations = normalizePodcastTranslations(raw.Translations, s.EN)
+	s.Translations = normalizePodcastTranslations(raw.Translations)
 	s.Summary = raw.Summary
 	s.StartMS = raw.StartMS
 	s.EndMS = raw.EndMS
@@ -244,14 +241,13 @@ func (s PodcastSegment) MarshalJSON() ([]byte, error) {
 		HighlightSpans []PodcastHighlightSpan `json:"highlight_spans,omitempty"`
 	}
 
-	translations := normalizePodcastTranslations(s.Translations, s.EN)
 	return json.Marshal(rawSegment{
 		SegmentID:      s.SegmentID,
 		Speaker:        s.Speaker,
 		SpeakerName:    s.SpeakerName,
 		Text:           s.Text,
 		SpeechText:     s.SpeechText,
-		Translations:   translations,
+		Translations:   normalizePodcastTranslations(s.Translations),
 		Summary:        s.Summary,
 		StartMS:        s.StartMS,
 		EndMS:          s.EndMS,
@@ -261,13 +257,21 @@ func (s PodcastSegment) MarshalJSON() ([]byte, error) {
 }
 
 func (s PodcastSegment) EnglishTranslation() string {
-	if text := strings.TrimSpace(s.Translations["en"]); text != "" {
-		return text
-	}
-	return strings.TrimSpace(s.EN)
+	return strings.TrimSpace(s.Translations["en"])
 }
 
-func normalizePodcastTranslations(values map[string]string, english string) map[string]string {
+func (s PodcastSegment) TranslationFor(language string) string {
+	language = strings.TrimSpace(language)
+	if language == "" {
+		return ""
+	}
+	if text := strings.TrimSpace(s.Translations[language]); text != "" {
+		return text
+	}
+	return ""
+}
+
+func normalizePodcastTranslations(values map[string]string) map[string]string {
 	out := make(map[string]string)
 	for key, value := range values {
 		key = strings.TrimSpace(key)
@@ -276,10 +280,6 @@ func normalizePodcastTranslations(values map[string]string, english string) map[
 			continue
 		}
 		out[key] = value
-	}
-	english = strings.TrimSpace(english)
-	if english != "" {
-		out["en"] = english
 	}
 	if len(out) == 0 {
 		return nil

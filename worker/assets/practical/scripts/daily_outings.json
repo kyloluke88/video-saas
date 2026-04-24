@@ -1,0 +1,1613 @@
+{
+    "title": "日常のお出かけ",
+    "en_title": "Daily Outings",
+    "language": "ja",
+    "difficulty_level": "N4",
+    "translation_locales": [
+        "en",
+        "es-419",
+        "zh-Hans",
+        "vi",
+        "ko",
+        "id"
+    ],
+    "youtube": {
+        "publish_title": "Daily Outings in Japanese | 日常のお出かけ",
+        "chapters": [
+            {
+                "block_id": "block_01",
+                "title_en": "Shopping at the Supermarket",
+                "title": "スーパーで買い物"
+            },
+            {
+                "block_id": "block_02",
+                "title_en": "Ordering at a Restaurant",
+                "title": "レストランで注文する"
+            },
+            {
+                "block_id": "block_03",
+                "title_en": "Asking for Directions",
+                "title": "道を聞く"
+            }
+        ],
+        "in_this_episode_you_will_learn": [
+            "How to ask where items are and compare products in a Japanese supermarket.",
+            "Useful phrases for ordering food, asking for recommendations, and paying at a restaurant.",
+            "Simple direction expressions such as straight, right, left, and walking time.",
+            "Natural polite Japanese you can use during everyday outings."
+        ],
+        "hashtags": [
+            "#StudyJapanese",
+            "#JapaneseListening",
+            "#JapaneseConversation",
+            "#LearnJapanese",
+            "#JLPTN4",
+            "#JapanesePodcast"
+        ],
+        "video_tags": [
+            "learn japanese",
+            "japanese listening practice",
+            "japanese conversation",
+            "daily japanese",
+            "jlpt n4 japanese",
+            "japanese podcast",
+            "shopping in japanese",
+            "restaurant japanese phrases",
+            "asking directions in japanese"
+        ],
+        "description_intro": [
+            "Practice natural Japanese for everyday outings with this practical listening episode. You will hear realistic conversations in a supermarket, a restaurant, and while asking for directions.",
+            "This episode is designed for learners around the N4 level who want clear, useful expressions for real-life situations. Follow the dialogue, review the vocabulary and grammar, and build confidence step by step.",
+            "It is a great lesson for improving listening, learning polite phrases, and getting comfortable with common daily interactions in Japanese."
+        ]
+    },
+    "vocabulary": [
+        {
+            "term": "お米",
+            "tokens": [
+                {
+                    "char": "米",
+                    "reading": "こめ"
+                }
+            ],
+            "meaning": "rice",
+            "explanation": "A common everyday word for rice sold in stores or eaten as a staple food in Japan.",
+            "examples": [
+                {
+                    "text": "すみません、お米はどこにありますか。",
+                    "tokens": [
+                        {
+                            "char": "米",
+                            "reading": "こめ"
+                        }
+                    ],
+                    "translation": "Excuse me, where is the rice?"
+                },
+                {
+                    "text": "今日はお米を一つ買います。",
+                    "tokens": [
+                        {
+                            "char": "今日",
+                            "reading": "きょう"
+                        },
+                        {
+                            "char": "米",
+                            "reading": "こめ"
+                        },
+                        {
+                            "char": "一",
+                            "reading": "ひと"
+                        },
+                        {
+                            "char": "買",
+                            "reading": "か"
+                        }
+                    ],
+                    "translation": "Today I will buy one bag of rice."
+                }
+            ]
+        },
+        {
+            "term": "値段",
+            "tokens": [
+                {
+                    "char": "値段",
+                    "reading": "ねだん"
+                }
+            ],
+            "meaning": "price",
+            "explanation": "This word is used when talking about how much something costs.",
+            "examples": [
+                {
+                    "text": "この二つのお米は値段が違いますが、何が違うんですか。",
+                    "tokens": [
+                        {
+                            "char": "二",
+                            "reading": "ふた"
+                        },
+                        {
+                            "char": "米",
+                            "reading": "こめ"
+                        },
+                        {
+                            "char": "値段",
+                            "reading": "ねだん"
+                        },
+                        {
+                            "char": "違",
+                            "reading": "ちが"
+                        },
+                        {
+                            "char": "何",
+                            "reading": "なに"
+                        },
+                        {
+                            "char": "違",
+                            "reading": "ちが"
+                        }
+                    ],
+                    "translation": "These two kinds of rice have different prices, but what is different about them?"
+                },
+                {
+                    "text": "このパンの値段はいくらですか。",
+                    "tokens": [
+                        {
+                            "char": "値段",
+                            "reading": "ねだん"
+                        }
+                    ],
+                    "translation": "How much is the price of this bread?"
+                }
+            ]
+        },
+        {
+            "term": "会計",
+            "tokens": [
+                {
+                    "char": "会計",
+                    "reading": "かいけい"
+                }
+            ],
+            "meaning": "bill; payment; checkout",
+            "explanation": "A useful word for paying at a restaurant or shop.",
+            "examples": [
+                {
+                    "text": "すみません、お会計をお願いします。",
+                    "tokens": [
+                        {
+                            "char": "会計",
+                            "reading": "かいけい"
+                        }
+                    ],
+                    "translation": "Excuse me, the check please."
+                },
+                {
+                    "text": "会計はレジでします。",
+                    "tokens": [
+                        {
+                            "char": "会計",
+                            "reading": "かいけい"
+                        }
+                    ],
+                    "translation": "You pay at the register."
+                }
+            ]
+        },
+        {
+            "term": "人気",
+            "tokens": [
+                {
+                    "char": "人気",
+                    "reading": "にんき"
+                }
+            ],
+            "meaning": "popular",
+            "explanation": "This word describes something that many people like or choose.",
+            "examples": [
+                {
+                    "text": "今日のランチセットが人気ですよ。",
+                    "tokens": [
+                        {
+                            "char": "今日",
+                            "reading": "きょう"
+                        },
+                        {
+                            "char": "人気",
+                            "reading": "にんき"
+                        }
+                    ],
+                    "translation": "Today's lunch set is popular."
+                },
+                {
+                    "text": "この店は学生に人気です。",
+                    "tokens": [
+                        {
+                            "char": "店",
+                            "reading": "みせ"
+                        },
+                        {
+                            "char": "学生",
+                            "reading": "がくせい"
+                        },
+                        {
+                            "char": "人気",
+                            "reading": "にんき"
+                        }
+                    ],
+                    "translation": "This shop is popular with students."
+                }
+            ]
+        },
+        {
+            "term": "現金",
+            "tokens": [
+                {
+                    "char": "現金",
+                    "reading": "げんきん"
+                }
+            ],
+            "meaning": "cash",
+            "explanation": "A basic payment word used when paying with physical money instead of a card.",
+            "examples": [
+                {
+                    "text": "現金で払います。ちょうどです。",
+                    "tokens": [
+                        {
+                            "char": "現金",
+                            "reading": "げんきん"
+                        },
+                        {
+                            "char": "払",
+                            "reading": "はら"
+                        }
+                    ],
+                    "translation": "I will pay in cash. Here is the exact amount."
+                },
+                {
+                    "text": "この店は現金だけです。",
+                    "tokens": [
+                        {
+                            "char": "店",
+                            "reading": "みせ"
+                        },
+                        {
+                            "char": "現金",
+                            "reading": "げんきん"
+                        }
+                    ],
+                    "translation": "This shop only accepts cash."
+                }
+            ]
+        },
+        {
+            "term": "道",
+            "tokens": [
+                {
+                    "char": "道",
+                    "reading": "みち"
+                }
+            ],
+            "meaning": "road; way; route",
+            "explanation": "A very common word used when talking about streets or asking how to get somewhere.",
+            "examples": [
+                {
+                    "text": "すみません、ちょっと道を教えてくれませんか。",
+                    "tokens": [
+                        {
+                            "char": "道",
+                            "reading": "みち"
+                        },
+                        {
+                            "char": "教",
+                            "reading": "おし"
+                        }
+                    ],
+                    "translation": "Excuse me, could you tell me the way?"
+                },
+                {
+                    "text": "この道をまっすぐ行ってください。",
+                    "tokens": [
+                        {
+                            "char": "道",
+                            "reading": "みち"
+                        },
+                        {
+                            "char": "行",
+                            "reading": "い"
+                        }
+                    ],
+                    "translation": "Please go straight down this road."
+                }
+            ]
+        },
+        {
+            "term": "駅",
+            "tokens": [
+                {
+                    "char": "駅",
+                    "reading": "えき"
+                }
+            ],
+            "meaning": "station",
+            "explanation": "A high-frequency word for a train station, especially useful when traveling or asking for directions.",
+            "examples": [
+                {
+                    "text": "さくら駅まで行きたいんですが、ここから歩けますか。",
+                    "tokens": [
+                        {
+                            "char": "駅",
+                            "reading": "えき"
+                        },
+                        {
+                            "char": "行",
+                            "reading": "い"
+                        },
+                        {
+                            "char": "歩",
+                            "reading": "ある"
+                        }
+                    ],
+                    "translation": "I want to go to Sakura Station, but can I walk there from here?"
+                },
+                {
+                    "text": "駅は左側にあります。",
+                    "tokens": [
+                        {
+                            "char": "駅",
+                            "reading": "えき"
+                        },
+                        {
+                            "char": "左側",
+                            "reading": "ひだりがわ"
+                        }
+                    ],
+                    "translation": "The station is on the left side."
+                }
+            ]
+        },
+        {
+            "term": "右に曲がる",
+            "tokens": [
+                {
+                    "char": "右",
+                    "reading": "みぎ"
+                },
+                {
+                    "char": "曲",
+                    "reading": "ま"
+                }
+            ],
+            "meaning": "to turn right",
+            "explanation": "A useful direction phrase for giving or following directions.",
+            "examples": [
+                {
+                    "text": "2つ目の角を右に曲がります。",
+                    "tokens": [
+                        {
+                            "char": "目",
+                            "reading": "め"
+                        },
+                        {
+                            "char": "角",
+                            "reading": "かど"
+                        },
+                        {
+                            "char": "右",
+                            "reading": "みぎ"
+                        },
+                        {
+                            "char": "曲",
+                            "reading": "ま"
+                        }
+                    ],
+                    "translation": "Turn right at the second corner."
+                },
+                {
+                    "text": "次の信号で右に曲がってください。",
+                    "tokens": [
+                        {
+                            "char": "次",
+                            "reading": "つぎ"
+                        },
+                        {
+                            "char": "信号",
+                            "reading": "しんごう"
+                        },
+                        {
+                            "char": "右",
+                            "reading": "みぎ"
+                        },
+                        {
+                            "char": "曲",
+                            "reading": "ま"
+                        }
+                    ],
+                    "translation": "Please turn right at the next traffic light."
+                }
+            ]
+        }
+    ],
+    "grammar": [
+        {
+            "pattern": "〜はどこにありますか",
+            "tokens": [],
+            "meaning": "Where is ...?",
+            "explanation": "Use this pattern to politely ask where an item or place is located.",
+            "examples": [
+                {
+                    "text": "お米はどこにありますか。",
+                    "tokens": [
+                        {
+                            "char": "米",
+                            "reading": "こめ"
+                        }
+                    ],
+                    "translation": "Where is the rice?"
+                },
+                {
+                    "text": "トイレはどこにありますか。",
+                    "tokens": [],
+                    "translation": "Where is the restroom?"
+                }
+            ]
+        },
+        {
+            "pattern": "〜てください",
+            "tokens": [],
+            "meaning": "please do ...",
+            "explanation": "A basic request pattern used to politely ask someone to do something.",
+            "examples": [
+                {
+                    "text": "この道をまっすぐ行ってください。",
+                    "tokens": [
+                        {
+                            "char": "道",
+                            "reading": "みち"
+                        },
+                        {
+                            "char": "行",
+                            "reading": "い"
+                        }
+                    ],
+                    "translation": "Please go straight on this road."
+                },
+                {
+                    "text": "ここで少し待ってください。",
+                    "tokens": [
+                        {
+                            "char": "少",
+                            "reading": "すこ"
+                        },
+                        {
+                            "char": "待",
+                            "reading": "ま"
+                        }
+                    ],
+                    "translation": "Please wait here for a moment."
+                }
+            ]
+        },
+        {
+            "pattern": "〜たいんですが",
+            "tokens": [],
+            "meaning": "I want to ..., but ... / I would like to ...",
+            "explanation": "This pattern is often used to softly introduce a request, question, or situation after saying what you want to do.",
+            "examples": [
+                {
+                    "text": "さくら駅まで行きたいんですが、ここから歩けますか。",
+                    "tokens": [
+                        {
+                            "char": "駅",
+                            "reading": "えき"
+                        },
+                        {
+                            "char": "行",
+                            "reading": "い"
+                        },
+                        {
+                            "char": "歩",
+                            "reading": "ある"
+                        }
+                    ],
+                    "translation": "I want to go to Sakura Station, but can I walk there from here?"
+                },
+                {
+                    "text": "水を買いたいんですが、近くに店はありますか。",
+                    "tokens": [
+                        {
+                            "char": "水",
+                            "reading": "みず"
+                        },
+                        {
+                            "char": "買",
+                            "reading": "か"
+                        },
+                        {
+                            "char": "近",
+                            "reading": "ちか"
+                        },
+                        {
+                            "char": "店",
+                            "reading": "みせ"
+                        }
+                    ],
+                    "translation": "I want to buy water, but is there a shop nearby?"
+                }
+            ]
+        },
+        {
+            "pattern": "〜になります",
+            "tokens": [],
+            "meaning": "it comes to ... / it will be ...",
+            "explanation": "In shops and restaurants, this polite expression is commonly used when telling the total amount.",
+            "examples": [
+                {
+                    "text": "全部で2,500円になります。",
+                    "tokens": [
+                        {
+                            "char": "全部",
+                            "reading": "ぜんぶ"
+                        },
+                        {
+                            "char": "円",
+                            "reading": "えん"
+                        }
+                    ],
+                    "translation": "The total comes to 2,500 yen."
+                },
+                {
+                    "text": "お会計は1,200円になります。",
+                    "tokens": [
+                        {
+                            "char": "会計",
+                            "reading": "かいけい"
+                        },
+                        {
+                            "char": "円",
+                            "reading": "えん"
+                        }
+                    ],
+                    "translation": "Your bill comes to 1,200 yen."
+                }
+            ]
+        },
+        {
+            "pattern": "〜をお願いします",
+            "tokens": [],
+            "meaning": "please give me ... / I would like ...",
+            "explanation": "A very common polite pattern used when ordering, requesting, or asking for service.",
+            "examples": [
+                {
+                    "text": "クレジットカードでお願いします。",
+                    "tokens": [],
+                    "translation": "By credit card, please."
+                },
+                {
+                    "text": "お会計をお願いします。",
+                    "tokens": [
+                        {
+                            "char": "会計",
+                            "reading": "かいけい"
+                        }
+                    ],
+                    "translation": "The check, please."
+                }
+            ]
+        }
+    ],
+    "blocks": [
+        {
+            "block_id": "block_01",
+            "block_prompt": "",
+            "topic": "スーパーで買い物",
+            "topic_translations": {
+                "en": "Shopping at the supermarket",
+                "es-419": "Comprar en el supermercado",
+                "zh-Hans": "超市购物",
+                "vi": "Mua sắm ở siêu thị",
+                "ko": "슈퍼마켓에서 장보기",
+                "id": "Belanja di supermarket"
+            },
+            "speakers": [
+                {
+                    "speaker_id": "female",
+                    "speaker_role": "customer"
+                },
+                {
+                    "speaker_id": "male",
+                    "speaker_role": "clerk"
+                }
+            ],
+            "chapters": [
+                {
+                    "chapter_id": "ch_01",
+                    "scene": "店員に売り場を聞いて商品を選ぶ",
+                    "scene_translations": {
+                        "en": "Asking the clerk for the aisle and choosing products",
+                        "es-419": "Preguntar al empleado por el pasillo y elegir productos",
+                        "zh-Hans": "向店员询问商品区并挑选商品",
+                        "vi": "Hỏi nhân viên về lối đi và chọn sản phẩm",
+                        "ko": "직원에게 매장 위치를 묻고 상품 고르기",
+                        "id": "Bertanya kepada pegawai tentang lorong dan memilih produk"
+                    },
+                    "scene_prompt": "@[customer] is standing in a bright Japanese supermarket, looking slightly confused, asking @[clerk] who is pointing politely towards a shelf. Clean 2D cartoon illustration, semi-flat shading, crisp line art, warm muted colors, friendly editorial style",
+                    "turns": [
+                        {
+                            "turn_id": "t_01",
+                            "speaker_role": "customer",
+                            "text": "すみません、お米はどこにありますか。",
+                            "speech_text": "すみません、お米はどこにありますか。",
+                            "translations": {
+                                "en": "Excuse me, where is the rice?",
+                                "es-419": "Disculpe, ¿dónde está el arroz?",
+                                "zh-Hans": "请问，大米在哪里？",
+                                "vi": "Xin lỗi, gạo ở đâu vậy?",
+                                "ko": "실례합니다, 쌀은 어디에 있나요?",
+                                "id": "Permisi, beras ada di mana?"
+                            },
+                            "tokens": [
+                                {
+                                    "char": "米",
+                                    "reading": "こめ"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_02",
+                            "speaker_role": "clerk",
+                            "text": "お米ですね。あちらの3番の棚にあります。",
+                            "speech_text": "お米ですね。あちらの3番の棚にあります。",
+                            "translations": {
+                                "en": "Rice, right? It's on shelf number 3 over there.",
+                                "es-419": "Arroz, ¿verdad? Está en el estante número 3 allá.",
+                                "zh-Hans": "大米是吗。在那边的3号货架上。",
+                                "vi": "Gạo phải không. Nó ở trên kệ số 3 đằng kia.",
+                                "ko": "쌀이군요. 저기 3번 선반에 있습니다.",
+                                "id": "Beras ya? Ada di rak nomor 3 sebelah sana."
+                            },
+                            "tokens": [
+                                {
+                                    "char": "米",
+                                    "reading": "こめ"
+                                },
+                                {
+                                    "char": "番",
+                                    "reading": "ばん"
+                                },
+                                {
+                                    "char": "棚",
+                                    "reading": "たな"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_03",
+                            "speaker_role": "customer",
+                            "text": "ありがとうございます。あ、この二つのお米は値段が違いますが、何が違うんですか。",
+                            "speech_text": "ありがとうございます。あ、この二つのお米は値段が違いますが、何が違うんですか。",
+                            "translations": {
+                                "en": "Thank you. Ah, these two types of rice have different prices, what is the difference?",
+                                "es-419": "Gracias. Ah, estos dos tipos de arroz tienen precios diferentes, ¿cuál es la diferencia?",
+                                "zh-Hans": "谢谢。啊，这两种大米价格不一样，有什么区别吗？",
+                                "vi": "Cảm ơn. À, hai loại gạo này giá khác nhau, có gì khác biệt vậy?",
+                                "ko": "감사합니다. 아, 이 두 가지 쌀은 가격이 다른데, 무엇이 다른가요?",
+                                "id": "Terima kasih. Ah, dua jenis beras ini harganya berbeda, apa bedanya?"
+                            },
+                            "tokens": [
+                                {
+                                    "char": "二",
+                                    "reading": "ふた"
+                                },
+                                {
+                                    "char": "米",
+                                    "reading": "こめ"
+                                },
+                                {
+                                    "char": "値段",
+                                    "reading": "ねだん"
+                                },
+                                {
+                                    "char": "違",
+                                    "reading": "ちが"
+                                },
+                                {
+                                    "char": "何",
+                                    "reading": "なに"
+                                },
+                                {
+                                    "char": "違",
+                                    "reading": "ちが"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_04",
+                            "speaker_role": "clerk",
+                            "text": "こちらは今年とれた新しいお米で、とても美味しいですよ。",
+                            "speech_text": "こちらは今年とれた新しいお米で、とても美味しいですよ。",
+                            "translations": {
+                                "en": "This one is newly harvested rice from this year, it's very delicious.",
+                                "es-419": "Este es arroz recién cosechado de este año, es muy delicioso.",
+                                "zh-Hans": "这个是今年刚收获的新米，非常美味哦。",
+                                "vi": "Đây là gạo mới thu hoạch năm nay, rất ngon đấy ạ.",
+                                "ko": "이것은 올해 수확한 햅쌀이라 아주 맛있습니다.",
+                                "id": "Ini adalah beras yang baru dipanen tahun ini, rasanya sangat enak."
+                            },
+                            "tokens": [
+                                {
+                                    "char": "今年",
+                                    "reading": "ことし"
+                                },
+                                {
+                                    "char": "新",
+                                    "reading": "あたら"
+                                },
+                                {
+                                    "char": "米",
+                                    "reading": "こめ"
+                                },
+                                {
+                                    "char": "美味",
+                                    "reading": "おい"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_05",
+                            "speaker_role": "customer",
+                            "text": "じゃあ、これを一つ買います。",
+                            "speech_text": "じゃあ、これを一つ買います。",
+                            "translations": {
+                                "en": "Then, I will buy one of this.",
+                                "es-419": "Entonces, compraré uno de estos.",
+                                "zh-Hans": "那我就买这个吧。",
+                                "vi": "Vậy, tôi sẽ mua một túi này.",
+                                "ko": "그럼, 이것으로 하나 살게요.",
+                                "id": "Kalau begitu, saya beli yang ini satu."
+                            },
+                            "tokens": [
+                                {
+                                    "char": "一",
+                                    "reading": "ひと"
+                                },
+                                {
+                                    "char": "買",
+                                    "reading": "か"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_06",
+                            "speaker_role": "clerk",
+                            "text": "ありがとうございます。レジはあちらです。",
+                            "speech_text": "ありがとうございます。レジはあちらです。",
+                            "translations": {
+                                "en": "Thank you. The register is over there.",
+                                "es-419": "Gracias. La caja registradora está allá.",
+                                "zh-Hans": "谢谢您。收银台在那边。",
+                                "vi": "Cảm ơn quý khách. Quầy thu ngân ở đằng kia.",
+                                "ko": "감사합니다. 계산대는 저쪽입니다.",
+                                "id": "Terima kasih. Kasir ada di sebelah sana."
+                            },
+                            "tokens": []
+                        }
+                    ]
+                },
+                {
+                    "chapter_id": "ch_02",
+                    "scene": "レジで会計する",
+                    "scene_translations": {
+                        "en": "Paying at the register",
+                        "es-419": "Pagando en la caja",
+                        "zh-Hans": "在收银台结账",
+                        "vi": "Thanh toán tại quầy thu ngân",
+                        "ko": "계산대에서 계산하기",
+                        "id": "Membayar di kasir"
+                    },
+                    "scene_prompt": "@[clerk] is standing behind the cash register, smiling and checking out items. @[customer] is holding a smartphone or wallet ready to pay. Clean 2D cartoon illustration, semi-flat shading, crisp line art, warm muted colors, friendly editorial style",
+                    "turns": [
+                        {
+                            "turn_id": "t_07",
+                            "speaker_role": "clerk",
+                            "text": "いらっしゃいませ。ポイントカードはお持ちですか。",
+                            "speech_text": "いらっしゃいませ。ポイントカードはお持ちですか。",
+                            "translations": {
+                                "en": "Welcome. Do you have a point card?",
+                                "es-419": "Bienvenido. ¿Tiene una tarjeta de puntos?",
+                                "zh-Hans": "欢迎光临。请问您有积分卡吗？",
+                                "vi": "Xin chào. Quý khách có thẻ tích điểm không ạ?",
+                                "ko": "어서 오세요. 포인트 카드가 있으신가요?",
+                                "id": "Selamat datang. Apakah Anda punya kartu poin?"
+                            },
+                            "tokens": [
+                                {
+                                    "char": "持",
+                                    "reading": "も"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_08",
+                            "speaker_role": "customer",
+                            "text": "いいえ、持っていません。",
+                            "speech_text": "いいえ、持っていません。",
+                            "translations": {
+                                "en": "No, I don't have one.",
+                                "es-419": "No, no la tengo.",
+                                "zh-Hans": "没有，我没带。",
+                                "vi": "Không, tôi không có.",
+                                "ko": "아니요, 없습니다.",
+                                "id": "Tidak, saya tidak punya."
+                            },
+                            "tokens": [
+                                {
+                                    "char": "持",
+                                    "reading": "も"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_09",
+                            "speaker_role": "clerk",
+                            "text": "かしこまりました。レジ袋はご利用になりますか。",
+                            "speech_text": "かしこまりました。レジ袋はご利用になりますか。",
+                            "translations": {
+                                "en": "Understood. Would you like a plastic bag?",
+                                "es-419": "Entendido. ¿Le gustaría una bolsa de plástico?",
+                                "zh-Hans": "好的。请问需要塑料袋吗？",
+                                "vi": "Vâng ạ. Quý khách có dùng túi nilon không?",
+                                "ko": "알겠습니다. 비닐봉투를 이용하시겠습니까?",
+                                "id": "Baik. Apakah Anda membutuhkan kantong plastik?"
+                            },
+                            "tokens": [
+                                {
+                                    "char": "袋",
+                                    "reading": "ぶくろ"
+                                },
+                                {
+                                    "char": "利用",
+                                    "reading": "りよう"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_10",
+                            "speaker_role": "customer",
+                            "text": "大丈夫です。マイバッグを持っていますから。",
+                            "speech_text": "大丈夫です。マイバッグを持っていますから。",
+                            "translations": {
+                                "en": "It's fine. I brought my own bag.",
+                                "es-419": "Está bien. Traje mi propia bolsa.",
+                                "zh-Hans": "不用了。我带了环保袋。",
+                                "vi": "Không sao đâu. Tôi có mang theo túi riêng rồi.",
+                                "ko": "괜찮습니다. 장바구니를 가지고 왔거든요.",
+                                "id": "Tidak apa-apa. Saya membawa tas belanja sendiri."
+                            },
+                            "tokens": [
+                                {
+                                    "char": "大丈夫",
+                                    "reading": "だいじょうぶ"
+                                },
+                                {
+                                    "char": "持",
+                                    "reading": "も"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_11",
+                            "speaker_role": "clerk",
+                            "text": "全部で2,500円になります。",
+                            "speech_text": "全部で2,500円になります。",
+                            "translations": {
+                                "en": "The total is 2,500 yen.",
+                                "es-419": "El total es de 2,500 yenes.",
+                                "zh-Hans": "总共是2500日元。",
+                                "vi": "Tổng cộng là 2.500 yên.",
+                                "ko": "전부 해서 2,500엔입니다.",
+                                "id": "Totalnya menjadi 2.500 yen."
+                            },
+                            "tokens": [
+                                {
+                                    "char": "全部",
+                                    "reading": "ぜんぶ"
+                                },
+                                {
+                                    "char": "円",
+                                    "reading": "えん"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_12",
+                            "speaker_role": "customer",
+                            "text": "クレジットカードでお願いします。",
+                            "speech_text": "クレジットカードでお願いします。",
+                            "translations": {
+                                "en": "By credit card, please.",
+                                "es-419": "Con tarjeta de crédito, por favor.",
+                                "zh-Hans": "请用信用卡结账。",
+                                "vi": "Tôi thanh toán bằng thẻ tín dụng.",
+                                "ko": "신용카드로 결제해 주세요.",
+                                "id": "Tolong gunakan kartu kredit."
+                            },
+                            "tokens": []
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "block_id": "block_02",
+            "block_prompt": "",
+            "topic": "レストランで注文する",
+            "topic_translations": {
+                "en": "Ordering at a restaurant",
+                "es-419": "Hacer un pedido en un restaurante",
+                "zh-Hans": "在餐厅点餐",
+                "vi": "Gọi món ở nhà hàng",
+                "ko": "레스토랑에서 주문하기",
+                "id": "Memesan di restoran"
+            },
+            "speakers": [
+                {
+                    "speaker_id": "male",
+                    "speaker_role": "customer"
+                },
+                {
+                    "speaker_id": "female",
+                    "speaker_role": "waiter"
+                }
+            ],
+            "chapters": [
+                {
+                    "chapter_id": "ch_03",
+                    "scene": "席に案内されてメニューを見る",
+                    "scene_translations": {
+                        "en": "Being guided to a seat and looking at the menu",
+                        "es-419": "Ser guiado a un asiento y mirar el menú",
+                        "zh-Hans": "被引导入座并查看菜单",
+                        "vi": "Được hướng dẫn vào chỗ ngồi và xem thực đơn",
+                        "ko": "자리를 안내받고 메뉴를 보기",
+                        "id": "Diarahkan ke tempat duduk dan melihat menu"
+                    },
+                    "scene_prompt": "@[waiter] is warmly guiding @[customer] to a clean wooden table in a cozy Japanese diner, handing him a menu. Clean 2D cartoon illustration, semi-flat shading, crisp line art, warm muted colors, friendly editorial style",
+                    "turns": [
+                        {
+                            "turn_id": "t_13",
+                            "speaker_role": "waiter",
+                            "text": "いらっしゃいませ。何名様ですか。",
+                            "speech_text": "いらっしゃいませ。何名様ですか。",
+                            "translations": {
+                                "en": "Welcome. How many people in your party?",
+                                "es-419": "Bienvenido. ¿Cuántas personas son?",
+                                "zh-Hans": "欢迎光临。请问几位？",
+                                "vi": "Kính chào quý khách. Quý khách đi mấy người ạ?",
+                                "ko": "어서 오세요. 몇 분이신가요?",
+                                "id": "Selamat datang. Untuk berapa orang?"
+                            },
+                            "tokens": [
+                                {
+                                    "char": "何名様",
+                                    "reading": "なんめいさま"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_14",
+                            "speaker_role": "customer",
+                            "text": "1人です。",
+                            "speech_text": "1人です。",
+                            "translations": {
+                                "en": "Just one.",
+                                "es-419": "Solo uno.",
+                                "zh-Hans": "一位。",
+                                "vi": "Một người ạ.",
+                                "ko": "한 명입니다.",
+                                "id": "Satu orang."
+                            },
+                            "tokens": [
+                                {
+                                    "char": "人",
+                                    "reading": "ひと"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_15",
+                            "speaker_role": "waiter",
+                            "text": "こちらの席へどうぞ。メニューです。",
+                            "speech_text": "こちらの席へどうぞ。メニューです。",
+                            "translations": {
+                                "en": "Please have a seat here. Here is the menu.",
+                                "es-419": "Por favor, tome asiento aquí. Aquí está el menú.",
+                                "zh-Hans": "请坐这边。这是菜单。",
+                                "vi": "Mời quý khách ngồi bên này. Đây là thực đơn ạ.",
+                                "ko": "이쪽 자리로 앉으세요. 메뉴판입니다.",
+                                "id": "Silakan duduk di sini. Ini menunya."
+                            },
+                            "tokens": [
+                                {
+                                    "char": "席",
+                                    "reading": "せき"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_16",
+                            "speaker_role": "customer",
+                            "text": "おすすめの料理はありますか。",
+                            "speech_text": "おすすめの料理はありますか。",
+                            "translations": {
+                                "en": "Do you have any recommended dishes?",
+                                "es-419": "¿Tienen algún plato recomendado?",
+                                "zh-Hans": "有什么推荐的菜吗？",
+                                "vi": "Nhà hàng có món nào gợi ý không?",
+                                "ko": "추천할 만한 요리가 있나요?",
+                                "id": "Apakah ada hidangan yang direkomendasikan?"
+                            },
+                            "tokens": [
+                                {
+                                    "char": "料理",
+                                    "reading": "りょうり"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_17",
+                            "speaker_role": "waiter",
+                            "text": "今日のランチセットが人気ですよ。",
+                            "speech_text": "今日のランチセットが人気ですよ。",
+                            "translations": {
+                                "en": "Today's lunch set is popular.",
+                                "es-419": "El menú del día de hoy es muy popular.",
+                                "zh-Hans": "今天的午餐套餐很受欢迎哦。",
+                                "vi": "Set ăn trưa hôm nay rất được yêu thích đấy ạ.",
+                                "ko": "오늘의 런치 세트가 인기 있습니다.",
+                                "id": "Paket makan siang hari ini sangat populer."
+                            },
+                            "tokens": [
+                                {
+                                    "char": "今日",
+                                    "reading": "きょう"
+                                },
+                                {
+                                    "char": "人気",
+                                    "reading": "にんき"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_18",
+                            "speaker_role": "customer",
+                            "text": "じゃあ、それをお願いします。あと、冷たいお水も。",
+                            "speech_text": "じゃあ、それをお願いします。あと、冷たいお水も。",
+                            "translations": {
+                                "en": "Then, I'll have that. And some cold water, please.",
+                                "es-419": "Entonces, pediré eso. Y un poco de agua fría, por favor.",
+                                "zh-Hans": "那请给我来一份这个。还要一杯冷水。",
+                                "vi": "Vậy cho tôi một phần đó. Và cho tôi thêm nước đá nhé.",
+                                "ko": "그럼, 그걸로 부탁드립니다. 그리고 시원한 물도 주세요.",
+                                "id": "Kalau begitu, saya pesan itu. Dan tolong air dingin juga."
+                            },
+                            "tokens": [
+                                {
+                                    "char": "冷",
+                                    "reading": "つめ"
+                                },
+                                {
+                                    "char": "水",
+                                    "reading": "みず"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "chapter_id": "ch_04",
+                    "scene": "料理を運ばれる・会計をする",
+                    "scene_translations": {
+                        "en": "Food is served and paying the bill",
+                        "es-419": "Se sirve la comida y se paga la cuenta",
+                        "zh-Hans": "上菜与结账",
+                        "vi": "Đồ ăn được dọn ra và thanh toán",
+                        "ko": "음식이 나오고 계산하기",
+                        "id": "Makanan disajikan dan membayar tagihan"
+                    },
+                    "scene_prompt": "@[waiter] is serving a delicious-looking meal to @[customer] who is sitting at the table with a happy expression. Later showing payment at a small counter. Clean 2D cartoon illustration, semi-flat shading, crisp line art, warm muted colors, friendly editorial style",
+                    "turns": [
+                        {
+                            "turn_id": "t_19",
+                            "speaker_role": "waiter",
+                            "text": "お待たせしました。ランチセットです。",
+                            "speech_text": "お待たせしました。ランチセットです。",
+                            "translations": {
+                                "en": "Thank you for waiting. Here is your lunch set.",
+                                "es-419": "Gracias por esperar. Aquí está su menú del día.",
+                                "zh-Hans": "让您久等了。这是您的午餐套餐。",
+                                "vi": "Cảm ơn quý khách đã đợi. Set ăn trưa đây ạ.",
+                                "ko": "오래 기다리셨습니다. 런치 세트입니다.",
+                                "id": "Terima kasih sudah menunggu. Ini paket makan siangnya."
+                            },
+                            "tokens": [
+                                {
+                                    "char": "待",
+                                    "reading": "ま"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_20",
+                            "speaker_role": "customer",
+                            "text": "ありがとうございます。美味しそうですね。",
+                            "speech_text": "ありがとうございます。美味しそうですね。",
+                            "translations": {
+                                "en": "Thank you. It looks delicious.",
+                                "es-419": "Gracias. Se ve delicioso.",
+                                "zh-Hans": "谢谢。看起来真好吃。",
+                                "vi": "Cảm ơn. Trông ngon quá nhỉ.",
+                                "ko": "감사합니다. 맛있어 보이네요.",
+                                "id": "Terima kasih. Kelihatannya enak."
+                            },
+                            "tokens": [
+                                {
+                                    "char": "美味",
+                                    "reading": "おい"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_21",
+                            "speaker_role": "waiter",
+                            "text": "ごゆっくりどうぞ。",
+                            "speech_text": "ごゆっくりどうぞ。",
+                            "translations": {
+                                "en": "Please take your time and enjoy.",
+                                "es-419": "Por favor, tómese su tiempo y disfrute.",
+                                "zh-Hans": "请慢用。",
+                                "vi": "Chúc quý khách ngon miệng.",
+                                "ko": "천천히 드세요.",
+                                "id": "Silakan dinikmati."
+                            },
+                            "tokens": []
+                        },
+                        {
+                            "turn_id": "t_22",
+                            "speaker_role": "customer",
+                            "text": "すみません、お会計をお願いします。",
+                            "speech_text": "すみません、お会計をお願いします。",
+                            "translations": {
+                                "en": "Excuse me, the check please.",
+                                "es-419": "Disculpe, la cuenta por favor.",
+                                "zh-Hans": "你好，请结账。",
+                                "vi": "Xin lỗi, cho tôi thanh toán với.",
+                                "ko": "저기요, 계산해 주세요.",
+                                "id": "Permisi, tolong bonnya."
+                            },
+                            "tokens": [
+                                {
+                                    "char": "会計",
+                                    "reading": "かいけい"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_23",
+                            "speaker_role": "waiter",
+                            "text": "はい。レジへどうぞ。1,200円になります。",
+                            "speech_text": "はい。レジへどうぞ。1,200円になります。",
+                            "translations": {
+                                "en": "Yes. Please come to the register. That will be 1,200 yen.",
+                                "es-419": "Sí. Por favor, pase por la caja. Serán 1,200 yenes.",
+                                "zh-Hans": "好的。请到收银台来。一共是1200日元。",
+                                "vi": "Vâng. Xin mời ra quầy thu ngân. Tổng cộng là 1.200 yên.",
+                                "ko": "네. 계산대로 오세요. 1,200엔입니다.",
+                                "id": "Ya. Silakan ke kasir. Totalnya 1.200 yen."
+                            },
+                            "tokens": [
+                                {
+                                    "char": "円",
+                                    "reading": "えん"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_24",
+                            "speaker_role": "customer",
+                            "text": "現金で払います。ちょうどです。",
+                            "speech_text": "現金で払います。ちょうどです。",
+                            "translations": {
+                                "en": "I'll pay with cash. Here is the exact amount.",
+                                "es-419": "Pagaré en efectivo. Aquí tiene la cantidad exacta.",
+                                "zh-Hans": "我付现金。刚好。",
+                                "vi": "Tôi trả tiền mặt. Vừa đủ luôn đây.",
+                                "ko": "현금으로 낼게요. 딱 맞습니다.",
+                                "id": "Saya bayar tunai. Uangnya pas."
+                            },
+                            "tokens": [
+                                {
+                                    "char": "現金",
+                                    "reading": "げんきん"
+                                },
+                                {
+                                    "char": "払",
+                                    "reading": "はら"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_25",
+                            "speaker_role": "waiter",
+                            "text": "ありがとうございます。またお越しください。",
+                            "speech_text": "ありがとうございます。またお越しください。",
+                            "translations": {
+                                "en": "Thank you very much. Please come again.",
+                                "es-419": "Muchas gracias. Por favor, vuelva pronto.",
+                                "zh-Hans": "非常感谢。欢迎下次光临。",
+                                "vi": "Cảm ơn quý khách rất nhiều. Hẹn gặp lại quý khách.",
+                                "ko": "감사합니다. 또 오세요.",
+                                "id": "Terima kasih banyak. Silakan datang kembali."
+                            },
+                            "tokens": [
+                                {
+                                    "char": "越",
+                                    "reading": "こ"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "block_id": "block_03",
+            "block_prompt": "",
+            "topic": "道を聞く",
+            "topic_translations": {
+                "en": "Asking for directions",
+                "es-419": "Pedir direcciones",
+                "zh-Hans": "问路",
+                "vi": "Hỏi đường",
+                "ko": "길 묻기",
+                "id": "Bertanya arah"
+            },
+            "speakers": [
+                {
+                    "speaker_id": "male",
+                    "speaker_role": "tourist"
+                },
+                {
+                    "speaker_id": "female",
+                    "speaker_role": "passerby"
+                }
+            ],
+            "chapters": [
+                {
+                    "chapter_id": "ch_05",
+                    "scene": "駅までの行き方を聞く",
+                    "scene_translations": {
+                        "en": "Asking for the way to the station",
+                        "es-419": "Preguntar el camino a la estación",
+                        "zh-Hans": "询问去车站的路",
+                        "vi": "Hỏi đường đến ga",
+                        "ko": "역으로 가는 길 묻기",
+                        "id": "Menanyakan jalan ke stasiun"
+                    },
+                    "scene_prompt": "@[tourist] is standing on a sunny sidewalk, looking at a map on her phone, politely stopping @[passerby] to ask for directions. Clean 2D cartoon illustration, semi-flat shading, crisp line art, warm muted colors, friendly editorial style",
+                    "turns": [
+                        {
+                            "turn_id": "t_26",
+                            "speaker_role": "tourist",
+                            "text": "すみません、ちょっと道を教えてくれませんか。",
+                            "speech_text": "すみません、ちょっと道を教えてくれませんか。",
+                            "translations": {
+                                "en": "Excuse me, could you tell me the way?",
+                                "es-419": "Disculpe, ¿podría decirme el camino?",
+                                "zh-Hans": "不好意思，能请您指个路吗？",
+                                "vi": "Xin lỗi, chị có thể chỉ đường cho tôi được không?",
+                                "ko": "실례합니다, 길 좀 가르쳐 주시겠어요?",
+                                "id": "Permisi, bisakah Anda memberi tahu jalan?"
+                            },
+                            "tokens": [
+                                {
+                                    "char": "道",
+                                    "reading": "みち"
+                                },
+                                {
+                                    "char": "教",
+                                    "reading": "おし"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_27",
+                            "speaker_role": "passerby",
+                            "text": "はい、どこに行きたいですか。",
+                            "speech_text": "はい、どこに行きたいですか。",
+                            "translations": {
+                                "en": "Yes, where do you want to go?",
+                                "es-419": "Sí, ¿a dónde quiere ir?",
+                                "zh-Hans": "好的，你想去哪里？",
+                                "vi": "Vâng, chị muốn đi đâu?",
+                                "ko": "네, 어디로 가고 싶으신가요?",
+                                "id": "Ya, Anda mau pergi ke mana?"
+                            },
+                            "tokens": [
+                                {
+                                    "char": "行",
+                                    "reading": "い"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_28",
+                            "speaker_role": "tourist",
+                            "text": "さくら駅まで行きたいんですが、ここから歩けますか。",
+                            "speech_text": "さくら駅まで行きたいんですが、ここから歩けますか。",
+                            "translations": {
+                                "en": "I'd like to go to Sakura Station, can I walk there from here?",
+                                "es-419": "Me gustaría ir a la estación Sakura, ¿puedo caminar hasta allá desde aquí?",
+                                "zh-Hans": "我想去樱花车站，从这里能走过去吗？",
+                                "vi": "Tôi muốn đến ga Sakura, từ đây có thể đi bộ không?",
+                                "ko": "사쿠라역까지 가고 싶은데, 여기서 걸어갈 수 있나요?",
+                                "id": "Saya ingin ke Stasiun Sakura, apakah bisa jalan kaki dari sini?"
+                            },
+                            "tokens": [
+                                {
+                                    "char": "駅",
+                                    "reading": "えき"
+                                },
+                                {
+                                    "char": "行",
+                                    "reading": "い"
+                                },
+                                {
+                                    "char": "歩",
+                                    "reading": "ある"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_29",
+                            "speaker_role": "passerby",
+                            "text": "はい、歩いて10分ぐらいですよ。",
+                            "speech_text": "はい、歩いて10分ぐらいですよ。",
+                            "translations": {
+                                "en": "Yes, it's about a 10-minute walk.",
+                                "es-419": "Sí, es una caminata de unos 10 minutos.",
+                                "zh-Hans": "能，走路大概10分钟。",
+                                "vi": "Được, đi bộ khoảng 10 phút thôi.",
+                                "ko": "네, 걸어서 10분 정도 걸려요.",
+                                "id": "Ya, sekitar 10 menit jalan kaki."
+                            },
+                            "tokens": [
+                                {
+                                    "char": "歩",
+                                    "reading": "ある"
+                                },
+                                {
+                                    "char": "分",
+                                    "reading": "ふん"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_30",
+                            "speaker_role": "tourist",
+                            "text": "よかったです。どうやって行けばいいですか。",
+                            "speech_text": "よかったです。どうやって行けばいいですか。",
+                            "translations": {
+                                "en": "That's good. How should I go there?",
+                                "es-419": "Qué bueno. ¿Cómo debo ir allá?",
+                                "zh-Hans": "太好了。我该怎么走呢？",
+                                "vi": "Tốt quá. Tôi nên đi như thế nào?",
+                                "ko": "다행이네요. 어떻게 가면 되나요?",
+                                "id": "Baguslah. Bagaimana cara ke sana?"
+                            },
+                            "tokens": [
+                                {
+                                    "char": "行",
+                                    "reading": "い"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_31",
+                            "speaker_role": "passerby",
+                            "text": "簡単ですよ。この道をまっすぐ行ってください。",
+                            "speech_text": "簡単ですよ。この道をまっすぐ行ってください。",
+                            "translations": {
+                                "en": "It's easy. Please go straight down this street.",
+                                "es-419": "Es fácil. Por favor, vaya directo por esta calle.",
+                                "zh-Hans": "很简单。请沿着这条路直走。",
+                                "vi": "Đơn giản lắm. Chị cứ đi thẳng đường này.",
+                                "ko": "간단해요. 이 길을 똑바로 가세요.",
+                                "id": "Mudah kok. Silakan jalan lurus di jalan ini."
+                            },
+                            "tokens": [
+                                {
+                                    "char": "簡単",
+                                    "reading": "かんたん"
+                                },
+                                {
+                                    "char": "道",
+                                    "reading": "みち"
+                                },
+                                {
+                                    "char": "行",
+                                    "reading": "い"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "chapter_id": "ch_06",
+                    "scene": "基本表現で案内する",
+                    "scene_translations": {
+                        "en": "Guiding using basic expressions",
+                        "es-419": "Guiar usando expresiones básicas",
+                        "zh-Hans": "用基本表达进行指路",
+                        "vi": "Hướng dẫn bằng cách dùng các từ cơ bản",
+                        "ko": "기본 표현으로 길 안내하기",
+                        "id": "Memandu menggunakan ekspresi dasar"
+                    },
+                    "scene_prompt": "@[passerby] is smiling and pointing her finger forward to show the direction to @[tourist] who is nodding attentively. Clean 2D cartoon illustration, semi-flat shading, crisp line art, warm muted colors, friendly editorial style",
+                    "turns": [
+                        {
+                            "turn_id": "t_32",
+                            "speaker_role": "tourist",
+                            "text": "まっすぐですね。それから？",
+                            "speech_text": "まっすぐですね。それから？",
+                            "translations": {
+                                "en": "Straight, right. And then?",
+                                "es-419": "Derecho, de acuerdo. ¿Y luego?",
+                                "zh-Hans": "直走对吧。然后呢？",
+                                "vi": "Đi thẳng nhỉ. Sau đó thì sao?",
+                                "ko": "똑바로요. 그리고 나서는요?",
+                                "id": "Lurus ya. Lalu?"
+                            },
+                            "tokens": []
+                        },
+                        {
+                            "turn_id": "t_33",
+                            "speaker_role": "passerby",
+                            "text": "2つ目の角を右に曲がります。",
+                            "speech_text": "2つ目の角を右に曲がります。",
+                            "translations": {
+                                "en": "You turn right at the second corner.",
+                                "es-419": "Gira a la derecha en la segunda esquina.",
+                                "zh-Hans": "在第二个路口向右转。",
+                                "vi": "Rẽ phải ở góc đường thứ hai.",
+                                "ko": "두 번째 모퉁이에서 오른쪽으로 돕니다.",
+                                "id": "Anda belok kanan di tikungan kedua."
+                            },
+                            "tokens": [
+                                {
+                                    "char": "目",
+                                    "reading": "め"
+                                },
+                                {
+                                    "char": "角",
+                                    "reading": "かど"
+                                },
+                                {
+                                    "char": "右",
+                                    "reading": "みぎ"
+                                },
+                                {
+                                    "char": "曲",
+                                    "reading": "ま"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_34",
+                            "speaker_role": "tourist",
+                            "text": "2つ目の角を右ですね。",
+                            "speech_text": "2つ目の角を右ですね。",
+                            "translations": {
+                                "en": "Turn right at the second corner, got it.",
+                                "es-419": "Doblar a la derecha en la segunda esquina, entendido.",
+                                "zh-Hans": "第二个路口右转，我记住了。",
+                                "vi": "Rẽ phải ở góc thứ hai nhỉ.",
+                                "ko": "두 번째 모퉁이에서 오른쪽이군요.",
+                                "id": "Belok kanan di tikungan kedua ya."
+                            },
+                            "tokens": [
+                                {
+                                    "char": "目",
+                                    "reading": "め"
+                                },
+                                {
+                                    "char": "角",
+                                    "reading": "かど"
+                                },
+                                {
+                                    "char": "右",
+                                    "reading": "みぎ"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_35",
+                            "speaker_role": "passerby",
+                            "text": "そうです。少し歩くと、左側に駅が見えます。",
+                            "speech_text": "そうです。少し歩くと、左側に駅が見えます。",
+                            "translations": {
+                                "en": "That's right. If you walk a little bit, you will see the station on your left.",
+                                "es-419": "Así es. Si camina un poco, verá la estación a su izquierda.",
+                                "zh-Hans": "是的。稍微走一点，就能在左边看到车站了。",
+                                "vi": "Đúng rồi. Đi thêm một chút nữa, chị sẽ thấy ga ở bên trái.",
+                                "ko": "맞아요. 조금 걸으면 왼쪽에 역이 보일 거예요.",
+                                "id": "Benar. Kalau jalan sedikit lagi, Anda akan melihat stasiun di sebelah kiri."
+                            },
+                            "tokens": [
+                                {
+                                    "char": "少",
+                                    "reading": "すこ"
+                                },
+                                {
+                                    "char": "歩",
+                                    "reading": "ある"
+                                },
+                                {
+                                    "char": "左側",
+                                    "reading": "ひだりがわ"
+                                },
+                                {
+                                    "char": "駅",
+                                    "reading": "えき"
+                                },
+                                {
+                                    "char": "見",
+                                    "reading": "み"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_36",
+                            "speaker_role": "tourist",
+                            "text": "わかりました。丁寧にありがとうございます。",
+                            "speech_text": "わかりました。丁寧にありがとうございます。",
+                            "translations": {
+                                "en": "I understand. Thank you for your polite explanation.",
+                                "es-419": "Entendido. Gracias por su amable explicación.",
+                                "zh-Hans": "我明白了。谢谢您的耐心讲解。",
+                                "vi": "Tôi hiểu rồi. Cảm ơn chị đã chỉ dẫn tận tình.",
+                                "ko": "알겠습니다. 친절하게 알려주셔서 감사합니다.",
+                                "id": "Saya mengerti. Terima kasih atas penjelasannya yang ramah."
+                            },
+                            "tokens": [
+                                {
+                                    "char": "丁寧",
+                                    "reading": "ていねい"
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "t_37",
+                            "speaker_role": "passerby",
+                            "text": "どういたしまして。気をつけてくださいね。",
+                            "speech_text": "どういたしまして。気をつけてくださいね。",
+                            "translations": {
+                                "en": "You're welcome. Please be careful.",
+                                "es-419": "De nada. Por favor, tenga cuidado.",
+                                "zh-Hans": "不客气。路上小心哦。",
+                                "vi": "Không có gì. Đi đường cẩn thận nhé.",
+                                "ko": "천만에요. 조심해서 가세요.",
+                                "id": "Sama-sama. Hati-hati di jalan ya."
+                            },
+                            "tokens": [
+                                {
+                                    "char": "気",
+                                    "reading": "き"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

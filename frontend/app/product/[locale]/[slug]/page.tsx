@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import PageViewTracker from "@/components/page-view-tracker";
-import ProductDetailPageView from "@/components/product-detail";
-import { getLocalizedProductDetail } from "@/lib/api";
-import { PAGE_VIEW_PAGE_TYPE } from "@/lib/page-view";
+import PageViewTracker from "@/features/analytics/page-view-tracker";
+import ProductDetailPageView from "@/features/commerce/product/components/product-detail";
+import { getLocalizedProductDetail } from "@/features/commerce/product/api.server";
+import { PAGE_VIEW_PAGE_TYPE } from "@/features/analytics/page-view.client";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;

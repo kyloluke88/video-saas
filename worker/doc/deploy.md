@@ -1,4 +1,4 @@
-ssh ec2-user@<你的EC2公网IP>
+ssh ec2-user@18.142.132.182
 
 cd /home/ec2-user/video-saas
 git pull origin main

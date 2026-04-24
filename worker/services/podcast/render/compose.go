@@ -42,6 +42,10 @@ func ComposeBaseVideoContext(ctx context.Context, input ComposeInput) error {
 	ffmpegTimeout := podcastComposeFFmpegTimeout(input.DialogueAudioPath)
 	animPath := podcastDesignAnimationPath(input.Language)
 	logoPath := podcastDesignLogoPath(input.Language)
+	logoInputIndex := 2
+	if animPath != "" {
+		logoInputIndex++
+	}
 
 	baseOutput := filepath.Join(projectDir, "podcast_base.mp4")
 	bgFilter := backgroundGraphFor(input.Resolution)
@@ -64,7 +68,7 @@ func ComposeBaseVideoContext(ctx context.Context, input ComposeInput) error {
 	}
 	if logoPath != "" {
 		args = appendLoopedImageInput(args, logoPath)
-		if logoFilter := podcastDesignLogoOverlayFilter(input.Resolution); logoFilter != "" {
+		if logoFilter := podcastDesignLogoOverlayFilter(input.Resolution, logoInputIndex); logoFilter != "" {
 			marginX, marginY := logoOverlayMargins(input.Resolution)
 			complexFilter += ";" + logoFilter + ";" + fmt.Sprintf("%s[logo]overlay=W-w-%d:%d:shortest=1:eof_action=pass[v1]", finalVideoLabel, marginX, marginY)
 			finalVideoLabel = "[v1]"
@@ -345,14 +349,9 @@ func podcastIntroAnimationPath(language string) string {
 }
 
 func podcastDesignAnimationPath(language string) string {
-	switch strings.TrimSpace(strings.ToLower(language)) {
-	case "ja":
-		return podcastDesignAnimationPathByFilename("headphone.gif")
-	case "zh":
-		return podcastDesignAnimationPathByFilename("headphone.gif")
-	default:
-		return ""
-	}
+	// Temporarily disable the top-left animation overlay for podcast videos.
+	// Keep the helper in place so it can be re-enabled without changing the call sites.
+	return ""
 }
 
 func podcastDesignAnimationPathByFilename(filename string) string {
@@ -399,7 +398,7 @@ func podcastDesignType1AnimationFilter(resolution string) string {
 	return fmt.Sprintf("[2:v]fps=15,scale=%d:%d:flags=lanczos,format=rgba[anim];[v0][anim]overlay=%d:%d:shortest=1:eof_action=pass", size, size, marginX, marginY)
 }
 
-func podcastDesignLogoOverlayFilter(resolution string) string {
+func podcastDesignLogoOverlayFilter(resolution string, inputIndex int) string {
 	playW, playH := resolutionSize(resolution)
 	size := playW / 14
 	if size < 42 {
@@ -416,7 +415,7 @@ func podcastDesignLogoOverlayFilter(resolution string) string {
 	if marginY < 14 {
 		marginY = 14
 	}
-	return fmt.Sprintf("[3:v]scale=%d:%d:flags=lanczos[logo]", size, size)
+	return fmt.Sprintf("[%d:v]scale=%d:%d:flags=lanczos[logo]", inputIndex, size, size)
 }
 
 func appendLoopedImageInput(args []string, path string) []string {

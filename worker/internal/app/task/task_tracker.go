@@ -8,6 +8,7 @@ import (
 	"time"
 
 	podcastreplay "worker/internal/app/workflow/podcast/replay"
+	practicalreplay "worker/internal/app/workflow/practical/replay"
 	"worker/internal/persistence"
 	"worker/pkg/x/mapx"
 )
@@ -145,7 +146,7 @@ func updateTrackedTask(task VideoTaskMessage, retryNum int, status int16, taskEr
 }
 
 func trackedTaskStage(task VideoTaskMessage) string {
-	return taskStage(task.TaskType)
+	return taskStage(taskContentType(task), task.TaskType)
 }
 
 func taskContentType(task VideoTaskMessage) string {
@@ -157,6 +158,8 @@ func taskContentType(task VideoTaskMessage) string {
 	switch {
 	case strings.HasPrefix(task.TaskType, "podcast."):
 		return "podcast"
+	case strings.HasPrefix(task.TaskType, "practical."):
+		return "practical"
 	case task.TaskType == "upload.v1" && strings.Contains(strings.ToLower(taskProjectID(task)), "podcast"):
 		return "podcast"
 	case strings.HasPrefix(task.TaskType, "scene.") || task.TaskType == "plan.v1" || task.TaskType == "compose.v1":
@@ -166,9 +169,23 @@ func taskContentType(task VideoTaskMessage) string {
 	}
 }
 
-func taskStage(taskType string) string {
-	if stage, ok := podcastreplay.PodcastStageForTaskType(taskType); ok {
-		return string(stage)
+func taskStage(contentType, taskType string) string {
+	switch strings.ToLower(strings.TrimSpace(contentType)) {
+	case "practical":
+		if stage, ok := practicalreplay.PracticalStageForTaskType(taskType); ok {
+			return string(stage)
+		}
+	case "podcast":
+		if stage, ok := podcastreplay.PodcastStageForTaskType(taskType); ok {
+			return string(stage)
+		}
+	default:
+		if stage, ok := podcastreplay.PodcastStageForTaskType(taskType); ok && strings.HasPrefix(strings.TrimSpace(taskType), "podcast.") {
+			return string(stage)
+		}
+		if stage, ok := practicalreplay.PracticalStageForTaskType(taskType); ok && strings.HasPrefix(strings.TrimSpace(taskType), "practical.") {
+			return string(stage)
+		}
 	}
 	switch taskType {
 	case "plan.v1":
@@ -192,13 +209,27 @@ func taskRunMode(task VideoTaskMessage) *int {
 }
 
 func isTerminalProjectTask(task VideoTaskMessage) bool {
-	switch taskContentType(task) {
+	contentType := taskContentType(task)
+	switch contentType {
 	case "podcast":
-		stage := taskStage(task.TaskType)
+		stage := taskStage(contentType, task.TaskType)
 		if stage == "" || stage == "unknown" {
 			return false
 		}
 		nextStage, ok, err := podcastreplay.NextPodcastStage(taskTTSType(task), stage, taskSpecifyTasks(task))
+		if err != nil {
+			return false
+		}
+		return !ok || strings.TrimSpace(nextStage) == ""
+	case "practical":
+		if task.TaskType == "upload.v1" {
+			return true
+		}
+		stage := taskStage(contentType, task.TaskType)
+		if stage == "" || stage == "unknown" {
+			return false
+		}
+		nextStage, ok, err := practicalreplay.NextPracticalStage(stage, taskSpecifyTasks(task))
 		if err != nil {
 			return false
 		}

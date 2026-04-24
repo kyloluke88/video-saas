@@ -41,3 +41,11 @@ worker 已具备独立连接 PostgreSQL 的实现，使用的环境变量与 bac
 - worker 当前通过 `gorm.io/gorm` 和 `gorm.io/driver/postgres` 直接写入：
   - `projects`
   - `podcast_script_pages`
+
+
+## project
+- service_account:  https://console.cloud.google.com/iam-admin/serviceaccounts?hl=ja&project=gen-lang-client-0260938115
+
+
+## test vioce
+- https://aistudio.google.com/generate-speech

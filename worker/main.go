@@ -11,9 +11,12 @@ import (
 	podcastaudiopipeline "worker/internal/app/workflow/podcast/audio"
 	podcastcomposepipeline "worker/internal/app/workflow/podcast/compose"
 	podcastpagepipeline "worker/internal/app/workflow/podcast/page"
+	practicalaudiopipeline "worker/internal/app/workflow/practical/audio"
+	practicalcomposepipeline "worker/internal/app/workflow/practical/compose"
+	practicalpagepipeline "worker/internal/app/workflow/practical/page"
 	uploadpipeline "worker/internal/app/workflow/upload"
-	"worker/pkg/googlecloud"
 	conf "worker/pkg/config"
+	"worker/pkg/googlecloud"
 )
 
 func main() {
@@ -75,14 +78,19 @@ func main() {
 
 func newTaskScheduler() map[string]task.TaskHandler {
 	return map[string]task.TaskHandler{
-		"plan.v1":                     idiompipeline.HandlePlan,
-		"scene.generate.v1":           idiompipeline.HandleSceneGenerate,
-		"compose.v1":                  idiompipeline.HandleProjectCompose,
-		"podcast.audio.generate.v1":   podcastaudiopipeline.HandleGenerate,
-		"podcast.audio.align.v1":      podcastaudiopipeline.HandleAlign,
-		"podcast.compose.render.v1":   podcastcomposepipeline.HandleComposeRender,
-		"podcast.compose.finalize.v1": podcastcomposepipeline.HandleComposeFinalize,
-		"upload.v1":                   uploadpipeline.HandleUploadTask,
-		"podcast.page.persist.v1":     podcastpagepipeline.HandlePersist,
+		"plan.v1":                       idiompipeline.HandlePlan,
+		"scene.generate.v1":             idiompipeline.HandleSceneGenerate,
+		"compose.v1":                    idiompipeline.HandleProjectCompose,
+		"practical.audio.generate.v1":   practicalaudiopipeline.HandleGenerate,
+		"practical.audio.align.v1":      practicalaudiopipeline.HandleAlign,
+		"practical.compose.render.v1":   practicalcomposepipeline.HandleComposeRender,
+		"practical.compose.finalize.v1": practicalcomposepipeline.HandleComposeFinalize,
+		"practical.page.persist.v1":     practicalpagepipeline.HandlePersist,
+		"podcast.audio.generate.v1":     podcastaudiopipeline.HandleGenerate,
+		"podcast.audio.align.v1":        podcastaudiopipeline.HandleAlign,
+		"podcast.compose.render.v1":     podcastcomposepipeline.HandleComposeRender,
+		"podcast.compose.finalize.v1":   podcastcomposepipeline.HandleComposeFinalize,
+		"upload.v1":                     uploadpipeline.HandleUploadTask,
+		"podcast.page.persist.v1":       podcastpagepipeline.HandlePersist,
 	}
 }

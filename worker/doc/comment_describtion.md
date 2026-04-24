@@ -14,9 +14,9 @@ https://podcast.lucayo.com/podcast/scripts/do-young-people-still-want-to-get-mar
 ### 日本語
 
 📚 Full script + vocabulary & grammar PDF here 👇
-https://podcast.lucayo.com/podcast/scripts/do-young-people-still-want-to-get-married
+https://podcast.lucayo.com/podcast/scripts/how-to-find-and-enjoy-hobbies-as-an-adult
 Hope this helps with your Japanese study! 😊
 
 📚 完全なスクリプト＋語彙・文法PDFはこちら 👇
-https://podcast.lucayo.com/podcast/scripts/do-young-people-still-want-to-get-married
+https://podcast.lucayo.com/podcast/scripts/how-to-find-and-enjoy-hobbies-as-an-adult
 日本語学習のお役に立てれば嬉しいです！😊

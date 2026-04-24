@@ -1,0 +1,75 @@
+{
+    "title": "日本語タイトル",
+    "en_title": "English Title",
+    "language": "ja",
+    "difficulty_level": "N2",
+    "translation_locales": [
+        "en",
+        "es-419",
+        "zh-Hans",
+        "vi",
+        "ko",
+        "id"
+    ],
+    "blocks": [
+        {
+            "block_id": "block_01",
+            "topic": "スーパーで買い物",
+            "topic_translations": {
+                "en": "Shopping at the supermarket",
+                "es-419": "Comprar en el supermercado",
+                "zh-Hans": "超市购物",
+                "vi": "Mua sắm ở siêu thị",
+                "ko": "마트에서 장보기",
+                "id": "Belanja di supermarket"
+            },
+            "speakers": [
+                {
+                    "speaker_id": "female",
+                    "speaker_role": "customer"
+                },
+                {
+                    "speaker_id": "male",
+                    "speaker_role": "waiter"
+                }
+            ],
+            "chapters": [
+                {
+                    "chapter_id": "ch_01",
+                    "scene": "店員に売り場を聞く",
+                    "scene_translations": {
+                        "en": "Asking a store clerk where an item is",
+                        "es-419": "Preguntar al empleado dónde está un producto",
+                        "zh-Hans": "向店员询问商品区在哪里",
+                        "vi": "Hỏi nhân viên cửa hàng món đồ ở đâu",
+                        "ko": "직원에게 상품 위치를 묻기",
+                        "id": "Bertanya kepada pegawai toko barang ada di mana"
+                    },
+                    "scene_prompt": "A clean Japanese supermarket dairy aisle, neatly arranged milk shelves, soft warm lighting, a customer asking a store clerk for help, realistic everyday shopping atmosphere, static composition, no text, no watermark",
+                    "turns": [
+                        {
+                            "turn_id": "ch01_t01",
+                            "speaker_role": "customer",
+                            "text": "すみません。牛乳はどこですか？",
+                            "speech_text": "すみません。ぎゅうにゅう は どこ です か？",
+                            "translations": {
+                                "en": "Excuse me. Where is the milk?",
+                                "es-419": "Disculpe. ¿Dónde está la leche?",
+                                "zh-Hans": "请问，牛奶在哪儿？",
+                                "vi": "Xin lỗi, sữa ở đâu vậy?",
+                                "ko": "실례합니다. 우유는 어디에 있나요?",
+                                "id": "Permisi, susu ada di mana?"
+                            },
+                            "tokens": [
+                                {
+                                    "text": "牛乳",
+                                    "reading": "ぎゅうにゅう"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

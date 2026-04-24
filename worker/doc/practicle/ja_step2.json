@@ -1,0 +1,201 @@
+{
+    "title": "日本語タイトル",
+    "en_title": "English Title",
+    "language": "ja",
+    "difficulty_level": "N2",
+    "translation_locales": [
+        "en",
+        "es-419",
+        "zh-Hans",
+        "vi",
+        "ko",
+        "id"
+    ],
+    "youtube": {
+        "publish_title": "English Title | 日本語タイトル",
+        "chapters": [
+            {
+                "block_id": "ch_001",
+                "title_en": "Topic Hook",
+                "title": "話題の入り口"
+            }
+        ],
+        "in_this_episode_you_will_learn": [
+            "What you will learn bullet 1",
+            "What you will learn bullet 2",
+            "What you will learn bullet 3"
+        ],
+        "hashtags": [
+            "#StudyJapanese",
+            "#JapaneseListening",
+            "#LearnJapanese"
+        ],
+        "video_tags": [
+            "learn japanese",
+            "japanese listening practice",
+            "japanese podcast"
+        ],
+        "description_intro": [
+            "First English paragraph for YouTube description.",
+            "Second English paragraph for YouTube description."
+        ]
+    },
+    "vocabulary": [
+        {
+            "term": "話題",
+            "tokens": [
+                {
+                    "char": "話題",
+                    "reading": "わだい"
+                }
+            ],
+            "meaning": "topic; subject of conversation",
+            "explanation": "A basic word for the topic or subject people are currently talking about in conversation or the news.",
+            "examples": [
+                {
+                    "text": "この話題、最近ほんとうによく聞きますよね。",
+                    "tokens": [
+                        {
+                            "char": "話題",
+                            "reading": "わだい"
+                        },
+                        {
+                            "char": "最近",
+                            "reading": "さいきん"
+                        },
+                        {
+                            "char": "聞",
+                            "reading": "き"
+                        }
+                    ],
+                    "translation": "This is something I have been hearing about a lot lately."
+                },
+                {
+                    "text": "今日はその話題についてゆっくり話したいです。",
+                    "tokens": [
+                        {
+                            "char": "今日",
+                            "reading": "きょう"
+                        },
+                        {
+                            "char": "話題",
+                            "reading": "わだい"
+                        },
+                        {
+                            "char": "話",
+                            "reading": "はな"
+                        }
+                    ],
+                    "translation": "Today I want to talk about that topic slowly."
+                }
+            ]
+        }
+    ],
+    "grammar": [
+        {
+            "pattern": "〜よね",
+            "tokens": [],
+            "meaning": "right? / you know?",
+            "explanation": "A sentence-ending pattern often used to seek gentle agreement or shared understanding from the listener.",
+            "examples": [
+                {
+                    "text": "この話題、最近ほんとうによく聞きますよね。",
+                    "tokens": [
+                        {
+                            "char": "話題",
+                            "reading": "わだい"
+                        },
+                        {
+                            "char": "最近",
+                            "reading": "さいきん"
+                        },
+                        {
+                            "char": "聞",
+                            "reading": "き"
+                        }
+                    ],
+                    "translation": "This is something I have been hearing about a lot lately, right?"
+                },
+                {
+                    "text": "今日は少し寒いですよね。",
+                    "tokens": [
+                        {
+                            "char": "今日",
+                            "reading": "きょう"
+                        },
+                        {
+                            "char": "少",
+                            "reading": "すこ"
+                        },
+                        {
+                            "char": "寒",
+                            "reading": "さむ"
+                        }
+                    ],
+                    "translation": "It is a little cold today, isn’t it?"
+                }
+            ]
+        }
+    ],
+    "blocks": [
+        {
+            "block_id": "block_01",
+            "topic": "スーパーで買い物",
+            "topic_translations": {
+                "en": "Shopping at the supermarket",
+                "es-419": "Comprar en el supermercado",
+                "zh-Hans": "超市购物",
+                "vi": "Mua sắm ở siêu thị",
+                "ko": "마트에서 장보기",
+                "id": "Belanja di supermarket"
+            },
+            "speakers": [
+                {
+                    "speaker_id": "female",
+                    "speaker_role": "customer"
+                },
+                {
+                    "speaker_id": "male",
+                    "speaker_role": "waiter"
+                }
+            ],
+            "chapters": [
+                {
+                    "chapter_id": "ch_01",
+                    "scene": "店員に売り場を聞く",
+                    "scene_translations": {
+                        "en": "Asking a store clerk where an item is",
+                        "es-419": "Preguntar al empleado dónde está un producto",
+                        "zh-Hans": "向店员询问商品区在哪里",
+                        "vi": "Hỏi nhân viên cửa hàng món đồ ở đâu",
+                        "ko": "직원에게 상품 위치를 묻기",
+                        "id": "Bertanya kepada pegawai toko barang ada di mana"
+                    },
+                    "scene_prompt": "A clean Japanese supermarket dairy aisle, neatly arranged milk shelves, soft warm lighting, a customer asking a store clerk for help, realistic everyday shopping atmosphere, static composition, no text, no watermark",
+                    "turns": [
+                        {
+                            "turn_id": "ch01_t01",
+                            "speaker_role": "customer",
+                            "text": "すみません。牛乳はどこですか？",
+                            "speech_text": "すみません。ぎゅうにゅう は どこ です か？",
+                            "translations": {
+                                "en": "Excuse me. Where is the milk?",
+                                "es-419": "Disculpe. ¿Dónde está la leche?",
+                                "zh-Hans": "请问，牛奶在哪儿？",
+                                "vi": "Xin lỗi, sữa ở đâu vậy?",
+                                "ko": "실례합니다. 우유는 어디에 있나요?",
+                                "id": "Permisi, susu ada di mana?"
+                            },
+                            "tokens": [
+                                {
+                                    "text": "牛乳",
+                                    "reading": "ぎゅうにゅう"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

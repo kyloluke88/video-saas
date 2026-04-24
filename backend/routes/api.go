@@ -61,6 +61,7 @@ func RegisterApiRoutes(r *gin.Engine) {
 		videoGroup.POST("/content/idiom/create", videoCtrl.CreateIdiomStory)
 		videoGroup.POST("/content/idiom/submit", videoCtrl.SubmitPlan)
 		videoGroup.POST("/content/podcast/create", videoCtrl.CreatePodcastDialogue)
+		videoGroup.POST("/content/practical/create", videoCtrl.CreatePracticalDialogue)
 		videoGroup.POST("/project/cancel", videoCtrl.CancelProject)
 	}
 

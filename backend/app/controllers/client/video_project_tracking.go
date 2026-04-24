@@ -59,6 +59,17 @@ func trackPodcastProject(
 	trackProject(projectID, "podcast", &runModeValue, podcastStageForTaskType(targetTaskType), targetTaskType, payloadForTracking)
 }
 
+func trackPracticalProject(
+	projectID string,
+	runMode int,
+	targetTaskType string,
+	requestPayload map[string]interface{},
+) {
+	runModeValue := runMode
+	payloadForTracking := buildTrackedPracticalPayload(runMode, requestPayload)
+	trackProject(projectID, "practical", &runModeValue, practicalStageForTaskType(targetTaskType), targetTaskType, payloadForTracking)
+}
+
 func trackIdiomProject(projectID string, targetTaskType string, requestPayload map[string]interface{}) {
 	runModeValue := 0
 	trackProject(projectID, "idiom", &runModeValue, "plan", targetTaskType, requestPayload)
@@ -88,6 +99,10 @@ func markPodcastProjectRequestFailed(projectID string, taskType string, err erro
 	markProjectRequestFailed(projectID, taskType, err)
 }
 
+func markPracticalProjectRequestFailed(projectID string, taskType string, err error) {
+	markProjectRequestFailed(projectID, taskType, err)
+}
+
 func buildTrackedPodcastPayload(runMode int, requestPayload map[string]interface{}) map[string]interface{} {
 	patch := cloneStringAnyMap(requestPayload)
 	if runMode == 0 {
@@ -110,6 +125,34 @@ func buildTrackedPodcastPayload(runMode int, requestPayload map[string]interface
 	base := make(map[string]interface{})
 	if err := json.Unmarshal(sourceProject.Payload, &base); err != nil {
 		logger.Warn("decode source project payload failed", zap.Error(err), zap.String("source_project_id", sourceProjectID))
+		return patch
+	}
+	return mergeStringAnyMap(base, patch)
+}
+
+func buildTrackedPracticalPayload(runMode int, requestPayload map[string]interface{}) map[string]interface{} {
+	patch := cloneStringAnyMap(requestPayload)
+	if runMode == 0 {
+		return patch
+	}
+
+	sourceProjectID := strings.TrimSpace(anyString(requestPayload["source_project_id"]))
+	if sourceProjectID == "" || database.DB == nil {
+		return patch
+	}
+
+	sourceProject, err := content.FindProjectByProjectID(sourceProjectID)
+	if err != nil {
+		logger.Warn("load source practical project payload failed", zap.Error(err), zap.String("source_project_id", sourceProjectID))
+		return patch
+	}
+	if len(sourceProject.Payload) == 0 {
+		return patch
+	}
+
+	base := make(map[string]interface{})
+	if err := json.Unmarshal(sourceProject.Payload, &base); err != nil {
+		logger.Warn("decode source practical project payload failed", zap.Error(err), zap.String("source_project_id", sourceProjectID))
 		return patch
 	}
 	return mergeStringAnyMap(base, patch)

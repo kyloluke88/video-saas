@@ -345,6 +345,94 @@ func (ctrl *VideoController) CreatePodcastDialogue(c *gin.Context) {
 	})
 }
 
+func (ctrl *VideoController) CreatePracticalDialogue(c *gin.Context) {
+	var req video.CreatePracticalDialogueRequest
+	if !ctrl.BindJSON(c, &req) {
+		return
+	}
+
+	runMode := normalizePracticalRunMode(req.RunMode)
+	projectID, err := resolvePracticalProjectID(req, runMode)
+	if err != nil {
+		response.BadRequest(c, err, err.Error())
+		return
+	}
+
+	bgImgFilenames := compactStringSlice(req.BgImgFilenames)
+	blockBgImgFilenames := compactStringSlice(req.BlockBgImgFilenames)
+	blockNums := compactPositiveInts(req.BlockNums)
+	if runMode == 0 {
+		if strings.TrimSpace(req.Lang) == "" {
+			response.BadRequest(c, fmt.Errorf("lang is required when run_mode is 0"), "lang is required when run_mode is 0")
+			return
+		}
+		if strings.TrimSpace(req.ScriptFilename) == "" {
+			response.BadRequest(c, fmt.Errorf("script_filename is required when run_mode is 0"), "script_filename is required when run_mode is 0")
+			return
+		}
+		if len(bgImgFilenames) == 0 {
+			response.BadRequest(c, fmt.Errorf("bg_img_filenames is required when run_mode is 0"), "bg_img_filenames is required when run_mode is 0")
+			return
+		}
+	}
+
+	requestPayload := buildPracticalRequestPayload(req, projectID, runMode, blockNums, bgImgFilenames, blockBgImgFilenames)
+	trackedPayload := buildTrackedPracticalPayload(runMode, requestPayload)
+
+	requestSpecifyTasks := compactStringSlice(req.SpecifyTasks)
+	if runMode == 1 {
+		specifyTasks, err := normalizePracticalSpecifyTasks(requestSpecifyTasks)
+		if err != nil {
+			response.BadRequest(c, err, err.Error())
+			return
+		}
+		if len(specifyTasks) == 0 {
+			response.BadRequest(c, fmt.Errorf("specify_tasks is required when run_mode is 1"), "specify_tasks is required when run_mode is 1")
+			return
+		}
+		if practicalSpecifiesStage(specifyTasks, practicalStageGenerate) && len(blockNums) == 0 {
+			response.BadRequest(c, fmt.Errorf("block_nums is required when specify_tasks includes generate"), "block_nums is required when specify_tasks includes generate")
+			return
+		}
+		trackedPayload["specify_tasks"] = specifyTasks
+		trackedPayload["source_project_id"] = strings.TrimSpace(req.ProjectID)
+	} else {
+		delete(trackedPayload, "specify_tasks")
+		delete(trackedPayload, "source_project_id")
+	}
+	trackedPayload["run_mode"] = runMode
+	trackedPayload["project_id"] = projectID
+
+	taskType, err := practicalTaskTypeForInitialStage(runMode, payloadStringSlice(trackedPayload, "specify_tasks"))
+	if err != nil {
+		response.BadRequest(c, err, err.Error())
+		return
+	}
+	payload := buildPracticalTaskPayload(trackedPayload)
+
+	trackPracticalProject(projectID, runMode, taskType, trackedPayload)
+
+	taskID, err := queue.PublishVideoTask(taskType, payload)
+	if err != nil {
+		markPracticalProjectRequestFailed(projectID, taskType, err)
+		if errors.Is(err, queue.ErrDisabled) {
+			c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
+				"message": "rabbitmq is disabled on this environment",
+			})
+			return
+		}
+		response.Abort500(c, "enqueue practical audio task failed: "+err.Error())
+		return
+	}
+
+	response.JSON(c, gin.H{
+		"message":    "practical dialogue accepted",
+		"project_id": projectID,
+		"task_id":    taskID,
+		"task_type":  taskType,
+	})
+}
+
 func anyString(v interface{}) string {
 	if s, ok := v.(string); ok {
 		return s
@@ -360,6 +448,11 @@ func buildProjectID(seed string) string {
 
 func buildPodcastProjectID(lang string) string {
 	prefix := normalizePodcastLang(lang) + "_podcast"
+	return fmt.Sprintf("%s_%s", prefix, time.Now().Format("20060102150405"))
+}
+
+func buildPracticalProjectID(lang string) string {
+	prefix := normalizePodcastLang(lang) + "_practical"
 	return fmt.Sprintf("%s_%s", prefix, time.Now().Format("20060102150405"))
 }
 
@@ -384,6 +477,19 @@ func resolvePodcastProjectID(req video.CreatePodcastDialogueRequest, runMode int
 
 	lang := normalizePodcastLang(req.Lang)
 	return buildPodcastProjectID(lang), nil
+}
+
+func resolvePracticalProjectID(req video.CreatePracticalDialogueRequest, runMode int) (string, error) {
+	if runMode == 1 {
+		sourceProjectID := strings.TrimSpace(req.ProjectID)
+		if sourceProjectID == "" {
+			return "", fmt.Errorf("project_id is required when run_mode is 1")
+		}
+		return buildPracticalReplayProjectID(sourceProjectID), nil
+	}
+
+	lang := normalizePodcastLang(req.Lang)
+	return buildPracticalProjectID(lang), nil
 }
 
 func buildPodcastRequestPayload(
@@ -449,6 +555,92 @@ func buildPodcastRequestPayload(
 	return payload
 }
 
+func buildPracticalRequestPayload(
+	req video.CreatePracticalDialogueRequest,
+	projectID string,
+	runMode int,
+	blockNums []int,
+	bgImgFilenames []string,
+	blockBgImgFilenames []string,
+) map[string]interface{} {
+	payload := map[string]interface{}{
+		"content_type": "practical",
+		"project_id":   projectID,
+		"run_mode":     runMode,
+	}
+	if runMode == 1 {
+		if sourceProjectID := strings.TrimSpace(req.ProjectID); sourceProjectID != "" {
+			payload["source_project_id"] = sourceProjectID
+		}
+		if tasks := compactStringSlice(req.SpecifyTasks); len(tasks) > 0 {
+			payload["specify_tasks"] = tasks
+		}
+	}
+	if lang := strings.TrimSpace(req.Lang); lang != "" {
+		payload["lang"] = lang
+	}
+	if scriptFile := strings.TrimSpace(req.ScriptFilename); scriptFile != "" {
+		payload["script_filename"] = scriptFile
+	}
+	if len(bgImgFilenames) > 0 {
+		payload["bg_img_filenames"] = bgImgFilenames
+	}
+	if len(blockBgImgFilenames) > 0 {
+		payload["block_bg_img_filenames"] = blockBgImgFilenames
+	}
+	if len(blockNums) > 0 {
+		payload["block_nums"] = blockNums
+	}
+	if resolution := strings.TrimSpace(req.Resolution); resolution != "" {
+		payload["resolution"] = resolution
+	} else if runMode == 0 {
+		payload["resolution"] = "1080p"
+	}
+	if req.DesignType > 0 {
+		payload["design_type"] = normalizePracticalDesignType(req.DesignType)
+	} else if runMode == 0 {
+		payload["design_type"] = 1
+	}
+	return payload
+}
+
+func buildPracticalTaskPayload(payload map[string]interface{}) map[string]interface{} {
+	out := map[string]interface{}{
+		"content_type": "practical",
+		"project_id":   strings.TrimSpace(payloadString(payload, "project_id")),
+		"run_mode":     normalizePracticalRunMode(payloadInt(payload, "run_mode", 0)),
+		"tts_type":     1,
+	}
+	if sourceProjectID := strings.TrimSpace(payloadString(payload, "source_project_id")); sourceProjectID != "" && payloadInt(payload, "run_mode", 0) == 1 {
+		out["source_project_id"] = sourceProjectID
+	}
+	if tasks := compactStringSlice(payloadStringSlice(payload, "specify_tasks")); len(tasks) > 0 && payloadInt(payload, "run_mode", 0) == 1 {
+		out["specify_tasks"] = tasks
+	}
+	if lang := strings.TrimSpace(payloadString(payload, "lang")); lang != "" {
+		out["lang"] = lang
+	}
+	if scriptFile := strings.TrimSpace(payloadString(payload, "script_filename")); scriptFile != "" {
+		out["script_filename"] = scriptFile
+	}
+	if backgrounds := compactStringSlice(payloadStringSlice(payload, "bg_img_filenames")); len(backgrounds) > 0 {
+		out["bg_img_filenames"] = backgrounds
+	}
+	if blockBackgrounds := compactStringSlice(payloadStringSlice(payload, "block_bg_img_filenames")); len(blockBackgrounds) > 0 {
+		out["block_bg_img_filenames"] = blockBackgrounds
+	}
+	if blockNums := compactPositiveInts(payloadIntSlice(payload, "block_nums")); len(blockNums) > 0 {
+		out["block_nums"] = blockNums
+	}
+	if resolution := strings.TrimSpace(payloadString(payload, "resolution")); resolution != "" {
+		out["resolution"] = resolution
+	}
+	if designType := payloadInt(payload, "design_type", 0); designType > 0 {
+		out["design_type"] = normalizePracticalDesignType(designType)
+	}
+	return out
+}
+
 func buildPodcastTaskPayload(payload map[string]interface{}) map[string]interface{} {
 	out := map[string]interface{}{
 		"content_type": "podcast",
@@ -505,6 +697,10 @@ func buildPodcastTaskPayload(payload map[string]interface{}) map[string]interfac
 }
 
 func buildPodcastReplayProjectID(sourceProjectID string) string {
+	return fmt.Sprintf("%s__rm1__%s", normalizePodcastReplayRootProjectID(sourceProjectID), time.Now().Format("20060102150405"))
+}
+
+func buildPracticalReplayProjectID(sourceProjectID string) string {
 	return fmt.Sprintf("%s__rm1__%s", normalizePodcastReplayRootProjectID(sourceProjectID), time.Now().Format("20060102150405"))
 }
 

@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import PageViewTracker from "@/components/page-view-tracker";
-import PodcastScriptPageView from "@/components/podcast-script-page";
-import { getPodcastScriptList, getPodcastScriptPage } from "@/lib/api";
-import { PAGE_VIEW_PAGE_TYPE } from "@/lib/page-view";
+import PageViewTracker from "@/features/analytics/page-view-tracker";
+import PodcastScriptPageView from "@/features/podcast-script/components/podcast-script-page";
+import { getPodcastScriptList, getPodcastScriptPage } from "@/features/podcast-script/api.server";
+import { PAGE_VIEW_PAGE_TYPE } from "@/features/analytics/page-view.client";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;

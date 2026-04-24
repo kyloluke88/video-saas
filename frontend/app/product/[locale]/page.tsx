@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import ProductCatalog from "@/components/product-catalog";
-import { getLocalizedProductList } from "@/lib/api";
+import ProductCatalog from "@/features/commerce/product/components/product-catalog";
+import { getLocalizedProductList } from "@/features/commerce/product/api.server";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;

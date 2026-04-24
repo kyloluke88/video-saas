@@ -5,8 +5,11 @@ const config: Config = {
   content: [
     "./app/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
+    "./features/**/*.{ts,tsx}",
+    "./shared/**/*.{ts,tsx}",
     "./lib/**/*.{ts,tsx}",
     "./types/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
   ],
   theme: {
     extend: {

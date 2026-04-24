@@ -5,11 +5,15 @@ import (
 	"fmt"
 	"io"
 	"mime"
+	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/retry"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
@@ -62,6 +66,12 @@ func NewClient(ctx context.Context, cfg Config) (*Client, error) {
 		awsconfig.WithRegion(cfg.Region),
 		awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.AccessKey, cfg.SecretKey, "")),
 		awsconfig.WithEndpointResolverWithOptions(customResolver),
+		awsconfig.WithHTTPClient(newHTTPClient()),
+		awsconfig.WithRetryer(func() aws.Retryer {
+			return retry.NewStandard(func(o *retry.StandardOptions) {
+				o.MaxAttempts = 5
+			})
+		}),
 	)
 	if err != nil {
 		return nil, err
@@ -222,4 +232,23 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func newHTTPClient() *http.Client {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.Proxy = http.ProxyFromEnvironment
+	transport.DialContext = (&net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}).DialContext
+	transport.TLSHandshakeTimeout = 45 * time.Second
+	transport.ResponseHeaderTimeout = 60 * time.Second
+	transport.ExpectContinueTimeout = 5 * time.Second
+	transport.IdleConnTimeout = 90 * time.Second
+	transport.MaxIdleConns = 100
+	transport.MaxIdleConnsPerHost = 20
+	return &http.Client{
+		Transport: transport,
+		Timeout:   0,
+	}
 }

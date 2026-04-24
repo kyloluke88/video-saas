@@ -1,0 +1,142 @@
+{
+    "series_id": "daily_life_expressions",
+    "episode_id": "zh_001",
+    "language": "zh",
+    "speakers": [
+        {
+            "speaker_id": "host_a",
+            "name": "A"
+        },
+        {
+            "speaker_id": "host_b",
+            "name": "B"
+        }
+    ],
+    "blocks": [
+        {
+            "block_id": "block_01",
+            "topic": "超市购物",
+            "topic_translations": {
+                "en": "Shopping at the supermarket",
+                "es-419": "Comprar en el supermercado",
+                "vi": "Mua sắm ở siêu thị",
+                "ja": "スーパーで買い物",
+                "pt-BR": "Compras no supermercado"
+            },
+            "chapters": [
+                {
+                    "chapter_id": "ch_01",
+                    "scene": "向店员询问商品位置",
+                    "scene_translations": {
+                        "en": "Asking a store clerk where an item is",
+                        "es-419": "Preguntar al empleado dónde está un producto",
+                        "vi": "Hỏi nhân viên cửa hàng món đồ ở đâu",
+                        "ja": "店員に売り場を聞く",
+                        "pt-BR": "Perguntar ao funcionário onde está um produto"
+                    },
+                    "scene_prompt": "A clean supermarket dairy aisle, neatly arranged milk shelves, soft warm lighting, a customer asking a store clerk for help, realistic everyday shopping atmosphere, static composition, no text, no watermark",
+                    "turns": [
+                        {
+                            "turn_id": "ch01_t01",
+                            "speaker_id": "host_a",
+                            "text": "请问，牛奶在哪儿？",
+                            "speech_text": "请问，牛奶在哪儿？",
+                            "translations": {
+                                "en": "Excuse me, where is the milk?",
+                                "es-419": "Disculpe, ¿dónde está la leche?",
+                                "vi": "Xin lỗi, sữa ở đâu vậy?",
+                                "ja": "すみません。牛乳はどこですか？",
+                                "pt-BR": "Com licença, onde fica o leite?"
+                            },
+                            "tokens": [
+                                {
+                                    "text": "请",
+                                    "reading": "qǐng"
+                                },
+                                {
+                                    "text": "问",
+                                    "reading": "wèn"
+                                },
+                                {
+                                    "text": "，",
+                                    "reading": ""
+                                },
+                                {
+                                    "text": "牛",
+                                    "reading": "niú"
+                                },
+                                {
+                                    "text": "奶",
+                                    "reading": "nǎi"
+                                },
+                                {
+                                    "text": "在",
+                                    "reading": "zài"
+                                },
+                                {
+                                    "text": "哪",
+                                    "reading": "nǎ"
+                                },
+                                {
+                                    "text": "儿",
+                                    "reading": "r"
+                                },
+                                {
+                                    "text": "？",
+                                    "reading": ""
+                                }
+                            ]
+                        },
+                        {
+                            "turn_id": "ch01_t02",
+                            "speaker_id": "host_b",
+                            "text": "在那边的冷藏区。",
+                            "speech_text": "在那边的冷藏区。",
+                            "translations": {
+                                "en": "It's in the refrigerated section over there.",
+                                "es-419": "Está en la sección refrigerada de allá.",
+                                "vi": "Nó ở khu đồ lạnh bên kia.",
+                                "ja": "あちらの冷蔵コーナーです。",
+                                "pt-BR": "Fica na seção refrigerada ali."
+                            },
+                            "tokens": [
+                                {
+                                    "text": "在",
+                                    "reading": "zài"
+                                },
+                                {
+                                    "text": "那",
+                                    "reading": "nà"
+                                },
+                                {
+                                    "text": "边",
+                                    "reading": "biān"
+                                },
+                                {
+                                    "text": "的",
+                                    "reading": "de"
+                                },
+                                {
+                                    "text": "冷",
+                                    "reading": "lěng"
+                                },
+                                {
+                                    "text": "藏",
+                                    "reading": "cáng"
+                                },
+                                {
+                                    "text": "区",
+                                    "reading": "qū"
+                                },
+                                {
+                                    "text": "。",
+                                    "reading": ""
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

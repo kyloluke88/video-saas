@@ -9,11 +9,11 @@ func TestPodcastDesignType1AnimationPath(t *testing.T) {
 	if got := podcastDesignAnimationPath("en"); got != "" {
 		t.Fatalf("expected no animation path for unsupported language, got %q", got)
 	}
-	if got := podcastDesignAnimationPath("ja"); got == "" || filepath.Base(got) != "headphone.gif" {
-		t.Fatalf("expected ja animation path, got %q", got)
+	if got := podcastDesignAnimationPath("ja"); got != "" {
+		t.Fatalf("expected ja animation to be disabled, got %q", got)
 	}
-	if got := podcastDesignAnimationPath("zh"); got == "" || filepath.Base(got) != "headphone.gif" {
-		t.Fatalf("expected zh animation path, got %q", got)
+	if got := podcastDesignAnimationPath("zh"); got != "" {
+		t.Fatalf("expected zh animation to be disabled, got %q", got)
 	}
 }
 
@@ -37,6 +37,20 @@ func TestPodcastDesignType1LogoPath(t *testing.T) {
 	}
 	if got := podcastDesignLogoPath("zh"); got != "" {
 		t.Fatalf("expected no zh logo path, got %q", got)
+	}
+}
+
+func TestPodcastDesignType1LogoOverlayFilter(t *testing.T) {
+	got := podcastDesignLogoOverlayFilter("1080p", 2)
+	want := "[2:v]scale=90:90:flags=lanczos[logo]"
+	if got != want {
+		t.Fatalf("unexpected 1080p logo filter\nwant: %s\ngot:  %s", want, got)
+	}
+
+	got = podcastDesignLogoOverlayFilter("480p", 3)
+	want = "[3:v]scale=61:61:flags=lanczos[logo]"
+	if got != want {
+		t.Fatalf("unexpected 480p logo filter\nwant: %s\ngot:  %s", want, got)
 	}
 }
 
