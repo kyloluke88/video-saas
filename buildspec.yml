@@ -33,7 +33,7 @@ phases:
           echo "Skipping worker tests because BUILD_WORKER_IMAGE=false"
         fi
       - docker build -f backend/Dockerfile.prod -t "${BACKEND_IMAGE}" ./backend
-      - docker build -f frontend/Dockerfile.prod -t "${FRONTEND_IMAGE}" ./frontend
+      - docker build --build-arg NEXT_PUBLIC_API_BASE_URL="${NEXT_PUBLIC_API_BASE_URL:-}" --build-arg NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL:-}" -f frontend/Dockerfile.prod -t "${FRONTEND_IMAGE}" ./frontend
       - |
         if [[ "${BUILD_WORKER_IMAGE:-false}" == "true" ]]; then
           docker build -f worker/Dockerfile.prod -t "${WORKER_IMAGE}" ./worker

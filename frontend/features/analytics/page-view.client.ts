@@ -16,11 +16,25 @@ const VISITOR_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 const SESSION_MAX_AGE_SECONDS = 60 * 60;
 
 export function getAnalyticsBaseUrl() {
-  return normalizeBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080");
+  const configuredBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  if (configuredBaseUrl) {
+    return normalizeBaseUrl(configuredBaseUrl);
+  }
+
+  // 线上默认走同域 API，由反向代理转发到 backend，避免浏览器端退回 localhost。
+  if (typeof window !== "undefined" && window.location.origin) {
+    return normalizeBaseUrl(window.location.origin);
+  }
+
+  return "";
 }
 
 export function getPageViewEndpoint() {
-  return `${getAnalyticsBaseUrl()}/api/analytics/page-view`;
+  const baseUrl = getAnalyticsBaseUrl();
+  if (!baseUrl) {
+    return "/api/analytics/page-view";
+  }
+  return `${baseUrl}/api/analytics/page-view`;
 }
 
 export function createUUID() {
