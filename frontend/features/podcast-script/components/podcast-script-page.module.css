@@ -7,7 +7,7 @@
 }
 
 .sidebar {
-  @apply flex min-h-0 flex-col gap-6 xl:sticky xl:top-6 xl:h-full;
+  @apply flex min-h-0 flex-col gap-6 xl:self-start;
 }
 
 .sidebarCard {
@@ -15,12 +15,16 @@
 }
 
 .sidebarRecentCard {
-  @apply xl:flex-none;
+  @apply overflow-hidden xl:flex-none;
 }
 
-.sidebarCardScroll {
-  @apply min-h-0 flex-1 overflow-y-scroll p-6;
-  scrollbar-gutter: stable;
+.sidebarCardContent {
+  @apply flex flex-col pt-6;
+}
+
+.sidebarRecentList {
+  @apply flex min-h-0 flex-col;
+  gap: var(--sidebar-list-gap, 0.25rem);
 }
 
 .sidebarTitle {
@@ -123,6 +127,14 @@
 
 @media (min-width: 1280px) {
   .sidebarRecentCard {
-    height: min(52rem, calc(100vh - 3rem));
+    --sidebar-list-gap: 0.25rem;
+    --sidebar-list-item-height: 21rem;
+  }
+
+  .sidebarRecentList {
+    max-height: calc((var(--sidebar-list-item-height) * 8.5) + (var(--sidebar-list-gap) * 7.5));
+    overflow-y: auto;
+    padding-right: 0.25rem;
+    scrollbar-gutter: stable;
   }
 }

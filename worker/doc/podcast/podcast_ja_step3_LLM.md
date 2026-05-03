@@ -3,79 +3,36 @@
 你的任务是读取“第一阶段 JSON”，并在其基础上补全最终版 JSON。
 
 你现在要做的是：
-1. 为每一个 segment 补全 tokens
-2. 生成顶层的 vocabulary 数组
-3. 生成顶层的 grammar 数组
-4. 输出最终完整 JSON
+1. 生成 segment.translations 各类语言的翻译文本
+2. 输出最终完整 JSON
 
-【tokens 规则】
-- segments.tokens 用于给 segments.text 中出现的需要注音的汉字或汉字词补全平假名读音
-- 每个 token 格式为：{ "char": "text 中出现的原文子串", "reading": "对应平假名读音" }
-- tokens 必须严格按 text 中汉字或汉字词从左到右顺序排列
-- token.char 中只能出现汉字，不能带平假名、片假名、标点、英文字符
-- 允许按自然词组标注，例如 { "char": "最近", "reading": "さいきん" }
-- 也允许在必要时按单个汉字标注，例如 { "char": "気", "reading": "き" }
-- 不能写成跨越汉字和假名的整段，例如不能写 { "char": "今日の話題", "reading": "きょうのわだい" }
-- text 中只要出现汉字或汉字词，就必须提供对应 tokens
-- 不允许漏标，不允许顺序错乱，不允许给不存在于 text 中的内容添加 token
 
-【vocabulary 规则】
-- vocabulary 是给脚本页直接入库使用的顶层 JSON 数组
-- 词汇要符合 difficulty_level 设置的难度
-- 建议输出 6 或者 8 个词汇
-- 只选择本集最值得学习、最适合页面展示的词汇
-- 每个词汇必须包含：
-  - term
-  - tokens
-  - meaning
-  - explanation
-  - examples
-- term 必须是日文原文
-- tokens 必须用于给 term 中出现的汉字或汉字词补全读音
-- meaning 必须使用英文表述
-- explanation 必须使用英文表述
-- examples 至少 2 条
-- 每条 example 必须包含：
-  - text
-  - tokens
-  - translation
-- example.tokens 必须用于给 example.text 中出现的汉字或汉字词补全读音
-- 第一个 example 优先直接使用 transcript 原句，或者只做轻微改写
-- 第二个 example 可以自由发挥，但必须通俗易懂、自然、适合学习者理解
-
-【grammar 规则】
-- grammar 是给脚本页直接入库使用的顶层 JSON 数组
-- grammar 要符合 difficulty_level 设置的难度
-- 建议输出 3 到 5 个语法点
-- 只选择本集最值得讲解、最有学习价值的语法结构
-- 每个语法点必须包含：
-  - pattern
-  - tokens
-  - meaning
-  - explanation
-  - examples
-- pattern 必须是日文语法模式
-- tokens 必须用于给 pattern 中出现的汉字或汉字词补全读音
-- meaning 必须使用英文表述
-- explanation 必须使用英文表述
-- 如果 pattern 中没有汉字，也必须显式输出空数组：tokens: []
-- examples 至少 2 条
-- 每条 example 必须包含：
-  - text
-  - tokens
-  - translation
-- example.tokens 必须用于给 example.text 中出现的汉字或汉字词补全读音
-- 第一个 example 优先使用 transcript 原句，或者只做轻微改写
-- 第二个 example 可以自由发挥，但必须通俗易懂、自然、适合学习者理解
+【translations 多语言字幕翻译规则】
+- translations 必须是对象，专门用于后续生成 YouTube SRT 字幕文件
+- 所有 translations 必须直接根据 segment.text 的原文语义翻译。
+- 根据 segment.text 需要补充以下翻译语言：
+  - en 英语
+  - es-419 西班牙语（拉丁美洲）
+  - zh-Hans 中文简体
+  - vi 越南语
+  - ko 韩国语
+  - id 印尼语
+  - pt-BR 葡萄牙语（巴西）
+  - th 泰语
+  - fr 法语
+  - de 德语
+  - ru 俄语
+- translations 的内容必须和原句语义一致，适合字幕阅读，表达自然、简洁、口语化
+- translations 里的每种语言都必须完整覆盖当前 segment 的意思，不要只翻一半
+- translations 不用于 TTS，不要加入任何 [] 标签
+- 所有 translations 的文本必须使用标准 Unicode NFC 形式。
+- 不要输出分解字符或组合音标字符。
+  - 例如德语必须输出 “über”, “höre”，不要输出 “über”, “höre”。
+  - 俄语必须输出 “которой”, “действительно”，不要输出带组合字符的形式。
+- translations 的各个语言的翻译文本不能为空，不能全部翻译成一种语言
 
 【输出前处理要求】
-- 补全所有 segment 的 tokens
-- 检查每个 segment 的 tokens 是否正确、完整、按顺序覆盖 text 中需要注音的汉字或汉字词
-- 检查 vocabulary 是否有 5 到 8 项，且每项至少 2 个 example
-- 检查 grammar 是否有 3 到 5 项，且每项至少 2 个 example
-- 检查 vocabulary.tokens vocabulary.example.tokens 是否正确、完整、按顺序覆盖 text 中需要注音的汉字或汉字词
-- 检查 grammar.tokens grammar.example.tokens 是否正确、完整、按顺序覆盖 text 中需要注音的汉字或汉字词
-- 检查最终 JSON 结构是否完整合法
+- translations 各个语言是否翻译完成，禁止翻译语言错乱
 
 如果补全内容有问题，先修正再输出。
 
@@ -196,7 +153,19 @@
           "text": "この話題、最近ほんとうによく聞きますよね。",
           "speech_text": "この話題、最近ほんとうによく聞きますよね。",
           "summary": false,
-          "translations": {}
+          "translations": {
+            "en": "This is something I've been hearing about a lot lately.",
+            "es-419": "Este es un tema del que he estado oyendo mucho últimamente.",
+            "zh-Hans": "这个话题，我最近真的常常听到。",
+            "vi": "Đây là chủ đề mà gần đây tôi nghe rất nhiều.",
+            "ko": "이 주제는 요즘 정말 자주 듣게 돼요.",
+            "id": "Topik ini belakangan ini sering sekali saya dengar.",
+            "pt-BR": "Esse é um assunto sobre o qual tenho ouvido falar muito ultimamente.",
+            "th": "ช่วงนี้ฉันได้ยินเรื่องนี้บ่อยมากจริง ๆ",
+            "fr": "C’est un sujet dont j’entends beaucoup parler ces derniers temps.",
+            "de": "Das ist ein Thema, über das ich in letzter Zeit wirklich oft etwas höre.",
+            "ru": "Это тема, о которой я в последнее время действительно часто слышу."
+          }
           "tokens": [
             { "char": "話題", "reading": "わだい" },
             { "char": "最近", "reading": "さいきん" },
@@ -208,4 +177,4 @@
   ]
 }
 
-文件为第一阶段的 JSON 文件，请在其基础上补全最终结果，并且给我可以下载的完整的 JSON 文件，文件名称设置为 en_title 的snake的形式。
+文件为第一阶段的 JSON 文件，请在其基础上补全 translations 的结果，并且给我可以下载的完整的 JSON 文件，文件名称设置为 en_title 的snake的形式。

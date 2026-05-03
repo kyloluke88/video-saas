@@ -7,7 +7,7 @@ import (
 	dto "worker/services/podcast/model"
 )
 
-func TestBuildYouTubeTranscriptSRT(t *testing.T) {
+func TestBuildYouTubeTranscriptSRTForLanguage(t *testing.T) {
 	script := dto.PodcastScript{
 		Language: "zh",
 		Segments: []dto.PodcastSegment{
@@ -32,7 +32,7 @@ func TestBuildYouTubeTranscriptSRT(t *testing.T) {
 		},
 	}
 
-	got := buildYouTubeTranscriptSRT(script)
+	got := buildYouTubeTranscriptSRTForLanguage(script, "zh")
 	wantParts := []string{
 		"1\n00:00:00,000 --> 00:00:02,450\n大家好，欢迎来到我们的日常中文频道。",
 		"2\n00:00:02,450 --> 00:00:05,870\n今天我们来聊一聊年轻人的婚恋观。",
@@ -108,7 +108,6 @@ func TestBuildYouTubeTranscriptArtifactsIncludesAllTranslationLanguages(t *testi
 	}
 
 	wantFiles := []string{
-		"youtube_transcript.srt",
 		"youtube_transcript_en.srt",
 		"youtube_transcript_zh.srt",
 		"youtube_transcript_es-419.srt",
@@ -135,9 +134,12 @@ func TestBuildYouTubeTranscriptArtifactsIncludesAllTranslationLanguages(t *testi
 	if !strings.Contains(got["youtube_transcript_zh.srt"], "大家好，欢迎来到我们的日常中文频道。") {
 		t.Fatalf("expected chinese transcript content, got %q", got["youtube_transcript_zh.srt"])
 	}
+	if _, exists := got["youtube_transcript.srt"]; exists {
+		t.Fatalf("expected legacy youtube_transcript.srt to be omitted, got %#v", got)
+	}
 }
 
-func TestBuildYouTubeTranscriptSRTWithLeadIn(t *testing.T) {
+func TestBuildYouTubeTranscriptSRTForLanguageWithLeadIn(t *testing.T) {
 	script := dto.PodcastScript{
 		Language: "ja",
 		Segments: []dto.PodcastSegment{
@@ -150,7 +152,7 @@ func TestBuildYouTubeTranscriptSRTWithLeadIn(t *testing.T) {
 		},
 	}
 
-	got := buildYouTubeTranscriptSRTWithLeadIn(script, 4070)
+	got := buildYouTubeTranscriptSRTForLanguageWithLeadIn(script, "ja", 4070)
 	want := "1\n00:00:04,170 --> 00:00:06,170\nみなさん、こんにちは。"
 	if !strings.Contains(got, want) {
 		t.Fatalf("expected transcript to contain %q, got %q", want, got)

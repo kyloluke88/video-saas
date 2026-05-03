@@ -594,9 +594,9 @@ export default function PodcastScriptPageView({
         </Card> */}
 
         <Card className={`${styles.sidebarCard} ${styles.sidebarRecentCard}`}>
-          <CardContent className={styles.sidebarCardScroll}>
+          <CardContent className={styles.sidebarCardContent}>
             <h3 className={styles.sidebarTitle}>{copy.sidebarRecentTitle}</h3>
-            <div className="space-y-1">
+            <div className={styles.sidebarRecentList}>
               {sidebarPages.length > 0 ? (
                 sidebarPages.map((item) => {
                   const coverURL = resolveCoverURL(item);

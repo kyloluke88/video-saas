@@ -4,6 +4,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     bzip2 \
     ca-certificates \
+    chromium \
     curl \
     ffmpeg \
     fontconfig \

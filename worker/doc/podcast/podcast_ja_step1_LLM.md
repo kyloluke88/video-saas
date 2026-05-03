@@ -73,10 +73,9 @@ en_title 规则】
 - 一个 chapter 由 1 个或多个 block 组成
 
 【按 target_duration_minutes 的推荐内容体量】
-- 5 分钟内容：建议 3 到 4 个 chapter、2 到 3 个 block、28 到 40 个 segments
-- 10 分钟内容：建议 3 到 4 个 chapter、4 到 5 个 block、55 到 70 个 segments
-- 15 分钟内容：建议 6 到 7 个 chapter、7 到 8 个 block、90 到 100 个 segments
-- 20 分钟内容：建议 9 到 10 个 chapter、10 到 11 个 block、115 到 130 个 segments
+- 10 分钟内容：建议 3 到 4 个 chapter、5 到 6 个 block、55 到 70 个 segments
+- 15 分钟内容：建议 6 到 7 个 chapter、9 到 10 个 block、105 到 120 个 segments
+- 20 分钟内容：建议 9 到 10 个 chapter、12 到 14 个 block、120 到 140 个 segments
 
 【segment 规则】
 - segment_id 必须按 seg_001、seg_002、seg_003 递增
@@ -205,9 +204,18 @@ Audio events / special（播客场景一般不建议使用）:
 }
 
 现在根据以下输入生成内容：
-topic：
+topic：在日本丢东西，真的比较容易找回来吗？
+段落	内容	重点
+1. 开场	聊“在日本丢东西，真的能找回来吗？”	制造好奇心
+2. 小故事开始	两个人去咖啡店 / 坐电车，其中一个人发现钱包不见了	故事感
+3. 紧张时刻	翻包、回忆最后一次看到钱包在哪里	日常表达
+4. 回去寻找	回咖啡店问店员，或者去车站的 lost and found	实用场景
+5. 开心结果	钱包被人交到柜台，里面的东西还在	情绪高潮
+6. 文化讨论	为什么日本很多人会把东西交给店员、车站或交番	日本文化
+7. 实用建议	丢东西时应该去哪里、怎么说	学习价值
+8. 总结	不是一定能找回，但在日本要冷静、尽快报告	温暖收尾
 difficulty_level：N3
-target_duration_minutes：15
+target_duration_minutes：20
 tts_type: google
 
 请按照规则要求给我生成内容并且给我可以下载的json文件，内容要丰富，chapter，block，segment 数量要足够要求

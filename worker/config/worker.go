@@ -72,6 +72,7 @@ func init() {
 			"seedance_enabled":                     cast.ToBool(config.Env("SEEDANCE_ENABLED", true)),
 			"bgm_enabled":                          cast.ToBool(config.Env("BGM_ENABLED", false)),
 			"worker_assets_dir":                    config.Env("WORKER_ASSETS_DIR", "/app/assets"),
+			"pdf_browser_bin":                      config.Env("WORKER_PDF_BROWSER_BIN", config.Env("PDF_BROWSER_BIN", "")),
 			"ffmpeg_work_dir":                      config.Env("FFMPEG_WORK_DIR", "/app/outputs"),
 			"ffmpeg_timeout_sec":                   cast.ToInt(config.Env("FFMPEG_TIMEOUT_SEC", 300)),
 			"podcast_ffmpeg_timeout_sec":           cast.ToInt(config.Env("PODCAST_FFMPEG_TIMEOUT_SEC", 0)),

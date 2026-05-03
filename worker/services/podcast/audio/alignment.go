@@ -68,7 +68,7 @@ func (a *blockAligner) AlignBlock(ctx context.Context, language string, block dt
 	words, err := a.client.AlignWords(ctx, mfa.AlignRequest{
 		LanguageCode: language,
 		AudioPath:    alignmentAudioPath,
-		Transcript:   blockTranscript(language, block),
+		Transcript:   blockTranscriptForMFA(language, block),
 		WorkingDir:   a.workingDir,
 	})
 	if err == nil && len(words) > 0 {
@@ -161,16 +161,36 @@ func extractAlignmentAudioChunk(ctx context.Context, audioPath, workingDir strin
 	return chunkPath, nil
 }
 
-func blockTranscript(language string, block dto.PodcastBlock) string {
+func blockTranscriptForMFA(language string, block dto.PodcastBlock) string {
 	parts := make([]string, 0, len(block.Segments))
 	for _, seg := range block.Segments {
-		text := strings.TrimSpace(spokenTextForAlignment(language, seg))
+		text := strings.TrimSpace(spokenTextForMFA(language, seg))
 		if text == "" {
 			continue
 		}
 		parts = append(parts, text)
 	}
 	return strings.Join(parts, "\n")
+}
+
+func spokenTextForMFA(language string, seg dto.PodcastSegment) string {
+	if isJapaneseLanguage(language) {
+		return spokenTextForAlignment(language, seg)
+	}
+	return chineseMFATranscript(seg.Text)
+}
+
+func chineseMFATranscript(text string) string {
+	normalized, _ := normalizeTextForAlignment(strings.TrimSpace(text))
+	if len(normalized) == 0 {
+		return strings.TrimSpace(text)
+	}
+
+	parts := make([]string, 0, len(normalized))
+	for _, r := range normalized {
+		parts = append(parts, string(r))
+	}
+	return strings.Join(parts, " ")
 }
 
 func spokenTextForAlignment(language string, seg dto.PodcastSegment) string {
@@ -195,7 +215,7 @@ func (a *blockAligner) alignBlockBySegments(ctx context.Context, language string
 		words, alignErr := a.client.AlignWords(ctx, mfa.AlignRequest{
 			LanguageCode: language,
 			AudioPath:    chunkPath,
-			Transcript:   spokenTextForAlignment(language, seg),
+			Transcript:   spokenTextForMFA(language, seg),
 			WorkingDir:   a.workingDir,
 		})
 		_ = os.Remove(chunkPath)

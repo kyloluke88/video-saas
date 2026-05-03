@@ -18,7 +18,6 @@ import (
 )
 
 const (
-	youtubeTranscriptFilename        = "youtube_transcript.srt"
 	youtubeTranscriptEnglishFilename = "youtube_transcript_en.srt"
 )
 
@@ -37,7 +36,7 @@ type publishGrammarItem struct {
 	Meaning string `json:"meaning"`
 }
 
-func exportYouTubeAssets(projectDir string, source podcastpageservice.PageSource) error {
+func exportYouTubeAssets(projectDir string, source podcastpageservice.PageSource) ([]string, error) {
 	script := source.Script
 	if len(script.Segments) == 0 && len(script.Blocks) > 0 {
 		script.RefreshSegmentsFromBlocks()
@@ -53,11 +52,32 @@ func exportYouTubeAssets(projectDir string, source podcastpageservice.PageSource
 		publishContent = buildYouTubePublishText(script, pageURL)
 	}
 	if err := writeOptionalFile(filepath.Join(projectDir, youtubePublishFilename), publishContent); err != nil {
-		return err
+		return nil, err
+	}
+	if err := cleanupYouTubeTranscriptFiles(projectDir); err != nil {
+		return nil, err
 	}
 
+	transcriptPaths := make([]string, 0)
 	for _, artifact := range buildYouTubeTranscriptArtifacts(script) {
-		if err := writeOptionalFile(filepath.Join(projectDir, artifact.filename), artifact.content); err != nil {
+		path := filepath.Join(projectDir, artifact.filename)
+		if err := writeOptionalFile(path, artifact.content); err != nil {
+			return nil, err
+		}
+		if strings.TrimSpace(artifact.content) != "" {
+			transcriptPaths = append(transcriptPaths, path)
+		}
+	}
+	return transcriptPaths, nil
+}
+
+func cleanupYouTubeTranscriptFiles(projectDir string) error {
+	matches, err := filepath.Glob(filepath.Join(projectDir, "youtube_transcript*.srt"))
+	if err != nil {
+		return err
+	}
+	for _, path := range matches {
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 			return err
 		}
 	}
@@ -81,19 +101,21 @@ func buildYouTubePublishText(script dto.PodcastScript, pageURL string) string {
 func buildYouTubePublishTextWithLeadIn(script dto.PodcastScript, pageURL string, leadInMS int) string {
 	var lines []string
 
-	if desc := buildYouTubeDescriptionBodyLines(script); len(desc) > 0 {
-		lines = append(lines, desc...)
-		lines = append(lines, "")
-	}
-
 	if title := strings.TrimSpace(buildYouTubeUploadTitle(script)); title != "" {
 		lines = append(lines, "Title:")
 		lines = append(lines, title, "")
 	}
 
-	if hashtags := buildPublishHashtagLines(script); len(hashtags) > 0 {
-		lines = append(lines, "Hashtags:")
-		lines = append(lines, hashtags...)
+	if desc := buildYouTubeDescriptionBodyLines(script); len(desc) > 0 {
+		lines = append(lines, desc...)
+		lines = append(lines, "")
+	}
+
+	if learn := compactNonEmpty(script.YouTube.InThisEpisodeYouWillLearn); len(learn) > 0 {
+		lines = append(lines, "In this episode, you will learn:")
+		for _, item := range learn {
+			lines = append(lines, "- "+item)
+		}
 		lines = append(lines, "")
 	}
 
@@ -104,6 +126,12 @@ func buildYouTubePublishTextWithLeadIn(script dto.PodcastScript, pageURL string,
 
 	if highlights := buildEpisodeStudyHighlightLines(script); len(highlights) > 0 {
 		lines = append(lines, highlights...)
+		lines = append(lines, "")
+	}
+
+	if hashtags := buildPublishHashtagLines(script); len(hashtags) > 0 {
+		lines = append(lines, "Hashtags:")
+		lines = append(lines, hashtags...)
 		lines = append(lines, "")
 	}
 
@@ -119,23 +147,7 @@ func buildYouTubePublishTextWithLeadIn(script dto.PodcastScript, pageURL string,
 }
 
 func buildYouTubeDescriptionBodyLines(script dto.PodcastScript) []string {
-	var lines []string
-
-	lines = append(lines, compactNonEmpty(script.YouTube.DescriptionIntro)...)
-	if len(lines) > 0 {
-		lines = append(lines, "")
-	}
-
-	learn := compactNonEmpty(script.YouTube.InThisEpisodeYouWillLearn)
-	if len(learn) > 0 {
-		lines = append(lines, "In this episode, you will learn:")
-		for _, item := range learn {
-			lines = append(lines, "- "+item)
-		}
-		lines = append(lines, "")
-	}
-
-	return trimTrailingBlankLines(lines)
+	return compactNonEmpty(script.YouTube.DescriptionIntro)
 }
 
 func buildYouTubeChapterLinesWithLeadIn(script dto.PodcastScript, leadInMS int) []string {
@@ -760,14 +772,6 @@ func isEmptyYouTubeMetadata(meta dto.PodcastYouTube) bool {
 		len(meta.Chapters) == 0
 }
 
-func buildYouTubeTranscriptSRT(script dto.PodcastScript) string {
-	return buildYouTubeTranscriptSRTWithLeadIn(script, 0)
-}
-
-func buildYouTubeTranscriptSRTWithLeadIn(script dto.PodcastScript, leadInMS int) string {
-	return buildYouTubeTranscriptSRTForLanguageWithLeadIn(script, script.Language, leadInMS)
-}
-
 func buildYouTubeTranscriptSRTForLanguage(script dto.PodcastScript, language string) string {
 	return buildYouTubeTranscriptSRTForLanguageWithLeadIn(script, language, 0)
 }
@@ -836,10 +840,6 @@ func buildYouTubeTranscriptArtifacts(script dto.PodcastScript) []transcriptArtif
 	leadInMS := youtubePublishLeadInMS(script.Language)
 	artifacts := []transcriptArtifact{
 		{
-			filename: youtubeTranscriptFilename,
-			content:  buildYouTubeTranscriptSRTWithLeadIn(script, leadInMS),
-		},
-		{
 			filename: youtubeTranscriptEnglishFilename,
 			content:  buildYouTubeEnglishTranscriptSRTWithLeadIn(script, leadInMS),
 		},
@@ -847,7 +847,7 @@ func buildYouTubeTranscriptArtifacts(script dto.PodcastScript) []transcriptArtif
 
 	for _, language := range collectTranscriptLanguages(script) {
 		filename := youtubeTranscriptFilenameForLanguage(language)
-		if filename == youtubeTranscriptFilename || filename == youtubeTranscriptEnglishFilename {
+		if filename == "" || filename == youtubeTranscriptEnglishFilename {
 			continue
 		}
 		artifacts = append(artifacts, transcriptArtifact{
@@ -856,10 +856,6 @@ func buildYouTubeTranscriptArtifacts(script dto.PodcastScript) []transcriptArtif
 		})
 	}
 	return artifacts
-}
-
-func transcriptSegments(script dto.PodcastScript) []dto.PodcastSegment {
-	return transcriptSegmentsForLanguage(script, script.Language)
 }
 
 func transcriptSegmentsForLanguage(script dto.PodcastScript, language string) []dto.PodcastSegment {
@@ -880,10 +876,6 @@ func transcriptSegmentsForLanguage(script dto.PodcastScript, language string) []
 		out = append(out, seg)
 	}
 	return out
-}
-
-func transcriptCueText(language string, seg dto.PodcastSegment) string {
-	return transcriptCueTextForLanguage(language, language, seg)
 }
 
 func transcriptCueTextForLanguage(sourceLanguage, targetLanguage string, seg dto.PodcastSegment) string {
@@ -968,7 +960,7 @@ func collectTranscriptLanguages(script dto.PodcastScript) []string {
 func youtubeTranscriptFilenameForLanguage(language string) string {
 	language = strings.TrimSpace(language)
 	if language == "" {
-		return youtubeTranscriptFilename
+		return ""
 	}
 	return "youtube_transcript_" + language + ".srt"
 }

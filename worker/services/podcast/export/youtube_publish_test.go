@@ -51,9 +51,10 @@ func TestBuildYouTubePublishTextWithLeadIn_JapaneseUsesUnifiedFormat(t *testing.
 
 	got := buildYouTubePublishTextWithLeadIn(script, pageURL, 4070)
 	for _, want := range []string{
-		"This episode gives you slow and natural Japanese listening practice.",
 		"Title:",
 		"Oshikatsu Culture for Everyday Japanese Learners | 若い人に広がる推活文化をゆるく話そう | Japanese Daily Podcast",
+		"This episode gives you slow and natural Japanese listening practice.",
+		"In this episode, you will learn:",
 		"Hashtags:",
 		"00:00 Opening",
 		"01:04 Why It Matters",
@@ -64,7 +65,6 @@ func TestBuildYouTubePublishTextWithLeadIn_JapaneseUsesUnifiedFormat(t *testing.
 		"- 〜について: about; regarding",
 		"Read the full podcast script and download the PDF study sheet here:",
 		pageURL,
-		"In this episode, you will learn:",
 		"Studio Tags (paste into YouTube Tags field only, comma-separated phrases are OK):",
 		"learn japanese",
 	} {
@@ -72,8 +72,30 @@ func TestBuildYouTubePublishTextWithLeadIn_JapaneseUsesUnifiedFormat(t *testing.
 			t.Fatalf("expected publish text to contain %q, got %q", want, got)
 		}
 	}
-	if !strings.HasPrefix(got, "This episode gives you slow and natural Japanese listening practice.") {
-		t.Fatalf("expected description intro at top, got %q", got)
+	if !strings.HasPrefix(got, "Title:\nOshikatsu Culture for Everyday Japanese Learners | 若い人に広がる推活文化をゆるく話そう | Japanese Daily Podcast") {
+		t.Fatalf("expected title block at top, got %q", got)
+	}
+	orderChecks := []struct {
+		label string
+		after string
+	}{
+		{label: "This episode gives you slow and natural Japanese listening practice.", after: "Title:"},
+		{label: "In this episode, you will learn:", after: "This episode gives you slow and natural Japanese listening practice."},
+		{label: "00:00 Opening", after: "In this episode, you will learn:"},
+		{label: "Key vocabulary and grammar from this episode:", after: "01:04 Why It Matters"},
+		{label: "Hashtags:", after: "Key vocabulary and grammar from this episode:"},
+		{label: "Read the full podcast script and download the PDF study sheet here:", after: "Hashtags:"},
+		{label: "Studio Tags (paste into YouTube Tags field only, comma-separated phrases are OK):", after: pageURL},
+	}
+	for _, check := range orderChecks {
+		left := strings.Index(got, check.after)
+		right := strings.Index(got, check.label)
+		if left == -1 || right == -1 || right <= left {
+			t.Fatalf("expected %q after %q, got %q", check.label, check.after, got)
+		}
+	}
+	if strings.Contains(got, "Chapters:") {
+		t.Fatalf("expected chapter heading to be omitted, got %q", got)
 	}
 	for _, unwanted := range []string{
 		"Description:",

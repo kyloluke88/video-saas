@@ -197,8 +197,6 @@ func renderBaseVideo(ctx context.Context, artifacts composeArtifacts) error {
 		artifacts.BlockBackgroundPaths,
 		practicalChapterGapMS(),
 		practicalBlockGapMS(),
-		practicalChapterTransitionLeadMS(),
-		practicalBlockTransitionLeadMS(),
 	)
 	if len(segments) == 0 {
 		return services.NonRetryableError{Err: fmt.Errorf("practical script has no chapters")}
@@ -268,19 +266,17 @@ type practicalRenderSegment struct {
 	DurationSec    float64
 }
 
-func buildPracticalRenderSegments(script dto.PracticalScript, chapterBackgroundPaths, blockBackgroundPaths []string, chapterGapMS, blockGapMS, chapterTransitionLeadMS, blockTransitionLeadMS int) []practicalRenderSegment {
+func buildPracticalRenderSegments(script dto.PracticalScript, chapterBackgroundPaths, blockBackgroundPaths []string, chapterGapMS, blockGapMS int) []practicalRenderSegment {
 	segments := make([]practicalRenderSegment, 0, len(chapterBackgroundPaths)+len(blockBackgroundPaths))
 	chapterCursor := 0
 	chapterGapSec := float64(maxInt(0, chapterGapMS)) / 1000.0
 	blockGapSec := float64(maxInt(0, blockGapMS)) / 1000.0
-	chapterLeadSec := float64(maxInt(0, chapterTransitionLeadMS)) / 1000.0
-	blockLeadSec := float64(maxInt(0, blockTransitionLeadMS)) / 1000.0
 
 	for blockIndex, block := range script.Blocks {
 		introDurationSec := float64(maxInt(0, block.TopicEndMS-block.TopicStartMS)) / 1000.0
 		if introDurationSec > 0 {
 			if blockIndex < len(blockBackgroundPaths) {
-				segmentDuration := introDurationSec + blockLeadSec
+				segmentDuration := introDurationSec
 				if blockIndex > 0 {
 					segmentDuration += blockGapSec
 				}
@@ -296,7 +292,7 @@ func buildPracticalRenderSegments(script dto.PracticalScript, chapterBackgroundP
 				return segments
 			}
 			startMS, endMS := chapterStartEndMS(chapter)
-			durationSec := float64(maxInt(1, endMS-startMS))/1000.0 + chapterLeadSec
+			durationSec := float64(maxInt(1, endMS-startMS)) / 1000.0
 			if chapterIndex < len(block.Chapters)-1 {
 				durationSec += chapterGapSec
 			}

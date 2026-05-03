@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="{{.Language}}">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{.Title}}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 7mm 4.5mm;
+    }
+
+    @font-face {
+      font-family: "PodcastBody";
+      src: url("{{.BodyFontURL}}") format("truetype");
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: "PodcastDisplay";
+      src: url("{{.DisplayFontURL}}") format("truetype");
+      font-display: swap;
+    }
+
+    :root {
+      --accent: {{.Theme.Accent}};
+      --accent-soft: {{.Theme.AccentSoft}};
+      --accent-strong: {{.Theme.AccentStrong}};
+      --paper: {{.Theme.Paper}};
+      --panel: {{.Theme.Panel}};
+      --border: {{.Theme.Border}};
+      --ink: {{.Theme.Ink}};
+      --muted: {{.Theme.Muted}};
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "PodcastBody", "Noto Sans CJK SC", "PingFang SC", "Hiragino Sans", sans-serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body {
+      font-size: 12px;
+      line-height: 1.72;
+    }
+
+    .page {
+      width: 100%;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #d7e2ea;
+      border-radius: 28px;
+      padding: 5mm 4.5mm 5mm;
+      background:
+        radial-gradient(circle at top left, rgba(123, 161, 197, 0.16), transparent 28%),
+        radial-gradient(circle at top right, rgba(255, 255, 255, 0.95), transparent 45%),
+        linear-gradient(180deg, #f5f9fc 0%, #ffffff 72%);
+      box-shadow: 0 18px 44px rgba(113, 140, 170, 0.12);
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(135deg, transparent 0 72%, color-mix(in srgb, var(--accent) 11%, white) 72% 100%),
+        linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 44%);
+      pointer-events: none;
+    }
+
+    .hero>* {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 15px;
+      border-radius: 999px;
+      border: 1px solid #cfdae5;
+      background: linear-gradient(180deg, #f0f6fb, #e8f0f7);
+      color: #375879;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .hero-title {
+      margin: 18px 0 0;
+      font-family: "PodcastDisplay", "PodcastBody", serif;
+      font-size: 30px;
+      line-height: 1.18;
+      letter-spacing: -0.03em;
+    }
+
+    .hero-subtitle {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+      font-weight: 600;
+    }
+
+    .hero-description {
+      margin-top: 14px;
+      display: grid;
+      gap: 10px;
+      max-width: 100%;
+    }
+
+    .hero-description p {
+      margin: 0;
+      font-size: 12.9px;
+      line-height: 1.96;
+    }
+
+    .section {
+      page-break-before: auto;
+      break-before: auto;
+      margin-top: 4mm;
+    }
+
+    .section-shell {
+      border: 1px solid #d9e4ed;
+      border-radius: 28px;
+      background: var(--panel);
+      overflow: hidden;
+    }
+
+    .section-head {
+      padding: 4.5mm 4.5mm 4mm;
+      background:
+        radial-gradient(circle at top left, rgba(120, 156, 191, 0.16), transparent 28%),
+        linear-gradient(180deg, #eff5fa 0%, #f7fbff 100%);
+      border-bottom: 1px solid #d7e3ec;
+    }
+
+    .section-kicker {
+      margin: 0;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--accent-strong);
+    }
+
+    .section-title {
+      margin: 0;
+      font-family: "PodcastDisplay", "PodcastBody", serif;
+      font-size: 23px;
+      line-height: 1.16;
+      letter-spacing: -0.03em;
+    }
+
+    .section-body {
+      padding: 4mm 4mm 4.5mm;
+    }
+
+    .chapter+.chapter {
+      margin-top: 4mm;
+    }
+
+    .chapter {
+      break-inside: auto;
+      page-break-inside: auto;
+    }
+
+    .chapter-title {
+      margin: 0 0 2.5mm;
+      font-family: "PodcastDisplay", "PodcastBody", serif;
+      font-size: 17px;
+      line-height: 1.28;
+    }
+
+    .line-card {
+      border-top: 1px solid #d7e3ed;
+      border-bottom: 1px solid #d7e3ed;
+      border-left: none;
+      border-right: none;
+      border-radius: 0;
+      background: transparent;
+      padding: 2.5mm 0;
+      break-inside: auto;
+      page-break-inside: auto;
+      box-shadow: none;
+    }
+
+    .line-entry+.line-entry {
+      margin-top: 3.2mm;
+    }
+
+    .line-entry {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    .speaker {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      display: inline-block;
+      padding: 5px 12px 6px;
+      border-radius: 9px;
+      margin-right: 9px;
+      vertical-align: baseline;
+    }
+
+    .speaker-male {
+      background: #dde0ff;
+      color: #4d6097;
+    }
+
+    .speaker-female {
+      background: #ffe3bf;
+      color: #996224;
+    }
+
+    .line-text {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.82;
+      font-weight: 600;
+    }
+
+    ruby {
+      padding: 0 0.03em;
+      font-weight: 600;
+    }
+
+    rt {
+      font-size: 0.4em;
+      color: #6488b0;
+      padding-bottom: 0.1em;
+      font-weight: 700;
+    }
+
+    .translation {
+      margin-top: 1.8mm;
+      margin-left: 12mm;
+      display: inline-block;
+      max-width: calc(100% - 12mm);
+      border: 1px solid #d2deea;
+      border-radius: 999px;
+      background: #dfeaf5;
+      padding: 1.6mm 4mm 1.8mm;
+      color: #6c8198;
+      font-size: 12.4px;
+      line-height: 1.54;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 5mm;
+    }
+
+    .stack-grid {
+      display: grid;
+      gap: 5mm;
+    }
+
+    .study-card {
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background:
+        radial-gradient(circle at top left, color-mix(in srgb, var(--accent-soft) 70%, white), transparent 35%),
+        white;
+      padding: 5.5mm;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    .study-headline {
+      margin: 0;
+      font-family: "PodcastDisplay", "PodcastBody", serif;
+      font-size: 20px;
+      line-height: 1.46;
+    }
+
+    .meta-block+.meta-block {
+      margin-top: 3.5mm;
+    }
+
+    .meta-label {
+      background-color: lightblue;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      padding: 3px 6px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .meta-value {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.82;
+    }
+
+    .examples {
+      margin-top: 4mm;
+      display: grid;
+      gap: 3mm;
+    }
+
+    .example {
+      border: 1px dashed color-mix(in srgb, var(--accent) 22%, white);
+      border-radius: 16px;
+      background: color-mix(in srgb, var(--paper) 92%, white);
+      padding: 3.5mm;
+    }
+
+    .example-text {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.82;
+    }
+
+    .example-translation {
+      margin-top: 2.2mm;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.74;
+    }
+
+    .empty {
+      border: 1px dashed var(--border);
+      border-radius: 18px;
+      padding: 6mm;
+      color: var(--muted);
+      font-size: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="hero-badges">
+        <span class="badge">{{.Language}}</span>
+        <span class="badge">Study Sheet</span>
+      </div>
+
+      <h1 class="hero-title">{{.Title}}</h1>
+
+      {{if .Subtitle}}
+      <p class="hero-subtitle">{{.Subtitle}}</p>
+      {{end}}
+
+      {{if .Description}}
+      <div class="hero-description">
+        {{range .Description}}
+        <p>{{.}}</p>
+        {{end}}
+      </div>
+      {{end}}
+    </section>
+
+    <section class="section">
+      <div class="section-shell">
+        <header class="section-head">
+          <h2 class="section-title">{{.ScriptHeading}}</h2>
+        </header>
+
+        <div class="section-body">
+          {{if .Sections}}
+          {{range .Sections}}
+          <article class="chapter">
+            {{if .Heading}}
+            <h3 class="chapter-title">{{.Heading}}</h3>
+            {{end}}
+            <div class="line-card">
+              {{range .Lines}}
+              <div class="line-entry">
+                <p class="line-text">
+                  <span class="speaker {{.SpeakerClass}}">{{.Speaker}}:</span>
+                  {{.TextHTML}}
+                </p>
+                {{if .Translation}}
+                <div class="translation">{{.Translation}}</div>
+                {{end}}
+              </div>
+              {{end}}
+            </div>
+          </article>
+          {{end}}
+          {{else}}
+          <div class="empty">Transcript is not available.</div>
+          {{end}}
+        </div>
+      </div>
+    </section>
+
+    {{if .Vocabulary}}
+    <section class="section">
+      <div class="section-shell">
+        <header class="section-head">
+          <h2 class="section-title">{{.VocabularyText}}</h2>
+        </header>
+
+        <div class="section-body">
+          <div class="card-grid">
+            {{range .Vocabulary}}
+            <article class="study-card">
+              <h3 class="study-headline">{{.HeadlineHTML}}</h3>
+
+              <div class="meta-block">
+                <p class="meta-label">Meaning</p>
+                <p class="meta-value">{{.Meaning}}</p>
+              </div>
+
+              <div class="meta-block">
+                <p class="meta-label">Explanation</p>
+                <p class="meta-value">{{.Explanation}}</p>
+              </div>
+
+              {{if .Examples}}
+              <div class="examples">
+                {{range .Examples}}
+                <div class="example">
+                  <p class="example-text">{{.TextHTML}}</p>
+                  {{if .Translation}}
+                  <div class="example-translation">{{.Translation}}</div>
+                  {{end}}
+                </div>
+                {{end}}
+              </div>
+              {{end}}
+            </article>
+            {{end}}
+          </div>
+        </div>
+      </div>
+    </section>
+    {{end}}
+
+    {{if .Grammar}}
+    <section class="section">
+      <div class="section-shell">
+        <header class="section-head">
+          <h2 class="section-title">{{.GrammarText}}</h2>
+        </header>
+
+        <div class="section-body">
+          <div class="stack-grid">
+            {{range .Grammar}}
+            <article class="study-card">
+              <h3 class="study-headline">{{.HeadlineHTML}}</h3>
+
+              <div class="meta-block">
+                <p class="meta-label">Meaning</p>
+                <p class="meta-value">{{.Meaning}}</p>
+              </div>
+
+              <div class="meta-block">
+                <p class="meta-label">Explanation</p>
+                <p class="meta-value">{{.Explanation}}</p>
+              </div>
+
+              {{if .Examples}}
+              <div class="examples">
+                {{range .Examples}}
+                <div class="example">
+                  <p class="example-text">{{.TextHTML}}</p>
+                  {{if .Translation}}
+                  <div class="example-translation">{{.Translation}}</div>
+                  {{end}}
+                </div>
+                {{end}}
+              </div>
+              {{end}}
+            </article>
+            {{end}}
+          </div>
+        </div>
+      </div>
+    </section>
+    {{end}}
+  </main>
+</body>
+
+</html>

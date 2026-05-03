@@ -1,11 +1,11 @@
 ### 中文
 
 📚 Full script + vocabulary & grammar PDF here 👇
-https://podcast.lucayo.com/podcast/scripts/do-young-people-still-want-to-get-married-zh
+https://podcast.lucayo.com/podcast/scripts/daily-morning-routines-and-habits
 Hope this helps with your Chinese study! 😊
 
 📚 完整对话脚本 + 词汇语法PDF在这里 👇
-https://podcast.lucayo.com/podcast/scripts/do-young-people-still-want-to-get-married-zh
+https://podcast.lucayo.com/podcast/scripts/daily-morning-routines-and-habits
 希望对你的中文学习有帮助！😊
 
 
@@ -14,9 +14,9 @@ https://podcast.lucayo.com/podcast/scripts/do-young-people-still-want-to-get-mar
 ### 日本語
 
 📚 Full script + vocabulary & grammar PDF here 👇
-https://podcast.lucayo.com/podcast/scripts/how-to-find-and-enjoy-hobbies-as-an-adult
+https://podcast.lucayo.com/podcast/scripts/japans-mysterious-restaurant-rules-otoshi-and-tipping
 Hope this helps with your Japanese study! 😊
 
 📚 完全なスクリプト＋語彙・文法PDFはこちら 👇
-https://podcast.lucayo.com/podcast/scripts/how-to-find-and-enjoy-hobbies-as-an-adult
+https://podcast.lucayo.com/podcast/scripts/japans-mysterious-restaurant-rules-otoshi-and-tipping
 日本語学習のお役に立てれば嬉しいです！😊
