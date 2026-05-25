@@ -32,6 +32,11 @@ func GenerateGoogleAudio(ctx context.Context, input GenerateInput) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err := artifacts.flushCheckpointStores(); err != nil {
+			log.Printf("⚠️ podcast block checkpoint index flush warning project_id=%s err=%v", input.ProjectID, err)
+		}
+	}()
 	if err := invalidateAlignedOutputs(artifacts); err != nil {
 		return err
 	}
@@ -49,7 +54,15 @@ func GenerateGoogleAudio(ctx context.Context, input GenerateInput) error {
 	if err != nil {
 		return err
 	}
-	if _, err := generateGoogleAudioOnly(ctx, client, input.ProjectID, language, artifacts, script, requestedBlocks, intPtr(input.IsMultiple)); err != nil {
+	results, err := generateGoogleAudioOnly(ctx, client, input.ProjectID, language, artifacts, script, requestedBlocks, intPtr(input.IsMultiple))
+	if err != nil {
+		return err
+	}
+	provisionalScript, err := buildProvisionalAlignedScript(language, script, results, artifacts.blockGapPath, blockGapMS())
+	if err != nil {
+		return err
+	}
+	if err := writeJSON(artifacts.alignedPath, provisionalScript); err != nil {
 		return err
 	}
 	return nil
@@ -72,6 +85,11 @@ func AlignGoogle(ctx context.Context, input AlignInput) (GenerateResult, error) 
 	if err != nil {
 		return GenerateResult{}, err
 	}
+	defer func() {
+		if err := artifacts.flushCheckpointStores(); err != nil {
+			log.Printf("⚠️ podcast block checkpoint index flush warning project_id=%s err=%v", input.ProjectID, err)
+		}
+	}()
 
 	script, err := loadCachedScriptForAlignment(projectDir, language)
 	if err != nil {
@@ -90,16 +108,11 @@ func AlignGoogle(ctx context.Context, input AlignInput) (GenerateResult, error) 
 	}
 
 	aligner := newBlockAligner(newMFAClient(), chunkWorkingDir(projectDir))
-	results, err := alignGoogleAudioOnly(ctx, aligner, input.ProjectID, language, projectDir, artifacts, script, blockGapMS, requestedBlocks, intPtr(input.IsMultiple))
+	results, err := alignGoogleAudioOnly(ctx, aligner, input.ProjectID, language, artifacts, script, requestedBlocks, intPtr(input.IsMultiple))
 	if err != nil {
 		return GenerateResult{}, err
 	}
-	for i := range results {
-		if i >= len(script.Blocks) {
-			break
-		}
-		script.Blocks[i] = results[i].AlignedBlock
-	}
+	applyBlockResults(&script, results)
 
 	finalScript, concatPaths, _, err := assembleDialogue(script, results, artifacts.blockGapPath, blockGapMS)
 	if err != nil {
@@ -197,7 +210,7 @@ func generateGoogleAudioOnly(
 		if err != nil {
 			return nil, err
 		}
-		if err := persistBlockCheckpoint(artifacts.blockStatesDir, blockIndex, block, blockDurationMS, currentTTSMode); err != nil {
+		if err := artifacts.persistBlockCheckpoint(blockIndex, block, blockDurationMS, currentTTSMode); err != nil {
 			return nil, err
 		}
 		results[blockIndex] = blockSynthesisResult{
@@ -216,10 +229,8 @@ func alignGoogleAudioOnly(
 	aligner *blockAligner,
 	projectID string,
 	language string,
-	projectDir string,
 	artifacts audioArtifacts,
 	script dto.PodcastScript,
-	blockGapMS int,
 	requestedBlocks map[int]struct{},
 	currentTTSMode *int,
 ) ([]blockSynthesisResult, error) {
@@ -245,7 +256,6 @@ func alignGoogleAudioOnly(
 			}
 			if ok {
 				results[blockIndex] = reused
-				script.Blocks[blockIndex] = reused.AlignedBlock
 				continue
 			}
 		}
@@ -258,22 +268,6 @@ func alignGoogleAudioOnly(
 			return nil, fmt.Errorf("google alignment requires existing block audio: block=%s block_index=%d", strings.TrimSpace(block.BlockID), blockIndex+1)
 		}
 		results[blockIndex] = aligned
-		script.Blocks[blockIndex] = aligned.AlignedBlock
-
-		partialScript, _, _, err := assembleDialogue(
-			dto.PodcastScript{
-				Language: script.Language,
-				Title:    script.Title,
-				YouTube:  script.YouTube,
-				Blocks:   append([]dto.PodcastBlock(nil), script.Blocks[:blockIndex+1]...),
-			},
-			results[:blockIndex+1],
-			artifacts.blockGapPath,
-			blockGapMS,
-		)
-		if err == nil {
-			_ = writeJSON(filepath.Join(projectDir, "script_partial.json"), partialScript)
-		}
 		log.Printf("✅ podcast align block done provider=google block=%03d/%03d block_id=%s duration_ms=%d project_id=%s",
 			blockIndex+1, len(script.Blocks), block.BlockID, aligned.DurationMS, projectID)
 	}
@@ -281,8 +275,12 @@ func alignGoogleAudioOnly(
 }
 
 func loadCachedScriptForAlignment(projectDir, language string) (dto.PodcastScript, error) {
-	scriptPath := projectScriptInputPath(projectDir)
-	return loadScriptFromPath(language, scriptPath)
+	scriptPath := projectScriptAlignedPath(projectDir)
+	script, err := loadScriptFromPath(language, scriptPath)
+	if err != nil {
+		return dto.PodcastScript{}, err
+	}
+	return restoreStableBlockIDsFromArtifacts(projectDir, script), nil
 }
 
 func invalidateAlignedOutputs(artifacts audioArtifacts) error {

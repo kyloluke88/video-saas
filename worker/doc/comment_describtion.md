@@ -14,9 +14,9 @@ https://podcast.lucayo.com/podcast/scripts/daily-morning-routines-and-habits
 ### 日本語
 
 📚 Full script + vocabulary & grammar PDF here 👇
-https://podcast.lucayo.com/podcast/scripts/japans-mysterious-restaurant-rules-otoshi-and-tipping
+https://podcast.lucayo.com/podcast/scripts/apartment-hunting-in-japan
 Hope this helps with your Japanese study! 😊
 
 📚 完全なスクリプト＋語彙・文法PDFはこちら 👇
-https://podcast.lucayo.com/podcast/scripts/japans-mysterious-restaurant-rules-otoshi-and-tipping
+https://podcast.lucayo.com/podcast/scripts/apartment-hunting-in-japan
 日本語学習のお役に立てれば嬉しいです！😊

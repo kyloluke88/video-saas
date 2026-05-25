@@ -49,7 +49,6 @@ func TestCleanupPodcastIntermediates(t *testing.T) {
 	}
 
 	for _, name := range []string{
-		"podcast_base.mp4",
 		"podcast_content.mp4",
 		"podcast_subtitles.ass",
 		"script_partial.json",
@@ -65,6 +64,7 @@ func TestCleanupPodcastIntermediates(t *testing.T) {
 	}
 
 	for _, name := range []string{
+		"podcast_base.mp4",
 		"podcast_final.mp4",
 		"dialogue.mp3",
 		"script_aligned.json",

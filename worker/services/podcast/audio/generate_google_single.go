@@ -61,7 +61,7 @@ func generateGoogleSingleAudioOnly(
 		if err != nil {
 			return nil, err
 		}
-		if err := persistBlockCheckpoint(artifacts.blockStatesDir, blockIndex, block, blockDurationMS, currentTTSMode); err != nil {
+		if err := artifacts.persistBlockCheckpoint(blockIndex, block, blockDurationMS, currentTTSMode); err != nil {
 			return nil, err
 		}
 		results[blockIndex] = blockSynthesisResult{

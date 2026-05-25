@@ -38,9 +38,6 @@ type publishGrammarItem struct {
 
 func exportYouTubeAssets(projectDir string, source podcastpageservice.PageSource) ([]string, error) {
 	script := source.Script
-	if len(script.Segments) == 0 && len(script.Blocks) > 0 {
-		script.RefreshSegmentsFromBlocks()
-	}
 
 	pageURL := strings.TrimSpace(source.Upsert.CanonicalURL)
 	if pageURL == "" {
@@ -859,14 +856,12 @@ func buildYouTubeTranscriptArtifacts(script dto.PodcastScript) []transcriptArtif
 }
 
 func transcriptSegmentsForLanguage(script dto.PodcastScript, language string) []dto.PodcastSegment {
-	if len(script.Segments) == 0 && len(script.Blocks) > 0 {
-		script.RefreshSegmentsFromBlocks()
-	}
-	if len(script.Segments) == 0 {
+	segments := script.FlatSegments()
+	if len(segments) == 0 {
 		return nil
 	}
-	out := make([]dto.PodcastSegment, 0, len(script.Segments))
-	for _, seg := range script.Segments {
+	out := make([]dto.PodcastSegment, 0, len(segments))
+	for _, seg := range segments {
 		if seg.EndMS <= seg.StartMS {
 			continue
 		}
@@ -896,14 +891,12 @@ func youtubeTranscriptDisplayText(sourceLanguage, targetLanguage string, seg dto
 }
 
 func englishTranscriptSegments(script dto.PodcastScript) []dto.PodcastSegment {
-	if len(script.Segments) == 0 && len(script.Blocks) > 0 {
-		script.RefreshSegmentsFromBlocks()
-	}
-	if len(script.Segments) == 0 {
+	segments := script.FlatSegments()
+	if len(segments) == 0 {
 		return nil
 	}
-	out := make([]dto.PodcastSegment, 0, len(script.Segments))
-	for _, seg := range script.Segments {
+	out := make([]dto.PodcastSegment, 0, len(segments))
+	for _, seg := range segments {
 		if seg.EndMS <= seg.StartMS {
 			continue
 		}
@@ -920,11 +913,9 @@ func englishTranscriptCueText(seg dto.PodcastSegment) string {
 }
 
 func collectTranscriptLanguages(script dto.PodcastScript) []string {
-	if len(script.Segments) == 0 && len(script.Blocks) > 0 {
-		script.RefreshSegmentsFromBlocks()
-	}
+	segments := script.FlatSegments()
 	seen := make(map[string]struct{})
-	languages := make([]string, 0, len(script.Segments)+1)
+	languages := make([]string, 0, len(segments)+1)
 
 	add := func(value string) {
 		value = strings.TrimSpace(value)
@@ -939,7 +930,7 @@ func collectTranscriptLanguages(script dto.PodcastScript) []string {
 	}
 
 	add(script.Language)
-	for _, seg := range script.Segments {
+	for _, seg := range segments {
 		for language := range seg.Translations {
 			add(language)
 		}

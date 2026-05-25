@@ -12,7 +12,6 @@ func sanitizeScriptTokens(script dto.PodcastScript) dto.PodcastScript {
 			script.Blocks[i].Segments[j] = sanitizeSegmentTokens(script.Blocks[i].Segments[j])
 		}
 	}
-	script.RefreshSegmentsFromBlocks()
 	return script
 }
 

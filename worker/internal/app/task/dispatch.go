@@ -251,7 +251,7 @@ func buildTaskMaterials(task VideoTaskMessage) []string {
 		appendMaterial("request_payload.json")
 		appendMaterial("script_aligned.json")
 	case "podcast.audio.align.v1":
-		appendMaterial("script_input.json")
+		appendMaterial("script_aligned.json")
 		appendMaterial("blocks")
 		appendMaterial("block_states")
 	case "podcast.compose.render.v1":

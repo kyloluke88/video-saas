@@ -43,15 +43,14 @@ type PodcastComposePayload struct {
 }
 
 type PodcastScript struct {
-	Language        string           `json:"language,omitempty"`
-	DifficultyLevel string           `json:"difficulty_level,omitempty"`
-	Title           string           `json:"title,omitempty"`
-	EnTitle         string           `json:"en_title,omitempty"`
-	YouTube         PodcastYouTube   `json:"youtube,omitempty"`
-	Vocabulary      json.RawMessage  `json:"vocabulary,omitempty"`
-	Grammar         json.RawMessage  `json:"grammar,omitempty"`
-	Blocks          []PodcastBlock   `json:"blocks,omitempty"`
-	Segments        []PodcastSegment `json:"segments,omitempty"`
+	Language        string          `json:"language,omitempty"`
+	DifficultyLevel string          `json:"difficulty_level,omitempty"`
+	Title           string          `json:"title,omitempty"`
+	EnTitle         string          `json:"en_title,omitempty"`
+	YouTube         PodcastYouTube  `json:"youtube,omitempty"`
+	Vocabulary      json.RawMessage `json:"vocabulary,omitempty"`
+	Grammar         json.RawMessage `json:"grammar,omitempty"`
+	Blocks          []PodcastBlock  `json:"blocks,omitempty"`
 }
 
 type PodcastBlock struct {
@@ -120,15 +119,14 @@ type PodcastTokenSpanRef struct {
 
 func (s *PodcastScript) UnmarshalJSON(data []byte) error {
 	type rawScript struct {
-		Language        string           `json:"language"`
-		DifficultyLevel string           `json:"difficulty_level"`
-		Title           string           `json:"title"`
-		EnTitle         string           `json:"en_title"`
-		YouTube         PodcastYouTube   `json:"youtube"`
-		Vocabulary      json.RawMessage  `json:"vocabulary"`
-		Grammar         json.RawMessage  `json:"grammar"`
-		Blocks          []PodcastBlock   `json:"blocks"`
-		Segments        []PodcastSegment `json:"segments"`
+		Language        string          `json:"language"`
+		DifficultyLevel string          `json:"difficulty_level"`
+		Title           string          `json:"title"`
+		EnTitle         string          `json:"en_title"`
+		YouTube         PodcastYouTube  `json:"youtube"`
+		Vocabulary      json.RawMessage `json:"vocabulary"`
+		Grammar         json.RawMessage `json:"grammar"`
+		Blocks          []PodcastBlock  `json:"blocks"`
 	}
 	var raw rawScript
 	if err := json.Unmarshal(data, &raw); err != nil {
@@ -142,10 +140,6 @@ func (s *PodcastScript) UnmarshalJSON(data []byte) error {
 	s.Vocabulary = raw.Vocabulary
 	s.Grammar = raw.Grammar
 	s.Blocks = raw.Blocks
-	s.Segments = raw.Segments
-	if len(s.Segments) == 0 && len(s.Blocks) > 0 {
-		s.RefreshSegmentsFromBlocks()
-	}
 	return nil
 }
 
@@ -307,48 +301,38 @@ func (t *PodcastToken) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (s *PodcastScript) RefreshSegmentsFromBlocks() {
-	if len(s.Blocks) == 0 {
-		return
+func (s PodcastScript) SegmentCount() int {
+	total := 0
+	for _, block := range s.Blocks {
+		total += len(block.Segments)
 	}
-	segments := make([]PodcastSegment, 0)
+	return total
+}
+
+func (s PodcastScript) FlatSegments() []PodcastSegment {
+	total := s.SegmentCount()
+	if total == 0 {
+		return nil
+	}
+	segments := make([]PodcastSegment, 0, total)
 	for _, block := range s.Blocks {
 		segments = append(segments, block.Segments...)
 	}
-	s.Segments = segments
+	return segments
 }
 
-func (s *PodcastScript) SyncBlocksFromSegments() {
-	if len(s.Blocks) == 0 || len(s.Segments) == 0 {
-		return
-	}
-	segmentsByID := make(map[string]PodcastSegment, len(s.Segments))
-	for _, seg := range s.Segments {
-		if seg.SegmentID == "" {
-			continue
-		}
-		segmentsByID[seg.SegmentID] = seg
-	}
-	for i := range s.Blocks {
-		for j := range s.Blocks[i].Segments {
-			segID := s.Blocks[i].Segments[j].SegmentID
-			if segID == "" {
-				continue
+func (s PodcastScript) WalkSegments(fn func(PodcastSegment) bool) {
+	for _, block := range s.Blocks {
+		for _, seg := range block.Segments {
+			if !fn(seg) {
+				return
 			}
-			updated, ok := segmentsByID[segID]
-			if !ok {
-				continue
-			}
-			s.Blocks[i].Segments[j] = updated
 		}
 	}
 }
 
 func (s *PodcastScript) RenumberStructureIDs() {
 	if len(s.Blocks) == 0 {
-		for i := range s.Segments {
-			s.Segments[i].SegmentID = formatSegmentID(i + 1)
-		}
 		return
 	}
 
@@ -364,7 +348,6 @@ func (s *PodcastScript) RenumberStructureIDs() {
 	chapters := make([]PodcastYouTubeChapter, 0, len(s.YouTube.Chapters))
 
 	nextChapter := 1
-	nextBlock := 1
 	nextSegment := 1
 
 	for i := range s.Blocks {
@@ -386,8 +369,7 @@ func (s *PodcastScript) RenumberStructureIDs() {
 		}
 
 		s.Blocks[i].ChapterID = newChapterID
-		s.Blocks[i].BlockID = formatBlockID(blockIDPrefix(s.Blocks[i]), nextBlock)
-		nextBlock++
+		s.Blocks[i].BlockID = normalizedStableBlockID(s.Blocks[i].BlockID, i)
 
 		chapters[chapterIndexByNewID[newChapterID]].BlockIDs = append(
 			chapters[chapterIndexByNewID[newChapterID]].BlockIDs,
@@ -401,7 +383,6 @@ func (s *PodcastScript) RenumberStructureIDs() {
 	}
 
 	s.YouTube.Chapters = chapters
-	s.RefreshSegmentsFromBlocks()
 }
 
 func normalizedBlockChapterKey(block PodcastBlock, index int) string {
@@ -411,27 +392,22 @@ func normalizedBlockChapterKey(block PodcastBlock, index int) string {
 	return fmt.Sprintf("__chapter_%03d", index+1)
 }
 
-func blockIDPrefix(block PodcastBlock) string {
-	raw := strings.TrimSpace(block.BlockID)
-	if raw == "" {
-		return "block"
-	}
-	if idx := strings.Index(raw, "."); idx > 0 {
-		return raw[:idx]
-	}
-	return raw
-}
-
 func formatChapterID(index int) string {
 	return fmt.Sprintf("ch_%03d", index)
 }
 
-func formatBlockID(prefix string, index int) string {
-	clean := strings.TrimSpace(prefix)
-	if clean == "" {
-		clean = "block"
+func normalizedStableBlockID(blockID string, index int) string {
+	blockID = strings.TrimSpace(blockID)
+	if blockID == "" {
+		return fmt.Sprintf("block_%03d", index+1)
 	}
-	return fmt.Sprintf("%s.%d", clean, index)
+	if dot := strings.Index(blockID, "."); dot > 0 {
+		blockID = strings.TrimSpace(blockID[:dot])
+	}
+	if blockID == "" {
+		return fmt.Sprintf("block_%03d", index+1)
+	}
+	return blockID
 }
 
 func formatSegmentID(index int) string {

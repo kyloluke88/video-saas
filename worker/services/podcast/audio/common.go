@@ -19,6 +19,10 @@ func projectScriptInputPath(projectDir string) string {
 	return filepath.Join(projectDir, "script_input.json")
 }
 
+func projectScriptAlignedPath(projectDir string) string {
+	return filepath.Join(projectDir, "script_aligned.json")
+}
+
 func projectDirFor(projectID string) string {
 	return filepath.Join(conf.Get[string]("worker.ffmpeg_work_dir"), "projects", projectID)
 }
@@ -104,10 +108,11 @@ func firstPositive(values ...int) int {
 
 func alignedStats(script dto.PodcastScript) (int, int, int, int) {
 	timedSegments := 0
-	totalSegments := len(script.Segments)
+	totalSegments := 0
 	timedTokens := 0
 	totalTokens := 0
-	for _, seg := range script.Segments {
+	script.WalkSegments(func(seg dto.PodcastSegment) bool {
+		totalSegments++
 		if seg.EndMS > seg.StartMS {
 			timedSegments++
 		}
@@ -117,6 +122,7 @@ func alignedStats(script dto.PodcastScript) (int, int, int, int) {
 				timedTokens++
 			}
 		}
-	}
+		return true
+	})
 	return timedSegments, totalSegments, timedTokens, totalTokens
 }

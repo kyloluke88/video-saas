@@ -96,3 +96,73 @@ func TestPodcastComposePayloadMarshalKeepsZeroRunMode(t *testing.T) {
 		t.Fatalf("expected run_mode to be marshaled, got %s", string(raw))
 	}
 }
+
+func TestPodcastScriptRenumberStructureIDsPreservesStableBlockIDs(t *testing.T) {
+	script := PodcastScript{
+		YouTube: PodcastYouTube{
+			Chapters: []PodcastYouTubeChapter{
+				{ChapterID: "opening", Title: "Opening"},
+				{ChapterID: "closing", Title: "Closing"},
+			},
+		},
+		Blocks: []PodcastBlock{
+			{
+				ChapterID: "opening",
+				BlockID:   "block_001",
+				Segments: []PodcastSegment{
+					{SegmentID: "seg_old_1"},
+				},
+			},
+			{
+				ChapterID: "closing",
+				BlockID:   "summary_cta",
+				Segments: []PodcastSegment{
+					{SegmentID: "seg_old_2"},
+				},
+			},
+		},
+	}
+
+	script.RenumberStructureIDs()
+
+	if got, want := script.Blocks[0].BlockID, "block_001"; got != want {
+		t.Fatalf("expected first block id %q, got %q", want, got)
+	}
+	if got, want := script.Blocks[1].BlockID, "summary_cta"; got != want {
+		t.Fatalf("expected summary block id %q, got %q", want, got)
+	}
+	if got, want := script.YouTube.Chapters[0].BlockIDs[0], "block_001"; got != want {
+		t.Fatalf("expected first chapter block id %q, got %q", want, got)
+	}
+	if got, want := script.YouTube.Chapters[1].BlockIDs[0], "summary_cta"; got != want {
+		t.Fatalf("expected second chapter block id %q, got %q", want, got)
+	}
+	if got, want := script.Blocks[0].Segments[0].SegmentID, "seg_001"; got != want {
+		t.Fatalf("expected first segment id %q, got %q", want, got)
+	}
+	if got, want := script.Blocks[1].Segments[0].SegmentID, "seg_002"; got != want {
+		t.Fatalf("expected second segment id %q, got %q", want, got)
+	}
+}
+
+func TestPodcastScriptRenumberStructureIDsNormalizesLegacyDottedBlockIDs(t *testing.T) {
+	script := PodcastScript{
+		Blocks: []PodcastBlock{
+			{BlockID: "block_001.1"},
+			{BlockID: "summary_cta.14"},
+			{BlockID: ""},
+		},
+	}
+
+	script.RenumberStructureIDs()
+
+	if got, want := script.Blocks[0].BlockID, "block_001"; got != want {
+		t.Fatalf("expected normalized block id %q, got %q", want, got)
+	}
+	if got, want := script.Blocks[1].BlockID, "summary_cta"; got != want {
+		t.Fatalf("expected normalized summary block id %q, got %q", want, got)
+	}
+	if got, want := script.Blocks[2].BlockID, "block_003"; got != want {
+		t.Fatalf("expected fallback block id %q, got %q", want, got)
+	}
+}

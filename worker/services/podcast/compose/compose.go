@@ -75,11 +75,13 @@ func Finalize(ctx context.Context, input ComposeInput) (ComposeResult, error) {
 	if err := readJSON(paths.ScriptPath, &script); err != nil {
 		return ComposeResult{}, err
 	}
+	if len(script.Blocks) == 0 {
+		return ComposeResult{}, services.NonRetryableError{Err: fmt.Errorf("aligned script requires non-empty blocks: %s", paths.ScriptPath)}
+	}
 	if err := validateScriptLanguage(script.Language, language); err != nil {
 		return ComposeResult{}, err
 	}
 	script.Language = language
-	script.RefreshSegmentsFromBlocks()
 	if err := ffmpegpodcast.FinalizeComposedVideoContext(ctx, ffmpegpodcast.ComposeInput{
 		DialogueAudioPath: paths.DialoguePath,
 		Script:            &script,

@@ -22,6 +22,8 @@
   - fr 法语
   - de 德语
   - ru 俄语
+  - mn 蒙古语
+  - my 缅甸语
 - translations 的内容必须和原句语义一致，适合字幕阅读，表达自然、简洁、口语化
 - translations 里的每种语言都必须完整覆盖当前 segment 的意思，不要只翻一半
 - translations 不用于 TTS，不要加入任何 [] 标签
@@ -164,7 +166,9 @@
             "th": "ช่วงนี้ฉันได้ยินเรื่องนี้บ่อยมากจริง ๆ",
             "fr": "C’est un sujet dont j’entends beaucoup parler ces derniers temps.",
             "de": "Das ist ein Thema, über das ich in letzter Zeit wirklich oft etwas höre.",
-            "ru": "Это тема, о которой я в последнее время действительно часто слышу."
+            "ru": "Это тема, о которой я в последнее время действительно часто слышу.",
+            "mn": "Энэ сэдвийн талаар би сүүлийн үед их сонсож байна.",
+            "my": "ဒီအကြောင်းကို လတ်တလော ကျွန်တော် ခဏခဏ ကြားနေရတယ်။"
           }
           "tokens": [
             { "char": "話題", "reading": "わだい" },
@@ -177,4 +181,4 @@
   ]
 }
 
-文件为第一阶段的 JSON 文件，请在其基础上补全 translations 的结果，并且给我可以下载的完整的 JSON 文件，文件名称设置为 en_title 的snake的形式。
+请继续将在你给出的这个 JSON 文件的基础上按照规则补全 translations 的结果，并且给我可以下载的完整的 JSON 文件，文件名称设置为 en_title 的snake的形式。

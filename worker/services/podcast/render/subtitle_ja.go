@@ -13,7 +13,8 @@ import (
 )
 
 func writeJapaneseASS(script dto.PodcastScript, projectDir, resolution string, style int) (string, error) {
-	if len(script.Segments) == 0 {
+	segments := script.FlatSegments()
+	if len(segments) == 0 {
 		return "", nil
 	}
 
@@ -23,7 +24,7 @@ func writeJapaneseASS(script dto.PodcastScript, projectDir, resolution string, s
 
 	var b strings.Builder
 	writeJapaneseASSHeader(&b, layout)
-	for _, seg := range script.Segments {
+	for _, seg := range segments {
 		if seg.EndMS <= seg.StartMS {
 			continue
 		}

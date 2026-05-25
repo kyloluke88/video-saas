@@ -13,7 +13,7 @@ import (
 )
 
 func TestBuildPageUpsertFromProjectDir(t *testing.T) {
-	projectID := "zh_podcast_20260401165006_json"
+	projectID := "ja_podcast_20260501082944"
 	projectDir := filepath.Clean(filepath.Join("..", "..", "..", "outputs", "projects", projectID))
 
 	upsert, err := BuildPageUpsertFromProjectDir(projectDir, PersistInput{
@@ -27,7 +27,7 @@ func TestBuildPageUpsertFromProjectDir(t *testing.T) {
 	if upsert.ProjectID != projectID {
 		t.Fatalf("unexpected project_id: %s", upsert.ProjectID)
 	}
-	if upsert.Title == "" || !strings.Contains(upsert.Title, "外国人第一次来中国") {
+	if upsert.Title == "" || !strings.Contains(upsert.Title, "ゴールデンウィークの小さな旅") {
 		t.Fatalf("unexpected title: %s", upsert.Title)
 	}
 	if upsert.VideoURL == "" || !strings.Contains(upsert.VideoURL, "cdn.example.com") {
@@ -36,7 +36,7 @@ func TestBuildPageUpsertFromProjectDir(t *testing.T) {
 	if len(upsert.Script) == 0 || !strings.Contains(string(upsert.Script), "\"sections\"") {
 		t.Fatalf("script json was not built correctly: %s", string(upsert.Script))
 	}
-	if upsert.Slug != "what-panics-first-timers-in-china" {
+	if upsert.Slug != "golden-week-mini-trip-kamakura" {
 		t.Fatalf("unexpected slug: %s", upsert.Slug)
 	}
 }
@@ -49,7 +49,7 @@ func TestBuildPageUpsertFromProjectDirIncludesVocabularyAndGrammar(t *testing.T)
 		"title":"为什么中国人总说多喝热水？",
 		"script_filename":"chinese-hot-water-test.json"
 	}`
-	scriptInput := `{
+	scriptAligned := `{
 		"language":"zh",
 		"title":"为什么中国人总说多喝热水？",
 		"en_title":"Why Do Chinese People Always Say Drink More Hot Water",
@@ -87,33 +87,38 @@ func TestBuildPageUpsertFromProjectDirIncludesVocabularyAndGrammar(t *testing.T)
 				]
 			}
 		],
-		"segments":[
+		"blocks":[
 			{
-				"segment_id":"seg_001",
-				"speaker":"female",
-				"speaker_name":"盼盼",
-				"text":"你有没有发现，中国人很喜欢说多喝热水？",
-				"en":"Have you noticed that Chinese people really like saying, drink more hot water?",
-				"tokens":[
-					{"char":"你","reading":"nǐ"},
-					{"char":"有","reading":"yǒu"},
-					{"char":"没","reading":"méi"},
-					{"char":"有","reading":"yǒu"},
-					{"char":"发","reading":"fā"},
-					{"char":"现","reading":"xiàn"},
-					{"char":"，","reading":""},
-					{"char":"中","reading":"zhōng"},
-					{"char":"国","reading":"guó"},
-					{"char":"人","reading":"rén"},
-					{"char":"很","reading":"hěn"},
-					{"char":"喜","reading":"xǐ"},
-					{"char":"欢","reading":"huān"},
-					{"char":"说","reading":"shuō"},
-					{"char":"多","reading":"duō"},
-					{"char":"喝","reading":"hē"},
-					{"char":"热","reading":"rè"},
-					{"char":"水","reading":"shuǐ"},
-					{"char":"？","reading":""}
+				"block_id":"block_001",
+				"segments":[
+					{
+						"segment_id":"seg_001",
+						"speaker":"female",
+						"speaker_name":"盼盼",
+						"text":"你有没有发现，中国人很喜欢说多喝热水？",
+						"en":"Have you noticed that Chinese people really like saying, drink more hot water?",
+						"tokens":[
+							{"char":"你","reading":"nǐ"},
+							{"char":"有","reading":"yǒu"},
+							{"char":"没","reading":"méi"},
+							{"char":"有","reading":"yǒu"},
+							{"char":"发","reading":"fā"},
+							{"char":"现","reading":"xiàn"},
+							{"char":"，","reading":""},
+							{"char":"中","reading":"zhōng"},
+							{"char":"国","reading":"guó"},
+							{"char":"人","reading":"rén"},
+							{"char":"很","reading":"hěn"},
+							{"char":"喜","reading":"xǐ"},
+							{"char":"欢","reading":"huān"},
+							{"char":"说","reading":"shuō"},
+							{"char":"多","reading":"duō"},
+							{"char":"喝","reading":"hē"},
+							{"char":"热","reading":"rè"},
+							{"char":"水","reading":"shuǐ"},
+							{"char":"？","reading":""}
+						]
+					}
 				]
 			}
 		]
@@ -122,8 +127,8 @@ func TestBuildPageUpsertFromProjectDirIncludesVocabularyAndGrammar(t *testing.T)
 	if err := os.WriteFile(filepath.Join(projectDir, "request_payload.json"), []byte(requestPayload), 0o644); err != nil {
 		t.Fatalf("write request_payload.json failed: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(projectDir, "script_input.json"), []byte(scriptInput), 0o644); err != nil {
-		t.Fatalf("write script_input.json failed: %v", err)
+	if err := os.WriteFile(filepath.Join(projectDir, "script_aligned.json"), []byte(scriptAligned), 0o644); err != nil {
+		t.Fatalf("write script_aligned.json failed: %v", err)
 	}
 
 	upsert, err := BuildPageUpsertFromProjectDir(projectDir, PersistInput{
@@ -134,10 +139,10 @@ func TestBuildPageUpsertFromProjectDirIncludesVocabularyAndGrammar(t *testing.T)
 	}
 
 	if len(upsert.Vocabulary) == 0 {
-		t.Fatal("expected vocabulary to be populated from script_input.json")
+		t.Fatal("expected vocabulary to be populated from script_aligned.json")
 	}
 	if len(upsert.Grammar) == 0 {
-		t.Fatal("expected grammar to be populated from script_input.json")
+		t.Fatal("expected grammar to be populated from script_aligned.json")
 	}
 	if !strings.Contains(string(upsert.Script), `"speaker_name":"盼盼"`) {
 		t.Fatalf("expected script json to preserve speaker_name, got: %s", string(upsert.Script))
@@ -168,16 +173,21 @@ func TestBuildPageUpsertFromProjectDirRequiresEnTitleForSlug(t *testing.T) {
 		"title":"测试标题",
 		"script_filename":"test.json"
 	}`
-	scriptInput := `{
+	scriptAligned := `{
 		"language":"zh",
 		"title":"测试标题",
-		"segments":[
+		"blocks":[
 			{
-				"segment_id":"seg_001",
-				"speaker":"female",
-				"speaker_name":"盼盼",
-				"text":"测试内容",
-				"en":"test"
+				"block_id":"block_001",
+				"segments":[
+					{
+						"segment_id":"seg_001",
+						"speaker":"female",
+						"speaker_name":"盼盼",
+						"text":"测试内容",
+						"en":"test"
+					}
+				]
 			}
 		]
 	}`
@@ -185,8 +195,8 @@ func TestBuildPageUpsertFromProjectDirRequiresEnTitleForSlug(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(projectDir, "request_payload.json"), []byte(requestPayload), 0o644); err != nil {
 		t.Fatalf("write request_payload.json failed: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(projectDir, "script_input.json"), []byte(scriptInput), 0o644); err != nil {
-		t.Fatalf("write script_input.json failed: %v", err)
+	if err := os.WriteFile(filepath.Join(projectDir, "script_aligned.json"), []byte(scriptAligned), 0o644); err != nil {
+		t.Fatalf("write script_aligned.json failed: %v", err)
 	}
 
 	_, err := BuildPageUpsertFromProjectDir(projectDir, PersistInput{
@@ -220,17 +230,22 @@ func TestBuildPageUpsertFromReplayProjectDirKeepsBaseSlug(t *testing.T) {
 		"run_mode":1,
 		"source_project_id":"ja_podcast_source"
 	}`
-	scriptInput := `{
+	scriptAligned := `{
 		"language":"ja",
 		"title":"テストタイトル",
 		"en_title":"What Happened in the First Episode?",
-		"segments":[
+		"blocks":[
 			{
-				"segment_id":"seg_001",
-				"speaker":"female",
-				"speaker_name":"盼盼",
-				"text":"テスト内容",
-				"en":"test content"
+				"block_id":"block_001",
+				"segments":[
+					{
+						"segment_id":"seg_001",
+						"speaker":"female",
+						"speaker_name":"盼盼",
+						"text":"テスト内容",
+						"en":"test content"
+					}
+				]
 			}
 		]
 	}`
@@ -238,8 +253,8 @@ func TestBuildPageUpsertFromReplayProjectDirKeepsBaseSlug(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(projectDir, "request_payload.json"), []byte(requestPayload), 0o644); err != nil {
 		t.Fatalf("write request_payload.json failed: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(projectDir, "script_input.json"), []byte(scriptInput), 0o644); err != nil {
-		t.Fatalf("write script_input.json failed: %v", err)
+	if err := os.WriteFile(filepath.Join(projectDir, "script_aligned.json"), []byte(scriptAligned), 0o644); err != nil {
+		t.Fatalf("write script_aligned.json failed: %v", err)
 	}
 
 	upsert, err := BuildPageUpsertFromProjectDir(projectDir, PersistInput{
@@ -264,5 +279,51 @@ func TestBuildReplayPageSlugFallsBackToBaseWhenLanguageMissing(t *testing.T) {
 	slug := buildReplayPageSlug("what-happened-in-the-first-episode", "")
 	if slug != "what-happened-in-the-first-episode" {
 		t.Fatalf("unexpected slug: %s", slug)
+	}
+}
+
+func TestBuildPageUpsertFromProjectDirRequiresAlignedScript(t *testing.T) {
+	projectDir := t.TempDir()
+
+	requestPayload := `{
+		"lang":"zh",
+		"title":"测试标题",
+		"script_filename":"test.json"
+	}`
+	scriptInput := `{
+		"language":"zh",
+		"title":"测试标题",
+		"en_title":"test-title",
+		"blocks":[
+			{
+				"block_id":"block_001",
+				"segments":[
+					{
+						"segment_id":"seg_001",
+						"speaker":"female",
+						"text":"测试内容",
+						"en":"test content"
+					}
+				]
+			}
+		]
+	}`
+
+	if err := os.WriteFile(filepath.Join(projectDir, "request_payload.json"), []byte(requestPayload), 0o644); err != nil {
+		t.Fatalf("write request_payload.json failed: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(projectDir, "script_input.json"), []byte(scriptInput), 0o644); err != nil {
+		t.Fatalf("write script_input.json failed: %v", err)
+	}
+
+	_, err := BuildPageUpsertFromProjectDir(projectDir, PersistInput{
+		ProjectID: "podcast-page-test-aligned-required",
+	})
+	if err == nil || !strings.Contains(err.Error(), "aligned script not found") {
+		t.Fatalf("expected aligned script requirement error, got: %v", err)
+	}
+	var nonRetryable services.NonRetryableError
+	if !errors.As(err, &nonRetryable) {
+		t.Fatalf("expected non-retryable error, got: %T %v", err, err)
 	}
 }

@@ -9,7 +9,6 @@ import (
 )
 
 var podcastIntermediateFiles = []string{
-	"podcast_base.mp4",
 	"podcast_content.mp4",
 	"podcast_subtitles.ass",
 	"script_partial.json",

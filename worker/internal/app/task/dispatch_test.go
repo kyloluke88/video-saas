@@ -28,7 +28,7 @@ func TestBuildTaskMaterialsPodcastStages(t *testing.T) {
 		{
 			name:     "audio-align",
 			taskType: "podcast.audio.align.v1",
-			want:     []string{"script_input.json", "blocks", "block_states"},
+			want:     []string{"script_aligned.json", "blocks", "block_states"},
 		},
 		{
 			name:     "compose-render",

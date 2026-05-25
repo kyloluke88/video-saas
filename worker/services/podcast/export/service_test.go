@@ -169,23 +169,12 @@ func findExportFixtureProject(t *testing.T) string {
 }
 
 func hasFixtureFiles(projectDir string) bool {
-	required := [][]string{
-		{"request_payload.json", "script_aligned.json"},
-		{"request_payload.json", "script_input.json"},
-	}
-	for _, pair := range required {
-		allExist := true
-		for _, name := range pair {
-			if _, err := os.Stat(filepath.Join(projectDir, name)); err != nil {
-				allExist = false
-				break
-			}
-		}
-		if allExist {
-			return true
+	for _, name := range []string{"request_payload.json", "script_aligned.json"} {
+		if _, err := os.Stat(filepath.Join(projectDir, name)); err != nil {
+			return false
 		}
 	}
-	return false
+	return true
 }
 
 func verifyBrowserPDFExportWorks() error {

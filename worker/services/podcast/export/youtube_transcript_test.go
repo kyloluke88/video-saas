@@ -10,26 +10,29 @@ import (
 func TestBuildYouTubeTranscriptSRTForLanguage(t *testing.T) {
 	script := dto.PodcastScript{
 		Language: "zh",
-		Segments: []dto.PodcastSegment{
-			{
-				SegmentID: "seg_001",
-				Text:      "大家好，欢迎来到我们的日常中文频道。",
-				Translations: map[string]string{
-					"en": "Hello everyone, welcome to our daily Chinese channel.",
+		Blocks: []dto.PodcastBlock{{
+			BlockID: "block_001",
+			Segments: []dto.PodcastSegment{
+				{
+					SegmentID: "seg_001",
+					Text:      "大家好，欢迎来到我们的日常中文频道。",
+					Translations: map[string]string{
+						"en": "Hello everyone, welcome to our daily Chinese channel.",
+					},
+					StartMS: 0,
+					EndMS:   2450,
 				},
-				StartMS: 0,
-				EndMS:   2450,
-			},
-			{
-				SegmentID: "seg_002",
-				Text:      "今天我们来聊一聊年轻人的婚恋观。",
-				Translations: map[string]string{
-					"en": "Today we are going to talk about young people's views on marriage and relationships.",
+				{
+					SegmentID: "seg_002",
+					Text:      "今天我们来聊一聊年轻人的婚恋观。",
+					Translations: map[string]string{
+						"en": "Today we are going to talk about young people's views on marriage and relationships.",
+					},
+					StartMS: 2450,
+					EndMS:   5870,
 				},
-				StartMS: 2450,
-				EndMS:   5870,
 			},
-		},
+		}},
 	}
 
 	got := buildYouTubeTranscriptSRTForLanguage(script, "zh")
@@ -47,26 +50,29 @@ func TestBuildYouTubeTranscriptSRTForLanguage(t *testing.T) {
 func TestBuildYouTubeEnglishTranscriptSRT(t *testing.T) {
 	script := dto.PodcastScript{
 		Language: "zh",
-		Segments: []dto.PodcastSegment{
-			{
-				SegmentID: "seg_001",
-				Text:      "大家好，欢迎来到我们的日常中文频道。",
-				Translations: map[string]string{
-					"en": "Hello everyone, welcome to our daily Chinese channel.",
+		Blocks: []dto.PodcastBlock{{
+			BlockID: "block_001",
+			Segments: []dto.PodcastSegment{
+				{
+					SegmentID: "seg_001",
+					Text:      "大家好，欢迎来到我们的日常中文频道。",
+					Translations: map[string]string{
+						"en": "Hello everyone, welcome to our daily Chinese channel.",
+					},
+					StartMS: 0,
+					EndMS:   2450,
 				},
-				StartMS: 0,
-				EndMS:   2450,
-			},
-			{
-				SegmentID: "seg_002",
-				Text:      "今天我们来聊一聊年轻人的婚恋观。",
-				Translations: map[string]string{
-					"en": "Today we are going to talk about young people's views on marriage and relationships.",
+				{
+					SegmentID: "seg_002",
+					Text:      "今天我们来聊一聊年轻人的婚恋观。",
+					Translations: map[string]string{
+						"en": "Today we are going to talk about young people's views on marriage and relationships.",
+					},
+					StartMS: 2450,
+					EndMS:   5870,
 				},
-				StartMS: 2450,
-				EndMS:   5870,
 			},
-		},
+		}},
 	}
 
 	got := buildYouTubeEnglishTranscriptSRT(script)
@@ -84,21 +90,24 @@ func TestBuildYouTubeEnglishTranscriptSRT(t *testing.T) {
 func TestBuildYouTubeTranscriptArtifactsIncludesAllTranslationLanguages(t *testing.T) {
 	script := dto.PodcastScript{
 		Language: "zh",
-		Segments: []dto.PodcastSegment{
-			{
-				SegmentID: "seg_001",
-				Text:      "大家好，欢迎来到我们的日常中文频道。",
-				Translations: map[string]string{
-					"en":     "Hello everyone, welcome to our daily Chinese channel.",
-					"es-419": "Hola a todos, bienvenidos a nuestro canal diario de chino.",
-					"vi":     "Xin chào mọi người, chào mừng đến với kênh tiếng Trung hằng ngày của chúng tôi.",
-					"ja":     "みなさん、こんにちは。私たちの日常中国語チャンネルへようこそ。",
-					"pt-BR":  "Olá pessoal, bem-vindos ao nosso canal diário de chinês.",
+		Blocks: []dto.PodcastBlock{{
+			BlockID: "block_001",
+			Segments: []dto.PodcastSegment{
+				{
+					SegmentID: "seg_001",
+					Text:      "大家好，欢迎来到我们的日常中文频道。",
+					Translations: map[string]string{
+						"en":     "Hello everyone, welcome to our daily Chinese channel.",
+						"es-419": "Hola a todos, bienvenidos a nuestro canal diario de chino.",
+						"vi":     "Xin chào mọi người, chào mừng đến với kênh tiếng Trung hằng ngày của chúng tôi.",
+						"ja":     "みなさん、こんにちは。私たちの日常中国語チャンネルへようこそ。",
+						"pt-BR":  "Olá pessoal, bem-vindos ao nosso canal diário de chinês.",
+					},
+					StartMS: 0,
+					EndMS:   2450,
 				},
-				StartMS: 0,
-				EndMS:   2450,
 			},
-		},
+		}},
 	}
 
 	artifacts := buildYouTubeTranscriptArtifacts(script)
@@ -142,14 +151,17 @@ func TestBuildYouTubeTranscriptArtifactsIncludesAllTranslationLanguages(t *testi
 func TestBuildYouTubeTranscriptSRTForLanguageWithLeadIn(t *testing.T) {
 	script := dto.PodcastScript{
 		Language: "ja",
-		Segments: []dto.PodcastSegment{
-			{
-				SegmentID: "seg_001",
-				Text:      "みなさん、こんにちは。",
-				StartMS:   100,
-				EndMS:     2100,
+		Blocks: []dto.PodcastBlock{{
+			BlockID: "block_001",
+			Segments: []dto.PodcastSegment{
+				{
+					SegmentID: "seg_001",
+					Text:      "みなさん、こんにちは。",
+					StartMS:   100,
+					EndMS:     2100,
+				},
 			},
-		},
+		}},
 	}
 
 	got := buildYouTubeTranscriptSRTForLanguageWithLeadIn(script, "ja", 4070)

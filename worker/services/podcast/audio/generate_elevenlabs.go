@@ -7,7 +7,6 @@ import (
 	"log"
 	"math"
 	"os"
-	"path/filepath"
 	"strings"
 	"unicode"
 
@@ -38,10 +37,8 @@ func synthesizeWithElevenLabs(
 	client *elevenlabs.Client,
 	projectID string,
 	language string,
-	projectDir string,
 	artifacts audioArtifacts,
 	script dto.PodcastScript,
-	blockGapMS int,
 	configSeed int,
 	requestedBlocks map[int]struct{},
 ) ([]blockSynthesisResult, error) {
@@ -58,7 +55,6 @@ func synthesizeWithElevenLabs(
 			}
 			if ok {
 				results[blockIndex] = reused
-				script.Blocks[blockIndex] = reused.AlignedBlock
 				continue
 			}
 		}
@@ -108,7 +104,7 @@ func synthesizeWithElevenLabs(
 			ttsResult.VoiceSegments,
 			blockDurationMS,
 		)
-		if err := persistBlockCheckpoint(artifacts.blockStatesDir, blockIndex, alignedBlock, blockDurationMS, nil); err != nil {
+		if err := artifacts.persistBlockCheckpoint(blockIndex, alignedBlock, blockDurationMS, nil); err != nil {
 			return nil, err
 		}
 
@@ -116,22 +112,6 @@ func synthesizeWithElevenLabs(
 			AudioPath:    blockAudioPath,
 			DurationMS:   blockDurationMS,
 			AlignedBlock: alignedBlock,
-		}
-		script.Blocks[blockIndex] = alignedBlock
-
-		partialScript, _, _, err := assembleDialogue(
-			dto.PodcastScript{
-				Language: script.Language,
-				Title:    script.Title,
-				YouTube:  script.YouTube,
-				Blocks:   append([]dto.PodcastBlock(nil), script.Blocks[:blockIndex+1]...),
-			},
-			results[:blockIndex+1],
-			artifacts.blockGapPath,
-			blockGapMS,
-		)
-		if err == nil {
-			_ = writeJSON(filepath.Join(projectDir, "script_partial.json"), partialScript)
 		}
 		log.Printf("✅ podcast tts block done provider=elevenlabs block=%03d/%03d block_id=%s duration_ms=%d project_id=%s",
 			blockIndex+1, len(script.Blocks), strings.TrimSpace(block.BlockID), blockDurationMS, projectID)

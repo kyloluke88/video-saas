@@ -152,10 +152,6 @@ func BuildPageSourceFromProjectDir(projectDir string, input PersistInput) (PageS
 		return PageSource{}, services.NonRetryableError{Err: fmt.Errorf("script en_title is required for slug generation")}
 	}
 
-	if len(script.Segments) == 0 {
-		script.RefreshSegmentsFromBlocks()
-	}
-
 	youtubeVideoID := strings.TrimSpace(input.YouTubeVideoID)
 	youtubeVideoURL := strings.TrimSpace(input.YouTubeVideoURL)
 	if youtubeVideoID == "" {
@@ -199,25 +195,26 @@ func BuildPageSourceFromProjectDir(projectDir string, input PersistInput) (PageS
 }
 
 func loadScript(projectDir string) (dto.PodcastScript, error) {
-	candidates := []string{
-		filepath.Join(projectDir, "script_aligned.json"),
-		filepath.Join(projectDir, "script_input.json"),
-	}
-
-	var lastErr error
-	for _, candidate := range candidates {
-		raw, err := os.ReadFile(candidate)
-		if err != nil {
-			lastErr = err
-			continue
+	candidate := filepath.Join(projectDir, "script_aligned.json")
+	raw, err := os.ReadFile(candidate)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return dto.PodcastScript{}, services.NonRetryableError{
+				Err: fmt.Errorf("aligned script not found: %s", candidate),
+			}
 		}
-		var script dto.PodcastScript
-		if err := json.Unmarshal(raw, &script); err != nil {
-			return dto.PodcastScript{}, fmt.Errorf("decode %s failed: %w", candidate, err)
-		}
-		return script, nil
+		return dto.PodcastScript{}, err
 	}
-	return dto.PodcastScript{}, fmt.Errorf("load podcast script failed: %w", lastErr)
+	var script dto.PodcastScript
+	if err := json.Unmarshal(raw, &script); err != nil {
+		return dto.PodcastScript{}, fmt.Errorf("decode %s failed: %w", candidate, err)
+	}
+	if len(script.Blocks) == 0 {
+		return dto.PodcastScript{}, services.NonRetryableError{
+			Err: fmt.Errorf("aligned script requires non-empty blocks: %s", candidate),
+		}
+	}
+	return script, nil
 }
 
 func loadRequestPayload(projectDir string) (requestPayload, error) {
@@ -282,8 +279,9 @@ func buildSections(script dto.PodcastScript) []sectionDocument {
 }
 
 func buildSingleSection(script dto.PodcastScript) []sectionDocument {
-	lines := make([]lineDocument, 0, len(script.Segments))
-	for _, seg := range script.Segments {
+	segments := script.FlatSegments()
+	lines := make([]lineDocument, 0, len(segments))
+	for _, seg := range segments {
 		line := buildLine(script.Language, seg)
 		if line.Text == "" {
 			continue

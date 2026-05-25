@@ -2,6 +2,7 @@ package podcast_audio_service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -91,6 +92,11 @@ func Generate(ctx context.Context, input GenerateInput) (GenerateResult, error) 
 		if err != nil {
 			return GenerateResult{}, err
 		}
+		defer func() {
+			if err := artifacts.flushCheckpointStores(); err != nil {
+				log.Printf("⚠️ podcast block checkpoint index flush warning project_id=%s err=%v", input.ProjectID, err)
+			}
+		}()
 		script, err := loadScriptForGeneration(projectDir, language, input.ScriptFilename)
 		if err != nil {
 			return GenerateResult{}, err
@@ -114,22 +120,15 @@ func Generate(ctx context.Context, input GenerateInput) (GenerateResult, error) 
 			elevenClient,
 			input.ProjectID,
 			language,
-			projectDir,
 			artifacts,
 			script,
-			blockGapMS,
 			input.Seed,
 			requestedBlocks,
 		)
 		if err != nil {
 			return GenerateResult{}, err
 		}
-		for i := range results {
-			if i >= len(script.Blocks) {
-				break
-			}
-			script.Blocks[i] = results[i].AlignedBlock
-		}
+		applyBlockResults(&script, results)
 
 		finalScript, concatPaths, _, err := assembleDialogue(script, results, artifacts.blockGapPath, blockGapMS)
 		if err != nil {
@@ -156,8 +155,10 @@ func Generate(ctx context.Context, input GenerateInput) (GenerateResult, error) 
 
 func loadScriptForGeneration(projectDir, language, scriptFilename string) (dto.PodcastScript, error) {
 	projectScriptPath := projectScriptInputPath(projectDir)
-	if fileExists(projectScriptPath) {
-		return loadScriptFromPath(language, projectScriptPath)
+	if script, ok, err := loadCachedProjectScript(projectScriptPath, language); err != nil {
+		return dto.PodcastScript{}, err
+	} else if ok {
+		return script, nil
 	}
 
 	scriptPath := scriptPathFor(scriptFilename)
@@ -172,11 +173,35 @@ func loadScriptForGeneration(projectDir, language, scriptFilename string) (dto.P
 	return script, nil
 }
 
+func loadCachedProjectScript(scriptPath, language string) (dto.PodcastScript, bool, error) {
+	raw, err := os.ReadFile(scriptPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return dto.PodcastScript{}, false, nil
+		}
+		return dto.PodcastScript{}, false, err
+	}
+
+	var script dto.PodcastScript
+	if err := json.Unmarshal(raw, &script); err != nil {
+		return dto.PodcastScript{}, false, fmt.Errorf("decode %s failed: %w", scriptPath, err)
+	}
+	normalized, err := normalizeLoadedScript(language, script)
+	if err != nil {
+		return dto.PodcastScript{}, false, err
+	}
+	return normalized, true, nil
+}
+
 func loadScriptFromPath(language, scriptPath string) (dto.PodcastScript, error) {
 	var script dto.PodcastScript
 	if err := readJSON(scriptPath, &script); err != nil {
 		return dto.PodcastScript{}, markScriptLoadNonRetryable(scriptPath, err)
 	}
+	return normalizeLoadedScript(language, script)
+}
+
+func normalizeLoadedScript(language string, script dto.PodcastScript) (dto.PodcastScript, error) {
 	if err := validateScriptLanguage(script.Language, language); err != nil {
 		return dto.PodcastScript{}, err
 	}
@@ -191,7 +216,6 @@ func loadScriptFromPath(language, scriptPath string) (dto.PodcastScript, error) 
 			return dto.PodcastScript{}, markScriptInputNonRetryable(err)
 		}
 	}
-	script.RefreshSegmentsFromBlocks()
 	return normalizeScriptForSpeech(script), nil
 }
 
@@ -233,7 +257,6 @@ func normalizeScriptForSpeech(script dto.PodcastScript) dto.PodcastScript {
 			script.Blocks[i].Segments[j] = seg
 		}
 	}
-	script.RefreshSegmentsFromBlocks()
 	return script
 }
 
@@ -258,7 +281,7 @@ func tryReuseCachedBlock(
 ) (blockSynthesisResult, bool, error) {
 	blockID := strings.TrimSpace(block.BlockID)
 	for _, candidate := range reusableBlockAudioCandidates(artifacts, index, blockID) {
-		state, stateOK, err := loadBlockCheckpoint(candidate.stateDir, index, blockID)
+		state, stateOK, err := artifacts.loadBlockCheckpoint(candidate.stateDir, index, blockID)
 		if err != nil {
 			return blockSynthesisResult{}, false, err
 		}
@@ -281,7 +304,7 @@ func tryReuseCachedBlock(
 			if err != nil {
 				return blockSynthesisResult{}, false, err
 			}
-			if err := persistBlockCheckpoint(artifacts.blockStatesDir, index, alignedBlock, durationMS, currentTTSMode); err != nil {
+			if err := artifacts.persistBlockCheckpoint(index, alignedBlock, durationMS, currentTTSMode); err != nil {
 				return blockSynthesisResult{}, false, err
 			}
 			if !suppressLog {
@@ -312,7 +335,7 @@ func tryReuseCompletedBlockWithoutMFA(
 ) (blockSynthesisResult, bool, error) {
 	blockID := strings.TrimSpace(block.BlockID)
 	for _, candidate := range reusableBlockAudioCandidates(artifacts, index, blockID) {
-		state, stateOK, err := loadBlockCheckpoint(candidate.stateDir, index, blockID)
+		state, stateOK, err := artifacts.loadBlockCheckpoint(candidate.stateDir, index, blockID)
 		if err != nil {
 			return blockSynthesisResult{}, false, err
 		}
@@ -345,7 +368,7 @@ func tryReuseCompletedBlockWithoutMFA(
 				return blockSynthesisResult{}, false, err
 			}
 		}
-		if err := persistBlockCheckpoint(artifacts.blockStatesDir, index, state.Block, durationMS, state.IsMultiple); err != nil {
+		if err := artifacts.persistBlockCheckpoint(index, state.Block, durationMS, state.IsMultiple); err != nil {
 			return blockSynthesisResult{}, false, err
 		}
 		if !suppressLog {
@@ -405,7 +428,7 @@ func canReuseCachedBlockAudio(ttsType int, language string, current, cached dto.
 	if strings.TrimSpace(current.BlockID) == "" || strings.TrimSpace(cached.BlockID) == "" {
 		return false
 	}
-	if strings.TrimSpace(current.BlockID) != strings.TrimSpace(cached.BlockID) {
+	if stableBlockID(strings.TrimSpace(current.BlockID)) != stableBlockID(strings.TrimSpace(cached.BlockID)) {
 		return false
 	}
 	if len(current.Segments) != len(cached.Segments) {
@@ -447,8 +470,116 @@ func assembleDialogue(base dto.PodcastScript, results []blockSynthesisResult, ga
 			cursorMS += gapMS
 		}
 	}
-	script.RefreshSegmentsFromBlocks()
 	return script, concatPaths, cursorMS, nil
+}
+
+func buildAlignedScriptFromResults(base dto.PodcastScript, results []blockSynthesisResult, gapPath string, gapMS int) (dto.PodcastScript, error) {
+	script, _, _, err := assembleDialogue(base, results, gapPath, gapMS)
+	if err != nil {
+		return dto.PodcastScript{}, err
+	}
+	return script, nil
+}
+
+func buildProvisionalAlignedScript(language string, base dto.PodcastScript, results []blockSynthesisResult, gapPath string, gapMS int) (dto.PodcastScript, error) {
+	normalizedResults := make([]blockSynthesisResult, len(results))
+	heuristicAligner := &blockAligner{}
+
+	for i, result := range results {
+		if i >= len(base.Blocks) {
+			return dto.PodcastScript{}, fmt.Errorf("block result index out of range: %d", i)
+		}
+		if result.DurationMS <= 0 {
+			return dto.PodcastScript{}, fmt.Errorf("block duration missing for provisional aligned script: block_index=%d", i+1)
+		}
+
+		normalizedResults[i] = result
+		if blockHasAlignedTiming(language, result.AlignedBlock) {
+			continue
+		}
+		normalizedResults[i].AlignedBlock = heuristicAligner.alignBlockHeuristically(
+			language,
+			clonePodcastBlock(base.Blocks[i]),
+			result.DurationMS,
+		)
+	}
+
+	return buildAlignedScriptFromResults(base, normalizedResults, gapPath, gapMS)
+}
+
+func applyBlockResults(script *dto.PodcastScript, results []blockSynthesisResult) {
+	if script == nil {
+		return
+	}
+	for i := range results {
+		if i >= len(script.Blocks) {
+			break
+		}
+		script.Blocks[i] = results[i].AlignedBlock
+	}
+}
+
+func restoreStableBlockIDsFromArtifacts(projectDir string, script dto.PodcastScript) dto.PodcastScript {
+	if strings.TrimSpace(projectDir) == "" || len(script.Blocks) == 0 {
+		return script
+	}
+
+	blocksDir := filepath.Join(projectDir, "blocks")
+	statesDir := filepath.Join(projectDir, "block_states")
+	replaced := make(map[string]string)
+
+	for i := range script.Blocks {
+		currentID := strings.TrimSpace(script.Blocks[i].BlockID)
+		stableID := stableProjectBlockID(blocksDir, statesDir, i, currentID)
+		if stableID == "" || stableID == currentID {
+			continue
+		}
+		script.Blocks[i].BlockID = stableID
+		replaced[currentID] = stableID
+	}
+
+	if len(replaced) == 0 {
+		return script
+	}
+
+	for i := range script.YouTube.Chapters {
+		for j := range script.YouTube.Chapters[i].BlockIDs {
+			currentID := strings.TrimSpace(script.YouTube.Chapters[i].BlockIDs[j])
+			if stableID, ok := replaced[currentID]; ok {
+				script.YouTube.Chapters[i].BlockIDs[j] = stableID
+			}
+		}
+	}
+	return script
+}
+
+func stableProjectBlockID(blocksDir, statesDir string, index int, currentID string) string {
+	currentID = strings.TrimSpace(currentID)
+	if currentID == "" {
+		return currentID
+	}
+	stableID := stableBlockID(currentID)
+	if stableID == currentID {
+		return currentID
+	}
+	if _, ok := existingBlockAudioPath(blocksDir, index, stableID); ok {
+		return stableID
+	}
+	if fileExists(blockStatePath(statesDir, index, stableID)) {
+		return stableID
+	}
+	return currentID
+}
+
+func stableBlockID(blockID string) string {
+	blockID = strings.TrimSpace(blockID)
+	if blockID == "" {
+		return ""
+	}
+	if idx := strings.Index(blockID, "."); idx > 0 {
+		return strings.TrimSpace(blockID[:idx])
+	}
+	return blockID
 }
 
 func clonePodcastBlock(block dto.PodcastBlock) dto.PodcastBlock {
