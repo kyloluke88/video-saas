@@ -9,24 +9,6 @@ import (
 
 func init() {
 	config.Add("worker", func() map[string]interface{} {
-		podcastMode := strings.ToLower(strings.TrimSpace(cast.ToString(config.Env("PODCAST_MODE", "debug"))))
-		podcastX264Preset := strings.TrimSpace(cast.ToString(config.Env("PODCAST_X264_PRESET", "")))
-		if podcastX264Preset == "" {
-			if podcastMode == "production" {
-				podcastX264Preset = "medium"
-			} else {
-				podcastX264Preset = "veryfast"
-			}
-		}
-		practicalX264Preset := strings.TrimSpace(cast.ToString(config.Env("PRACTICAL_X264_PRESET", "")))
-		if practicalX264Preset == "" {
-			if podcastMode == "production" {
-				practicalX264Preset = "medium"
-			} else {
-				practicalX264Preset = "veryfast"
-			}
-		}
-		podcastKeepASS := cast.ToBool(config.Env("PODCAST_KEEP_ASS", podcastMode == "debug"))
 		return map[string]interface{}{
 			"rabbitmq_url":                         config.Env("RABBITMQ_URL", ""),
 			"rabbitmq_host":                        config.Env("RABBITMQ_HOST", "rabbitmq"),
@@ -76,15 +58,19 @@ func init() {
 			"ffmpeg_work_dir":                      config.Env("FFMPEG_WORK_DIR", "/app/outputs"),
 			"ffmpeg_timeout_sec":                   cast.ToInt(config.Env("FFMPEG_TIMEOUT_SEC", 300)),
 			"podcast_ffmpeg_timeout_sec":           cast.ToInt(config.Env("PODCAST_FFMPEG_TIMEOUT_SEC", 0)),
-			"podcast_mode":                         podcastMode,
-			"podcast_x264_preset":                  podcastX264Preset,
-			"podcast_keep_ass":                     podcastKeepASS,
-			"practical_x264_preset":                practicalX264Preset,
-			"practical_tts_tempo":                  cast.ToFloat64(config.Env("PRACTICAL_TTS_TEMPO", 0.9)),
-			"practical_chapter_gap_ms":             cast.ToInt(config.Env("PRACTICAL_CHAPTER_GAP_MS", 800)),
-			"practical_block_gap_ms":               cast.ToInt(config.Env("PRACTICAL_BLOCK_GAP_MS", 900)),
+			"practical_ffmpeg_timeout_sec":         cast.ToInt(config.Env("PRACTICAL_FFMPEG_TIMEOUT_SEC", 0)),
+			"podcast_mode":                         config.Env("PODCAST_MODE", "debug"),
+			"podcast_x264_preset":                  config.Env("PODCAST_X264_PRESET", "veryfast"),
+			"podcast_keep_ass":                     cast.ToBool(config.Env("PODCAST_KEEP_ASS", strings.EqualFold(strings.TrimSpace(cast.ToString(config.Env("PODCAST_MODE", "debug"))), "debug"))),
+			"practical_x264_preset":                config.Env("PRACTICAL_X264_PRESET", "veryfast"),
+			"practical_x264_threads":               cast.ToInt(config.Env("PRACTICAL_X264_THREADS", 4)),
+			"practical_fps":                        cast.ToInt(config.Env("PRACTICAL_FPS", 24)),
+			"practical_tts_tempo":                  cast.ToFloat64(config.Env("PRACTICAL_TTS_TEMPO", 0.78)),
+			"practical_turn_gap_ms":                cast.ToInt(config.Env("PRACTICAL_TURN_GAP_MS", 500)),
+			"practical_chapter_gap_ms":             cast.ToInt(config.Env("PRACTICAL_CHAPTER_GAP_MS", 1800)),
+			"practical_block_gap_ms":               cast.ToInt(config.Env("PRACTICAL_BLOCK_GAP_MS", 1100)),
 			"practical_chapter_transition_lead_ms": cast.ToInt(config.Env("PRACTICAL_CHAPTER_TRANSITION_LEAD_MS", 1000)),
-			"practical_block_transition_lead_ms":   cast.ToInt(config.Env("PRACTICAL_BLOCK_TRANSITION_LEAD_MS", 1000)),
+			"practical_block_transition_lead_ms":   cast.ToInt(config.Env("PRACTICAL_BLOCK_TRANSITION_LEAD_MS", 1100)),
 			"practical_subtitle_lead_ms":           cast.ToInt(config.Env("PRACTICAL_SUBTITLE_LEAD_MS", 200)),
 			"google_tts_enabled":                   cast.ToBool(config.Env("GOOGLE_TTS_ENABLED", true)),
 			"google_cloud_project_id":              config.Env("GOOGLE_CLOUD_PROJECT_ID", ""),
@@ -95,47 +81,61 @@ func init() {
 			"google_oauth_token_url":               config.Env("GOOGLE_OAUTH_TOKEN_URL", "https://oauth2.googleapis.com/token"),
 			"google_tts_speaking_rate":             cast.ToFloat64(config.Env("GOOGLE_TTS_SPEAKING_RATE", 1.0)),
 			"google_tts_ja_speaking_rate":          cast.ToFloat64(config.Env("GOOGLE_TTS_JA_SPEAKING_RATE", 0.85)),
-			"google_tts_zh_male_voice_id":          config.Env("GOOGLE_TTS_ZH_MALE_VOICE_ID", ""),
-			"google_tts_zh_female_voice_id":        config.Env("GOOGLE_TTS_ZH_FEMALE_VOICE_ID", ""),
-			"google_tts_ja_male_voice_id":          config.Env("GOOGLE_TTS_JA_MALE_VOICE_ID", ""),
-			"google_tts_ja_female_voice_id":        config.Env("GOOGLE_TTS_JA_FEMALE_VOICE_ID", ""),
-			"google_tts_narrator_voice_id":         config.Env("GOOGLE_TTS_NARRATOR_VOICE_ID", ""),
-			"google_tts_prompt_append":             config.Env("GOOGLE_TTS_PROMPT_APPEND", ""),
-			"google_tts_zh_prompt_append":          config.Env("GOOGLE_TTS_ZH_PROMPT_APPEND", ""),
-			"google_tts_ja_prompt_append":          config.Env("GOOGLE_TTS_JA_PROMPT_APPEND", ""),
-			"elevenlabs_tts_enabled":               cast.ToBool(config.Env("ELEVENLABS_TTS_ENABLED", false)),
-			"elevenlabs_api_key":                   config.Env("ELEVENLABS_API_KEY", ""),
-			"elevenlabs_base_url":                  config.Env("ELEVENLABS_BASE_URL", "https://api.elevenlabs.io"),
-			"elevenlabs_dialogue_path":             config.Env("ELEVENLABS_DIALOGUE_PATH", "/v1/text-to-dialogue/with-timestamps"),
-			"elevenlabs_tts_model":                 config.Env("ELEVENLABS_TTS_MODEL", "eleven_v3"),
-			"elevenlabs_output_format":             config.Env("ELEVENLABS_OUTPUT_FORMAT", "mp3_44100_128"),
-			"elevenlabs_tts_speed":                 cast.ToFloat64(config.Env("ELEVENLABS_TTS_SPEED", 1.0)),
-			"elevenlabs_tts_prompt_append":         config.Env("ELEVENLABS_TTS_PROMPT_APPEND", ""),
-			"elevenlabs_tts_zh_prompt_append":      config.Env("ELEVENLABS_TTS_ZH_PROMPT_APPEND", ""),
-			"elevenlabs_tts_ja_prompt_append":      config.Env("ELEVENLABS_TTS_JA_PROMPT_APPEND", ""),
-			"elevenlabs_tts_prompt_max_bytes":      cast.ToInt(config.Env("ELEVENLABS_TTS_PROMPT_MAX_BYTES", 1200)),
-			"elevenlabs_tts_male_voice_id":         config.Env("ELEVENLABS_TTS_MALE_VOICE_ID", ""),
-			"elevenlabs_tts_female_voice_id":       config.Env("ELEVENLABS_TTS_FEMALE_VOICE_ID", ""),
-			"mfa_enabled":                          cast.ToBool(config.Env("MFA_ENABLED", false)),
-			"mfa_command":                          config.Env("MFA_COMMAND", "mfa"),
-			"mfa_temporary_directory":              config.Env("MFA_TEMPORARY_DIRECTORY", ""),
-			"mfa_beam":                             cast.ToInt(config.Env("MFA_BEAM", 10)),
-			"mfa_retry_beam":                       cast.ToInt(config.Env("MFA_RETRY_BEAM", 40)),
-			"mfa_zh_dictionary":                    config.Env("MFA_ZH_DICTIONARY", ""),
-			"mfa_zh_acoustic_model":                config.Env("MFA_ZH_ACOUSTIC_MODEL", ""),
-			"mfa_zh_g2p_model":                     config.Env("MFA_ZH_G2P_MODEL", "mandarin_china_mfa"),
-			"mfa_ja_dictionary":                    config.Env("MFA_JA_DICTIONARY", ""),
-			"mfa_ja_acoustic_model":                config.Env("MFA_JA_ACOUSTIC_MODEL", ""),
-			"mfa_ja_g2p_model":                     config.Env("MFA_JA_G2P_MODEL", "japanese_mfa"),
-			"podcast_block_gap_ms":                 cast.ToInt(config.Env("PODCAST_BLOCK_GAP_MS", 280)),
-			"podcast_template_gap_ms":              cast.ToInt(config.Env("PODCAST_TEMPLATE_GAP_MS", 280)),
-			"s3_enabled":                           cast.ToBool(config.Env("S3_ENABLED", false)),
-			"s3_endpoint":                          config.Env("S3_ENDPOINT", ""),
-			"s3_region":                            config.Env("S3_REGION", "us-east-1"),
-			"s3_bucket":                            config.Env("S3_BUCKET", ""),
-			"s3_access_key":                        config.Env("S3_ACCESS_KEY", ""),
-			"s3_secret_key":                        config.Env("S3_SECRET_KEY", ""),
-			"s3_public_url":                        config.Env("S3_PUBLIC_URL", ""),
+			"google_tts_practical_ja_speaking_rate": cast.ToFloat64(
+				config.Env("GOOGLE_TTS_PRACTICAL_JA_SPEAKING_RATE", 0.82),
+			),
+			"google_tts_zh_male_voice_id":   config.Env("GOOGLE_TTS_ZH_MALE_VOICE_ID", ""),
+			"google_tts_zh_female_voice_id": config.Env("GOOGLE_TTS_ZH_FEMALE_VOICE_ID", ""),
+			"google_tts_ja_male_voice_id":   config.Env("GOOGLE_TTS_JA_MALE_VOICE_ID", ""),
+			"google_tts_ja_female_voice_id": config.Env("GOOGLE_TTS_JA_FEMALE_VOICE_ID", ""),
+			"google_tts_practical_male_voice_id": config.Env(
+				"GOOGLE_TTS_PRACTICAL_MALE_VOICE_ID",
+				config.Env("GOOGLE_TTS_JA_MALE_VOICE_ID", ""),
+			),
+			"google_tts_practical_female_voice_id": config.Env(
+				"GOOGLE_TTS_PRACTICAL_FEMALE_VOICE_ID",
+				config.Env("GOOGLE_TTS_JA_FEMALE_VOICE_ID", ""),
+			),
+			"google_tts_narrator_voice_id":    config.Env("GOOGLE_TTS_NARRATOR_VOICE_ID", ""),
+			"google_tts_prompt_append":        config.Env("GOOGLE_TTS_PROMPT_APPEND", ""),
+			"google_tts_zh_prompt_append":     config.Env("GOOGLE_TTS_ZH_PROMPT_APPEND", ""),
+			"google_tts_ja_prompt_append":     config.Env("GOOGLE_TTS_JA_PROMPT_APPEND", ""),
+			"elevenlabs_tts_enabled":          cast.ToBool(config.Env("ELEVENLABS_TTS_ENABLED", false)),
+			"elevenlabs_api_key":              config.Env("ELEVENLABS_API_KEY", ""),
+			"elevenlabs_base_url":             config.Env("ELEVENLABS_BASE_URL", "https://api.elevenlabs.io"),
+			"elevenlabs_dialogue_path":        config.Env("ELEVENLABS_DIALOGUE_PATH", "/v1/text-to-dialogue/with-timestamps"),
+			"elevenlabs_tts_model":            config.Env("ELEVENLABS_TTS_MODEL", "eleven_v3"),
+			"elevenlabs_output_format":        config.Env("ELEVENLABS_OUTPUT_FORMAT", "mp3_44100_128"),
+			"elevenlabs_tts_speed":            cast.ToFloat64(config.Env("ELEVENLABS_TTS_SPEED", 1.0)),
+			"elevenlabs_tts_prompt_append":    config.Env("ELEVENLABS_TTS_PROMPT_APPEND", ""),
+			"elevenlabs_tts_zh_prompt_append": config.Env("ELEVENLABS_TTS_ZH_PROMPT_APPEND", ""),
+			"elevenlabs_tts_ja_prompt_append": config.Env("ELEVENLABS_TTS_JA_PROMPT_APPEND", ""),
+			"elevenlabs_tts_prompt_max_bytes": cast.ToInt(config.Env("ELEVENLABS_TTS_PROMPT_MAX_BYTES", 1200)),
+			"elevenlabs_tts_male_voice_id":    config.Env("ELEVENLABS_TTS_MALE_VOICE_ID", ""),
+			"elevenlabs_tts_female_voice_id":  config.Env("ELEVENLABS_TTS_FEMALE_VOICE_ID", ""),
+			"mfa_enabled":                     cast.ToBool(config.Env("MFA_ENABLED", false)),
+			"mfa_command":                     config.Env("MFA_COMMAND", "mfa"),
+			"mfa_temporary_directory":         config.Env("MFA_TEMPORARY_DIRECTORY", ""),
+			"mfa_beam":                        cast.ToInt(config.Env("MFA_BEAM", 10)),
+			"mfa_retry_beam":                  cast.ToInt(config.Env("MFA_RETRY_BEAM", 40)),
+			"mfa_verbose":                     cast.ToBool(config.Env("MFA_VERBOSE", false)),
+			"mfa_debug":                       cast.ToBool(config.Env("MFA_DEBUG", false)),
+			"mfa_use_postgres":                cast.ToBool(config.Env("MFA_USE_POSTGRES", false)),
+			"mfa_zh_dictionary":               config.Env("MFA_ZH_DICTIONARY", ""),
+			"mfa_zh_acoustic_model":           config.Env("MFA_ZH_ACOUSTIC_MODEL", ""),
+			"mfa_zh_g2p_model":                config.Env("MFA_ZH_G2P_MODEL", "mandarin_china_mfa"),
+			"mfa_ja_dictionary":               config.Env("MFA_JA_DICTIONARY", ""),
+			"mfa_ja_acoustic_model":           config.Env("MFA_JA_ACOUSTIC_MODEL", ""),
+			"mfa_ja_g2p_model":                config.Env("MFA_JA_G2P_MODEL", "japanese_mfa"),
+			"podcast_block_gap_ms":            cast.ToInt(config.Env("PODCAST_BLOCK_GAP_MS", 280)),
+			"podcast_template_gap_ms":         cast.ToInt(config.Env("PODCAST_TEMPLATE_GAP_MS", 280)),
+			"s3_enabled":                      cast.ToBool(config.Env("S3_ENABLED", false)),
+			"s3_endpoint":                     config.Env("S3_ENDPOINT", ""),
+			"s3_region":                       config.Env("S3_REGION", "us-east-1"),
+			"s3_bucket":                       config.Env("S3_BUCKET", ""),
+			"s3_access_key":                   config.Env("S3_ACCESS_KEY", ""),
+			"s3_secret_key":                   config.Env("S3_SECRET_KEY", ""),
+			"s3_public_url":                   config.Env("S3_PUBLIC_URL", ""),
 		}
 	})
 }

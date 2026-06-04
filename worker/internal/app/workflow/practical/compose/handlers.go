@@ -27,18 +27,6 @@ func HandleComposeRender(ctx context.Context, ch *amqp.Channel, msg task.VideoTa
 	return publishNextPracticalTaskFromComposePayload(ch, payload, string(practicalreplay.PracticalStageRender))
 }
 
-func HandleComposeFinalize(ctx context.Context, ch *amqp.Channel, msg task.VideoTaskMessage) error {
-	payload, err := resolveComposePayload(msg.Payload)
-	if err != nil {
-		return err
-	}
-	_, err = practicalcomposeservice.Finalize(ctx, composeInputFromPayload(payload))
-	if err != nil {
-		return err
-	}
-	return publishNextPracticalTaskFromComposePayload(ch, payload, string(practicalreplay.PracticalStageFinalize))
-}
-
 func resolveComposePayload(raw map[string]interface{}) (dto.PracticalAudioGeneratePayload, error) {
 	payload, err := decodePayload(raw)
 	if err != nil {
@@ -68,20 +56,15 @@ func resolveComposePayload(raw map[string]interface{}) (dto.PracticalAudioGenera
 	if strings.TrimSpace(payload.Lang) == "" {
 		return dto.PracticalAudioGeneratePayload{}, fmt.Errorf("lang is required")
 	}
-	if len(payload.BgImgFilenames) == 0 {
-		return dto.PracticalAudioGeneratePayload{}, fmt.Errorf("bg_img_filenames is required")
-	}
 	return payload, nil
 }
 
 func composeInputFromPayload(payload dto.PracticalAudioGeneratePayload) practicalcomposeservice.ComposeInput {
 	return practicalcomposeservice.ComposeInput{
-		ProjectID:           payload.ProjectID,
-		Language:            payload.Lang,
-		BgImgFilenames:      payload.BgImgFilenames,
-		BlockBgImgFilenames: payload.BlockBgImgFilenames,
-		Resolution:          payload.Resolution,
-		DesignType:          payload.DesignType,
+		ProjectID:  payload.ProjectID,
+		Language:   payload.Lang,
+		Resolution: payload.Resolution,
+		DesignType: payload.DesignType,
 	}
 }
 
@@ -118,11 +101,8 @@ func buildPracticalComposeTaskPayload(payload dto.PracticalAudioGeneratePayload)
 	if len(payload.BlockNums) > 0 {
 		out["block_nums"] = compactPositiveInts(payload.BlockNums)
 	}
-	if backgrounds := compactNonEmptyStrings(payload.BgImgFilenames); len(backgrounds) > 0 {
-		out["bg_img_filenames"] = backgrounds
-	}
-	if blockBackgrounds := compactNonEmptyStrings(payload.BlockBgImgFilenames); len(blockBackgrounds) > 0 {
-		out["block_bg_img_filenames"] = blockBackgrounds
+	if chapterNums := compactPositiveInts(payload.ChapterNums); len(chapterNums) > 0 {
+		out["chapter_nums"] = chapterNums
 	}
 	if resolution := strings.TrimSpace(payload.Resolution); resolution != "" {
 		out["resolution"] = resolution

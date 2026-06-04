@@ -123,8 +123,18 @@ func TestJapaneseSubtitleLayout_Style1UsesConfiguredTopBandsAndColors(t *testing
 
 	var b strings.Builder
 	writeJapaneseASSHeader(&b, layout)
-	if !strings.Contains(b.String(), layout.HighlightColor) {
+	rendered := b.String()
+	if !strings.Contains(rendered, layout.HighlightColor) {
 		t.Fatalf("expected style1 ass header to use configured highlight color")
+	}
+	if !strings.Contains(rendered, "Style: JaActive,"+layout.HanziFontName+",") {
+		t.Fatalf("expected ass header to define JaActive style")
+	}
+	if !strings.Contains(rendered, ","+assColorRGB(0, 0, 0)+",&H64000000,1,0,0,0,100,100,") {
+		t.Fatalf("expected JaActive to use black outline and bold highlight state")
+	}
+	if !strings.Contains(rendered, ",0,1,2,0,5,10,10,10,1\n") {
+		t.Fatalf("expected JaActive to add outline during highlight")
 	}
 }
 
@@ -164,13 +174,13 @@ func TestChooseJapanesePageBreak_ExtendsToNextPunctuationWhenOverLimit(t *testin
 
 func TestComputeJapaneseRows_TwoLineSpacing(t *testing.T) {
 	layout := subtitleLayout{
-		TopSectionTop:    100,
-		TopSectionHeight: 200,
+		TopSectionTop:       100,
+		TopSectionHeight:    200,
 		BottomSectionHeight: 0,
-		HanziSize:       40,
-		RubySize:        20,
-		RowGap:          10,
-		TokenLineGap:    18,
+		HanziSize:           40,
+		RubySize:            20,
+		RowGap:              10,
+		TokenLineGap:        18,
 	}
 
 	rows := computeJapaneseRows(layout, 2)

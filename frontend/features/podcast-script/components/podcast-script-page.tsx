@@ -457,7 +457,7 @@ export default function PodcastScriptPageView({
                           </p>
 
                           <div className="space-y-2">
-                            <p className={`${styles.transcriptLineText} text-[1.5rem] leading-[2.2] text-foreground`}>
+                            <p className={`${styles.transcriptLineText} text-[1.2rem] leading-[2.2] text-foreground`}>
                               {renderTextWithRuby(line.text, line.ruby)}
                             </p>
                             {line.translation ? (

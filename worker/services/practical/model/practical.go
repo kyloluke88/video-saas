@@ -8,19 +8,18 @@ import (
 )
 
 type PracticalAudioGeneratePayload struct {
-	ProjectID           string   `json:"project_id"`
-	SourceProjectID     string   `json:"source_project_id,omitempty"`
-	Lang                string   `json:"lang"`
-	TTSType             int      `json:"tts_type,omitempty"`
-	RunMode             int      `json:"run_mode"`
-	SpecifyTasks        []string `json:"specify_tasks,omitempty"`
-	BlockNums           []int    `json:"block_nums,omitempty"`
-	ScriptFilename      string   `json:"script_filename"`
-	BgImgFilenames      []string `json:"bg_img_filenames,omitempty"`
-	BlockBgImgFilenames []string `json:"block_bg_img_filenames,omitempty"`
-	Resolution          string   `json:"resolution,omitempty"`
-	AspectRatio         string   `json:"aspect_ratio,omitempty"`
-	DesignType          int      `json:"design_type,omitempty"`
+	ProjectID       string   `json:"project_id"`
+	SourceProjectID string   `json:"source_project_id,omitempty"`
+	Lang            string   `json:"lang"`
+	TTSType         int      `json:"tts_type,omitempty"`
+	RunMode         int      `json:"run_mode"`
+	SpecifyTasks    []string `json:"specify_tasks,omitempty"`
+	BlockNums       []int    `json:"block_nums,omitempty"`
+	ChapterNums     []int    `json:"chapter_nums,omitempty"`
+	ScriptFilename  string   `json:"script_filename"`
+	Resolution      string   `json:"resolution,omitempty"`
+	AspectRatio     string   `json:"aspect_ratio,omitempty"`
+	DesignType      int      `json:"design_type,omitempty"`
 }
 
 type PracticalScript struct {
@@ -49,8 +48,9 @@ type PracticalSpeaker struct {
 	SpeakerID string `json:"speaker_id,omitempty"`
 	// SpeakerRole is the business role identifier used by turns.
 	// Example: customer, clerk, doctor.
-	SpeakerRole string `json:"speaker_role,omitempty"`
-	Name        string `json:"name,omitempty"`
+	SpeakerRole   string `json:"speaker_role,omitempty"`
+	SpeakerPrompt string `json:"speaker_prompt,omitempty"`
+	Name          string `json:"name,omitempty"`
 }
 
 type PracticalBlock struct {
@@ -334,6 +334,7 @@ func normalizePracticalSpeakers(values []PracticalSpeaker) []PracticalSpeaker {
 		rawID := strings.TrimSpace(speaker.SpeakerID)
 		speaker.SpeakerID = normalizePracticalSpeakerVoice(rawID)
 		speaker.SpeakerRole = strings.TrimSpace(speaker.SpeakerRole)
+		speaker.SpeakerPrompt = strings.TrimSpace(speaker.SpeakerPrompt)
 		speaker.Name = strings.TrimSpace(speaker.Name)
 		if speaker.SpeakerRole == "" {
 			if speaker.SpeakerID != "" {

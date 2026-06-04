@@ -169,7 +169,6 @@ func loadScriptForGeneration(projectDir, language, scriptFilename string) (dto.P
 	if err := writeJSON(projectScriptPath, script); err != nil {
 		return dto.PodcastScript{}, err
 	}
-	log.Printf("📝 podcast script cached project_id=%s source=%s path=%s", filepath.Base(projectDir), scriptPath, projectScriptPath)
 	return script, nil
 }
 
@@ -497,6 +496,11 @@ func buildProvisionalAlignedScript(language string, base dto.PodcastScript, resu
 		if blockHasAlignedTiming(language, result.AlignedBlock) {
 			continue
 		}
+		blockID := strings.TrimSpace(base.Blocks[i].BlockID)
+		if blockID == "" {
+			blockID = strings.TrimSpace(base.Blocks[i].ChapterID)
+		}
+		log.Printf("📝 podcast provisional alignment block=%s strategy=heuristic_preview reason=missing_aligned_timing duration_ms=%d", blockID, result.DurationMS)
 		normalizedResults[i].AlignedBlock = heuristicAligner.alignBlockHeuristically(
 			language,
 			clonePodcastBlock(base.Blocks[i]),
@@ -891,6 +895,9 @@ func newMFAClient() *mfa.Client {
 		TemporaryDirectory:    conf.Get[string]("worker.mfa_temporary_directory"),
 		Beam:                  conf.Get[int]("worker.mfa_beam"),
 		RetryBeam:             conf.Get[int]("worker.mfa_retry_beam"),
+		Verbose:               conf.Get[bool]("worker.mfa_verbose"),
+		Debug:                 conf.Get[bool]("worker.mfa_debug"),
+		UsePostgres:           conf.Get[bool]("worker.mfa_use_postgres"),
 		MandarinDictionary:    conf.Get[string]("worker.mfa_zh_dictionary"),
 		MandarinAcousticModel: conf.Get[string]("worker.mfa_zh_acoustic_model"),
 		MandarinG2PModel:      conf.Get[string]("worker.mfa_zh_g2p_model"),

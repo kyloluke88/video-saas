@@ -14,20 +14,19 @@ import (
 	conf "worker/pkg/config"
 	"worker/pkg/googlecloud"
 	"worker/pkg/mfa"
+	"worker/pkg/x/fsx"
 	ffmpegcommon "worker/services/media/ffmpeg/common"
 )
 
 func scriptPathFor(filename string) string {
 	base := filepath.Base(strings.TrimSpace(filename))
-	candidates := []string{
-		filepath.Join(conf.Get[string]("worker.worker_assets_dir"), "practical", "scripts", base),
-		filepath.Join(conf.Get[string]("worker.worker_assets_dir"), "practicle", "scripts", base),
+	candidates := append(practicalAssetFileCandidates("scripts", base),
 		filepath.Join("worker", "doc", "practical", base),
 		filepath.Join("worker", "doc", "practicle", base),
 		filepath.Join("worker", "doc", "life", base),
 		filepath.Join("doc", "practicle", base),
 		filepath.Join("doc", "life", base),
-	}
+	)
 	for _, candidate := range candidates {
 		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
 			return candidate
@@ -37,7 +36,7 @@ func scriptPathFor(filename string) string {
 }
 
 func projectDirFor(projectID string) string {
-	return filepath.Join(conf.Get[string]("worker.ffmpeg_work_dir"), "projects", strings.TrimSpace(projectID))
+	return filepath.Join(practicalOutputsRoot(), "projects", strings.TrimSpace(projectID))
 }
 
 func projectScriptInputPath(projectDir string) string {
@@ -50,6 +49,10 @@ func projectScriptAlignedPath(projectDir string) string {
 
 func projectDialoguePath(projectDir string) string {
 	return filepath.Join(projectDir, "dialogue.wav")
+}
+
+func projectTurnGapPath(projectDir string) string {
+	return filepath.Join(projectDir, "turn_gap.wav")
 }
 
 func projectChapterGapPath(projectDir string) string {
@@ -72,12 +75,43 @@ func blocksDir(projectDir string) string {
 	return filepath.Join(projectDir, "blocks")
 }
 
-func blockAudioPath(projectDir, blockID string, blockIndex int) string {
+func chaptersDir(projectDir string) string {
+	return filepath.Join(projectDir, "chapters")
+}
+
+func blockAudioDir(projectDir, blockID string, blockIndex int) string {
 	name := sanitizePracticalID(blockID)
 	if name == "" {
 		name = fmt.Sprintf("block_%02d", maxInt(1, blockIndex))
 	}
-	return filepath.Join(blocksDir(projectDir), name+".wav")
+	return filepath.Join(chaptersDir(projectDir), name)
+}
+
+func chapterRawAudioPath(projectDir, blockID, chapterID string, blockIndex, chapterIndex int) string {
+	blockDir := blockAudioDir(projectDir, blockID, blockIndex)
+	chapterName := sanitizePracticalID(chapterID)
+	if chapterName == "" {
+		chapterName = fmt.Sprintf("chapter_%02d", maxInt(1, chapterIndex))
+	}
+	return filepath.Join(blockDir, chapterName+"_tts_raw.wav")
+}
+
+func chapterTempoAudioPath(projectDir, blockID, chapterID string, blockIndex, chapterIndex int) string {
+	blockDir := blockAudioDir(projectDir, blockID, blockIndex)
+	chapterName := sanitizePracticalID(chapterID)
+	if chapterName == "" {
+		chapterName = fmt.Sprintf("chapter_%02d", maxInt(1, chapterIndex))
+	}
+	return filepath.Join(blockDir, chapterName+"_tempo.wav")
+}
+
+func chapterAudioPath(projectDir, blockID, chapterID string, blockIndex, chapterIndex int) string {
+	blockDir := blockAudioDir(projectDir, blockID, blockIndex)
+	chapterName := sanitizePracticalID(chapterID)
+	if chapterName == "" {
+		chapterName = fmt.Sprintf("chapter_%02d", maxInt(1, chapterIndex))
+	}
+	return filepath.Join(blockDir, chapterName+".wav")
 }
 
 func blockIntroAudioPath(projectDir, blockID string, blockIndex int) string {
@@ -86,6 +120,14 @@ func blockIntroAudioPath(projectDir, blockID string, blockIndex int) string {
 		name = fmt.Sprintf("block_%02d", maxInt(1, blockIndex))
 	}
 	return filepath.Join(blocksDir(projectDir), name+"_topic.wav")
+}
+
+func blockIntroRawAudioPath(projectDir, blockID string, blockIndex int) string {
+	name := sanitizePracticalID(blockID)
+	if name == "" {
+		name = fmt.Sprintf("block_%02d", maxInt(1, blockIndex))
+	}
+	return filepath.Join(blocksDir(projectDir), name+"_topic_tts_raw.wav")
 }
 
 func sanitizePracticalID(value string) string {
@@ -97,6 +139,53 @@ func sanitizePracticalID(value string) string {
 	raw = strings.ReplaceAll(raw, "\\", "_")
 	raw = strings.ReplaceAll(raw, " ", "_")
 	return raw
+}
+
+func practicalAssetsRoot() string {
+	candidates := []string{
+		"assets",
+		filepath.Join("worker", "assets"),
+		"/app/assets",
+	}
+	for _, candidate := range candidates {
+		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
+			return practicalAbsolutePath(candidate)
+		}
+	}
+	return practicalAbsolutePath(candidates[0])
+}
+
+func practicalOutputsRoot() string {
+	candidates := []string{
+		"outputs",
+		filepath.Join("worker", "outputs"),
+		"/app/outputs",
+	}
+	for _, candidate := range candidates {
+		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
+			return practicalAbsolutePath(candidate)
+		}
+	}
+	return practicalAbsolutePath(candidates[0])
+}
+
+func practicalAbsolutePath(path string) string {
+	if filepath.IsAbs(strings.TrimSpace(path)) {
+		return strings.TrimSpace(path)
+	}
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return path
+	}
+	return abs
+}
+
+func practicalAssetFileCandidates(subdir, base string) []string {
+	base = filepath.Base(strings.TrimSpace(base))
+	return []string{
+		filepath.Join(practicalAssetsRoot(), "practical", subdir, base),
+		filepath.Join(practicalAssetsRoot(), "practicle", subdir, base),
+	}
 }
 
 func writeJSON(path string, data interface{}) error {
@@ -127,6 +216,9 @@ func createSilenceAudio(ctx context.Context, path string, durationMs int) error 
 	if durationMs <= 0 {
 		return nil
 	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
 	return ffmpegcommon.RunFFmpegContext(
 		ctx,
 		"-y",
@@ -138,43 +230,32 @@ func createSilenceAudio(ctx context.Context, path string, durationMs int) error 
 	)
 }
 
-func applyAudioTempoToFile(ctx context.Context, path string, tempo float64) error {
+func renderTempoAdjustedAudio(ctx context.Context, inputPath, outputPath string, tempo float64) error {
+	if strings.TrimSpace(inputPath) == "" || strings.TrimSpace(outputPath) == "" {
+		return fmt.Errorf("tempo audio paths are required")
+	}
+	if !fileExists(inputPath) {
+		return fmt.Errorf("tempo input audio missing: %s", inputPath)
+	}
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
+		return err
+	}
 	if tempo <= 0 || math.Abs(tempo-1.0) <= 0.001 {
-		return nil
+		return fsx.CopyFile(inputPath, outputPath)
 	}
 	filter := buildAtempoFilter(tempo)
 	if strings.TrimSpace(filter) == "" {
-		return nil
-	}
-
-	dir := filepath.Dir(path)
-	ext := filepath.Ext(path)
-	if strings.TrimSpace(ext) == "" {
-		ext = ".wav"
-	}
-	tmpFile, err := os.CreateTemp(dir, "tempo_*.tmp"+ext)
-	if err != nil {
-		return err
-	}
-	tmpPath := tmpFile.Name()
-	if err := tmpFile.Close(); err != nil {
-		_ = os.Remove(tmpPath)
-		return err
+		return fsx.CopyFile(inputPath, outputPath)
 	}
 
 	if err := ffmpegcommon.RunFFmpegContext(
 		ctx,
 		"-y",
-		"-i", path,
+		"-i", inputPath,
 		"-filter:a", filter,
 		"-c:a", "pcm_s16le",
-		tmpPath,
+		outputPath,
 	); err != nil {
-		_ = os.Remove(tmpPath)
-		return err
-	}
-	if err := os.Rename(tmpPath, path); err != nil {
-		_ = os.Remove(tmpPath)
 		return err
 	}
 	return nil
@@ -208,13 +289,11 @@ func concatAudioFiles(ctx context.Context, projectDir string, files []string, ou
 		return fmt.Errorf("no audio files to concat")
 	}
 	listPath := filepath.Join(projectDir, fmt.Sprintf("audio_concat_%d.txt", time.Now().UnixNano()))
-	var b strings.Builder
-	for _, file := range files {
-		b.WriteString("file '")
-		b.WriteString(strings.ReplaceAll(file, "'", "'\\''"))
-		b.WriteString("'\n")
+	listContent, err := buildConcatListContent(files)
+	if err != nil {
+		return err
 	}
-	if err := os.WriteFile(listPath, []byte(b.String()), 0o644); err != nil {
+	if err := os.WriteFile(listPath, []byte(listContent), 0o644); err != nil {
 		return err
 	}
 	defer os.Remove(listPath)
@@ -228,6 +307,24 @@ func concatAudioFiles(ctx context.Context, projectDir string, files []string, ou
 		"-c", "copy",
 		outputPath,
 	)
+}
+
+func buildConcatListContent(files []string) (string, error) {
+	var b strings.Builder
+	for _, file := range files {
+		candidate := strings.TrimSpace(file)
+		if candidate == "" {
+			return "", fmt.Errorf("concat audio file path is empty")
+		}
+		absPath, err := filepath.Abs(candidate)
+		if err != nil {
+			return "", err
+		}
+		b.WriteString("file '")
+		b.WriteString(strings.ReplaceAll(absPath, "'", "'\\''"))
+		b.WriteString("'\n")
+	}
+	return b.String(), nil
 }
 
 func extractAudioChunk(ctx context.Context, sourcePath, outputPath string, startMS, endMS int) error {
@@ -268,6 +365,9 @@ func newMFAClient() *mfa.Client {
 		TemporaryDirectory:    conf.Get[string]("worker.mfa_temporary_directory"),
 		Beam:                  conf.Get[int]("worker.mfa_beam"),
 		RetryBeam:             conf.Get[int]("worker.mfa_retry_beam"),
+		Verbose:               conf.Get[bool]("worker.mfa_verbose"),
+		Debug:                 conf.Get[bool]("worker.mfa_debug"),
+		UsePostgres:           conf.Get[bool]("worker.mfa_use_postgres"),
 		MandarinDictionary:    conf.Get[string]("worker.mfa_zh_dictionary"),
 		MandarinAcousticModel: conf.Get[string]("worker.mfa_zh_acoustic_model"),
 		MandarinG2PModel:      conf.Get[string]("worker.mfa_zh_g2p_model"),
@@ -279,6 +379,9 @@ func newMFAClient() *mfa.Client {
 
 func practicalSpeakingRate(language string) float64 {
 	if strings.EqualFold(strings.TrimSpace(language), "ja") {
+		if value := conf.Get[float64]("worker.google_tts_practical_ja_speaking_rate"); value > 0 {
+			return value
+		}
 		if value := conf.Get[float64]("worker.google_tts_ja_speaking_rate"); value > 0 {
 			return value
 		}
@@ -292,8 +395,8 @@ func practicalSpeakingRate(language string) float64 {
 
 func practicalTTSVoiceIDs(language string) (string, string) {
 	if strings.EqualFold(strings.TrimSpace(language), "ja") {
-		return strings.TrimSpace(conf.Get[string]("worker.google_tts_ja_male_voice_id")),
-			strings.TrimSpace(conf.Get[string]("worker.google_tts_ja_female_voice_id"))
+		return strings.TrimSpace(conf.Get[string]("worker.google_tts_practical_male_voice_id")),
+			strings.TrimSpace(conf.Get[string]("worker.google_tts_practical_female_voice_id"))
 	}
 	return strings.TrimSpace(conf.Get[string]("worker.google_tts_zh_male_voice_id")),
 		strings.TrimSpace(conf.Get[string]("worker.google_tts_zh_female_voice_id"))
@@ -306,24 +409,15 @@ func practicalNarratorVoiceID() string {
 func practicalTempo() float64 {
 	value := conf.Get[float64]("worker.practical_tts_tempo")
 	if value <= 0 {
-		return 0.8
+		return 0.75
 	}
 	return value
 }
 
-func practicalTurnTempo() float64 {
-	return 0.8
-}
-
-func practicalBlockTempo() float64 {
-	return 0.8
-}
-
 func practicalNarratorSpeakingRate(language string) float64 {
-	_ = language
-	rate := 1.0
+	rate := practicalSpeakingRate(language)
 	if rate <= 0 {
-		return 1.0
+		return 0.9
 	}
 	return rate
 }
@@ -332,6 +426,17 @@ func practicalChapterGapMS() int {
 	value := conf.Get[int]("worker.practical_chapter_gap_ms")
 	if value < 0 {
 		return 0
+	}
+	return value
+}
+
+func practicalTurnGapMS() int {
+	value := conf.Get[int]("worker.practical_turn_gap_ms")
+	if value < 0 {
+		return 0
+	}
+	if value == 0 {
+		return 600
 	}
 	return value
 }
@@ -381,7 +486,7 @@ func practicalAlignmentUnits(language, text string) []string {
 		return nil
 	}
 	if strings.EqualFold(strings.TrimSpace(language), "ja") {
-		if fields := strings.Fields(trimmed); len(fields) > 0 {
+		if fields := strings.Fields(trimmed); len(fields) > 1 {
 			return fields
 		}
 	}

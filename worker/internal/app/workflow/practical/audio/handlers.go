@@ -76,8 +76,10 @@ func handleRunModeReplay(ctx context.Context, ch *amqp.Channel, payload dto.Prac
 		return err
 	}
 	replayPayload.SpecifyTasks = normalizedTasks
-	if containsPracticalTask(replayPayload.SpecifyTasks, string(practicalreplay.PracticalStageGenerate)) && len(compactPositiveInts(replayPayload.BlockNums)) == 0 {
-		return services.NonRetryableError{Err: fmt.Errorf("block_nums is required when specify_tasks includes generate")}
+	if containsPracticalTask(replayPayload.SpecifyTasks, string(practicalreplay.PracticalStageGenerate)) &&
+		len(compactPositiveInts(replayPayload.BlockNums)) == 0 &&
+		len(compactPositiveInts(replayPayload.ChapterNums)) == 0 {
+		return services.NonRetryableError{Err: fmt.Errorf("chapter_nums or block_nums is required when specify_tasks includes generate")}
 	}
 	return generateAndContinue(ctx, ch, replayPayload)
 }
@@ -91,9 +93,6 @@ func validateFreshGeneratePayload(payload dto.PracticalAudioGeneratePayload) err
 	}
 	if strings.TrimSpace(payload.ScriptFilename) == "" {
 		return fmt.Errorf("script_filename is required")
-	}
-	if len(compactNonEmptyStrings(payload.BgImgFilenames)) == 0 {
-		return fmt.Errorf("bg_img_filenames is required")
 	}
 	if payload.DesignType != 0 && normalizePracticalDesignType(payload.DesignType) != payload.DesignType {
 		return fmt.Errorf("design_type must be 1 or 2")
@@ -110,6 +109,7 @@ func generateAndContinue(ctx context.Context, ch *amqp.Channel, payload dto.Prac
 		Language:       payload.Lang,
 		ScriptFilename: payload.ScriptFilename,
 		BlockNums:      compactPositiveInts(payload.BlockNums),
+		ChapterNums:    compactPositiveInts(payload.ChapterNums),
 	})
 	if err != nil {
 		return err
@@ -119,8 +119,10 @@ func generateAndContinue(ctx context.Context, ch *amqp.Channel, payload dto.Prac
 
 func alignAndContinue(ctx context.Context, ch *amqp.Channel, payload dto.PracticalAudioGeneratePayload) error {
 	_, err := practicalaudioservice.Align(ctx, practicalaudioservice.AlignInput{
-		ProjectID: payload.ProjectID,
-		Language:  payload.Lang,
+		ProjectID:   payload.ProjectID,
+		Language:    payload.Lang,
+		BlockNums:   compactPositiveInts(payload.BlockNums),
+		ChapterNums: compactPositiveInts(payload.ChapterNums),
 	})
 	if err != nil {
 		return err
@@ -165,11 +167,8 @@ func buildPracticalAudioTaskPayload(payload dto.PracticalAudioGeneratePayload) m
 	if len(payload.BlockNums) > 0 {
 		out["block_nums"] = compactPositiveInts(payload.BlockNums)
 	}
-	if backgrounds := compactNonEmptyStrings(payload.BgImgFilenames); len(backgrounds) > 0 {
-		out["bg_img_filenames"] = backgrounds
-	}
-	if blockBackgrounds := compactNonEmptyStrings(payload.BlockBgImgFilenames); len(blockBackgrounds) > 0 {
-		out["block_bg_img_filenames"] = blockBackgrounds
+	if chapterNums := compactPositiveInts(payload.ChapterNums); len(chapterNums) > 0 {
+		out["chapter_nums"] = chapterNums
 	}
 	if resolution := strings.TrimSpace(payload.Resolution); resolution != "" {
 		out["resolution"] = resolution

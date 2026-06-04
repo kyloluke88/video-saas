@@ -82,6 +82,7 @@ func Finalize(ctx context.Context, input ComposeInput) (ComposeResult, error) {
 		return ComposeResult{}, err
 	}
 	script.Language = language
+
 	if err := ffmpegpodcast.FinalizeComposedVideoContext(ctx, ffmpegpodcast.ComposeInput{
 		DialogueAudioPath: paths.DialoguePath,
 		Script:            &script,
@@ -175,7 +176,8 @@ func defaultPodcastResolution(value string) string {
 	if strings.TrimSpace(value) != "" {
 		return value
 	}
-	if strings.TrimSpace(conf.Get[string]("worker.podcast_mode", "debug")) == "production" {
+	mode := strings.ToLower(strings.TrimSpace(conf.Get[string]("worker.podcast_mode", "debug")))
+	if mode == "production" {
 		return "1080p"
 	}
 	return "480p"

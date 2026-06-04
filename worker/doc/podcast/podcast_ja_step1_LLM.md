@@ -67,7 +67,9 @@ en_title 规则】
 
 【block】
 - block 是请求 TTS 的单位
-- block 中的所有的 segment.text 的字符总和不能超过3600个
+
+【segment.text】
+- text 需要ます、です形
 
 【chapter 与 block 的关系】
 - 一个 chapter 由 1 个或多个 block 组成
@@ -204,22 +206,9 @@ Audio events / special（播客场景一般不建议使用）:
 }
 
 现在根据以下输入生成内容：
-topic：旅行で性格がバレる瞬間 / 旅行すると本性が出る？
-女生：Yui
-性格：计划型、细心、喜欢提前查好路线和餐厅。
-观点：
-旅行はちゃんと計画したほうが楽しめる。
-旅行要好好计划，才会玩得开心。
-男生：Akira
-性格：随性型、轻松派、不喜欢安排太满。
-观点：
-旅行は予定通りにいかないから面白い。
-旅行就是因为不按计划，才有趣。
-两个人不是情侣，是关系很好的男女好友。
-所以语气可以轻松、吐槽、互相开玩笑。
-
+topic：ぶっちゃけ年収いくらあれば幸せになれるのか
 difficulty_level：N3
-target_duration_minutes：20
+target_duration_minutes：15
 tts_type: google
 
 请按照规则要求给我生成内容并且给我可以下载的json文件，内容要丰富，chapter，block，segment 数量要足够要求

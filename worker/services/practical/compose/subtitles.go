@@ -20,6 +20,9 @@ type practicalSubtitleStyle struct {
 	TurnFontSize          int
 	BlockFontSize         int
 	RubyFontSize          int
+	TurnCharGap           float64
+	RubyCharSpacing       float64
+	PunctuationGapRatio   float64
 	PrimaryColor          string
 	OutlineColor          string
 	RubyColor             string
@@ -33,6 +36,7 @@ type practicalSubtitleStyle struct {
 	BlockMaxLineChars     int
 	WrapMaxLines          int
 	RowGap                int
+	TurnLineGap           int
 	RubyGap               int
 	TurnBoxPaddingX       int
 	TurnBoxPaddingY       int
@@ -53,6 +57,7 @@ func writePracticalASS(script dto.PracticalScript, projectDir, resolution string
 	if len(turns) == 0 {
 		return "", nil
 	}
+	windows := buildPracticalTurnSubtitleWindows(turns, practicalSubtitleLeadMS())
 
 	playW, playH := practicalResolutionDimensions(resolution)
 	style := practicalSubtitleStyleFor(script.Language, designType)
@@ -64,8 +69,12 @@ func writePracticalASS(script dto.PracticalScript, projectDir, resolution string
 			return "", err
 		}
 	}
-	for _, turn := range turns {
-		if err := appendPracticalTurnLines(&b, playW, playH, style, script.Language, turn); err != nil {
+	for idx, turn := range turns {
+		window := practicalTurnSubtitleWindow{StartMS: turn.Turn.StartMS, EndMS: turn.Turn.EndMS}
+		if idx < len(windows) {
+			window = windows[idx]
+		}
+		if err := appendPracticalTurnLines(&b, playW, playH, style, script.Language, turn, window); err != nil {
 			return "", err
 		}
 	}
@@ -83,6 +92,11 @@ func writePracticalASS(script dto.PracticalScript, projectDir, resolution string
 type practicalTurnEntry struct {
 	Turn         dto.PracticalTurn
 	SpeakerVoice string
+}
+
+type practicalTurnSubtitleWindow struct {
+	StartMS int
+	EndMS   int
 }
 
 type practicalSubtitleLine struct {
@@ -180,7 +194,7 @@ func appendPracticalBlockTitleLines(b *strings.Builder, playW, playH int, style 
 	return nil
 }
 
-func appendPracticalTurnLines(b *strings.Builder, playW, playH int, style practicalSubtitleStyle, language string, entry practicalTurnEntry) error {
+func appendPracticalTurnLines(b *strings.Builder, playW, playH int, style practicalSubtitleStyle, language string, entry practicalTurnEntry, window practicalTurnSubtitleWindow) error {
 	turn := entry.Turn
 	if turn.EndMS <= turn.StartMS {
 		return nil
@@ -191,7 +205,7 @@ func appendPracticalTurnLines(b *strings.Builder, playW, playH int, style practi
 	}
 
 	maxTextWidth := practicalTurnMaxTextWidth(playW, style)
-	lineLayouts := buildPracticalJapaneseLineLayouts(language, text, turn.Tokens, style.TurnFontSize, maxTextWidth, style.TurnMaxLineChars, style.WrapMaxLines)
+	lineLayouts := buildPracticalJapaneseLineLayouts(language, text, turn.Tokens, style, maxTextWidth, style.TurnMaxLineChars, style.WrapMaxLines)
 	lines := make([]practicalSubtitleLine, 0, len(lineLayouts))
 	lineWidths := make([]float64, 0, len(lineLayouts))
 	if len(lineLayouts) > 0 {
@@ -209,8 +223,10 @@ func appendPracticalTurnLines(b *strings.Builder, playW, playH int, style practi
 		return nil
 	}
 	panel := buildPracticalTurnPanelWithLineWidths(playW, playH, style, lineWidths)
-	start := formatASSTimestampMS(maxInt(0, turn.StartMS-practicalSubtitleLeadMS()))
-	end := formatASSTimestampMS(turn.EndMS)
+	startMS := maxInt(0, window.StartMS)
+	endMS := maxInt(startMS, window.EndMS)
+	start := formatASSTimestampMS(startMS)
+	end := formatASSTimestampMS(endMS)
 	b.WriteString(dialogueLineASSLayer(0, practicalTurnBoxStyleName(entry.SpeakerVoice), start, end, roundedBoxTextASS(panel.Left, panel.Top, panel.Width, panel.Height, style.TurnBoxRadius)))
 
 	spans := buildPracticalTokenSpans(text, turn.Tokens)
@@ -227,7 +243,7 @@ func appendPracticalTurnLines(b *strings.Builder, playW, playH int, style practi
 		rubyCenterY := row.RubyTopY + practicalTurnRubyHeight(style)/2
 
 		if rowIndex < len(lineLayouts) && len(lineLayouts[rowIndex].Cells) > 0 {
-			renderCells := layoutPracticalLineCells(lineLayouts[rowIndex].Cells, panel.CenterX)
+			renderCells := layoutPracticalLineCells(lineLayouts[rowIndex].Cells, panel.CenterX, maxTextWidth)
 			for _, cell := range renderCells {
 				b.WriteString(dialogueLineASSLayer(1, "TurnSub", start, end, posTextASSCenter(cell.CenterX, baseCenterY, cell.Char)))
 			}
@@ -245,7 +261,7 @@ func appendPracticalTurnLines(b *strings.Builder, playW, playH int, style practi
 		if len(lineSpans) == 0 {
 			continue
 		}
-		cells := buildPracticalLineCellsForLine(line, style.TurnFontSize, panel.CenterX)
+		cells := buildPracticalLineCellsForLine(line, style, panel.CenterX, maxTextWidth)
 		for _, span := range lineSpans {
 			centerX, ok := practicalRubyCenter(span, cells)
 			if !ok {
@@ -257,14 +273,48 @@ func appendPracticalTurnLines(b *strings.Builder, playW, playH int, style practi
 	return nil
 }
 
+func buildPracticalTurnSubtitleWindows(entries []practicalTurnEntry, leadMS int) []practicalTurnSubtitleWindow {
+	if len(entries) == 0 {
+		return nil
+	}
+	if leadMS < 0 {
+		leadMS = 0
+	}
+
+	out := make([]practicalTurnSubtitleWindow, 0, len(entries))
+	prevEndMS := 0
+	for _, entry := range entries {
+		turn := entry.Turn
+		if turn.EndMS <= turn.StartMS {
+			out = append(out, practicalTurnSubtitleWindow{})
+			continue
+		}
+		startMS := maxInt(0, turn.StartMS-leadMS)
+		if startMS < prevEndMS {
+			startMS = prevEndMS
+		}
+		endMS := maxInt(startMS+1, turn.EndMS)
+		window := practicalTurnSubtitleWindow{
+			StartMS: startMS,
+			EndMS:   endMS,
+		}
+		out = append(out, window)
+		prevEndMS = endMS
+	}
+	return out
+}
+
 func practicalSubtitleStyleFor(language string, designType int) practicalSubtitleStyle {
 	lang := strings.ToLower(strings.TrimSpace(language))
 	style := practicalSubtitleStyle{
 		TurnFontName:          "HYWenRunSongYun J",
 		RubyFontName:          "HYWenRunSongYun J",
-		TurnFontSize:          43,
+		TurnFontSize:          53,
 		BlockFontSize:         83,
-		RubyFontSize:          23,
+		RubyFontSize:          28,
+		TurnCharGap:           3.44,
+		RubyCharSpacing:       0,
+		PunctuationGapRatio:   0.46,
 		PrimaryColor:          assColorRGB(0, 0, 0),
 		OutlineColor:          assColorRGB(0, 0, 0),
 		RubyColor:             assColorRGB(0, 0, 0),
@@ -278,9 +328,10 @@ func practicalSubtitleStyleFor(language string, designType int) practicalSubtitl
 		BlockMaxLineChars:     25,
 		WrapMaxLines:          2,
 		RowGap:                8,
+		TurnLineGap:           8,
 		RubyGap:               3,
-		TurnBoxPaddingX:       12,
-		TurnBoxPaddingY:       8,
+		TurnBoxPaddingX:       16,
+		TurnBoxPaddingY:       10,
 		BlockBoxPaddingX:      18,
 		BlockBoxPaddingY:      12,
 		TurnBoxRadius:         18,
@@ -297,6 +348,11 @@ func practicalSubtitleStyleFor(language string, designType int) practicalSubtitl
 		style.RubyFontName = style.TurnFontName
 		style.TurnBold = 0
 		style.BlockBold = 0
+		style.TurnCharGap = 0.08
+		style.RubyCharSpacing = -1.33
+		style.PunctuationGapRatio = 0.4615384615
+		style.TurnLineGap = 11
+		style.RubyGap = 1
 		style.TurnMaxLineChars = 25
 		style.BlockMaxLineChars = 25
 	}
@@ -327,7 +383,7 @@ func writePracticalASSHeader(b *strings.Builder, playW, playH int, style practic
 	b.WriteString("Style: TurnBox," + style.TurnFontName + ",20," + style.BoxColor + "," + style.BoxColor + "," + style.BoxColor + "," + style.BoxColor + ",0,0,0,0,100,100,0,0,1,0,0,7,0,0,0,1\n")
 	b.WriteString("Style: TurnBoxFemale," + style.TurnFontName + ",20," + style.FemaleBoxColor + "," + style.FemaleBoxColor + "," + style.FemaleBoxColor + "," + style.FemaleBoxColor + ",0,0,0,0,100,100,0,0,1,0,0,7,0,0,0,1\n")
 	b.WriteString("Style: BlockBox," + style.TurnFontName + ",20," + style.BoxColor + "," + style.BoxColor + "," + style.BoxColor + "," + style.BoxColor + ",0,0,0,0,100,100,0,0,1,0,0,7,0,0,0,1\n")
-	b.WriteString("Style: TurnRuby," + style.RubyFontName + "," + strconv.Itoa(style.RubyFontSize) + "," + style.RubyColor + "," + style.RubyColor + "," + style.OutlineColor + ",&H00000000," + strconv.Itoa(style.RubyBold) + ",0,0,0,100,100,0,0,1,0,0,8,0,0,0,1\n")
+	b.WriteString("Style: TurnRuby," + style.RubyFontName + "," + strconv.Itoa(style.RubyFontSize) + "," + style.RubyColor + "," + style.RubyColor + "," + style.OutlineColor + ",&H00000000," + strconv.Itoa(style.RubyBold) + ",0,0,0,100,100," + practicalASSSpacingText(style.RubyCharSpacing) + ",0,1,0,0,8,0,0,0,1\n")
 	b.WriteString("Style: TurnSub," + style.TurnFontName + "," + strconv.Itoa(style.TurnFontSize) + "," + style.PrimaryColor + "," + style.PrimaryColor + "," + style.OutlineColor + ",&H00000000," + strconv.Itoa(style.TurnBold) + ",0,0,0,100,100,0,0,1," + strconv.Itoa(style.Outline) + ",0,8,0,0,0,1\n")
 	b.WriteString("Style: BlockSub," + style.TurnFontName + "," + strconv.Itoa(style.BlockFontSize) + "," + style.PrimaryColor + "," + style.PrimaryColor + "," + style.OutlineColor + ",&H00000000," + strconv.Itoa(style.BlockBold) + ",0,0,0,100,100,0,0,1," + strconv.Itoa(style.Outline) + ",0,8,0,0,0,1\n\n")
 
@@ -364,7 +420,7 @@ func buildPracticalTurnPanelWithLineWidths(playW, playH int, style practicalSubt
 	lineCount := maxInt(1, len(lineWidths))
 	textHeight := rowHeight * lineCount
 	if lineCount > 1 {
-		textHeight += style.RowGap * (lineCount - 1)
+		textHeight += style.TurnLineGap * (lineCount - 1)
 	}
 	boxHeight := textHeight + style.TurnBoxPaddingY*2
 
@@ -396,7 +452,7 @@ func buildPracticalTurnPanelWithLineWidths(playW, playH int, style practicalSubt
 			RubyTopY: cursorY,
 			BaseTopY: cursorY + rubyHeight + style.RubyGap,
 		})
-		cursorY += rowHeight + style.RowGap
+		cursorY += rowHeight + style.TurnLineGap
 	}
 
 	return practicalSubtitlePanel{
@@ -464,7 +520,7 @@ func buildPracticalCenteredPanel(playW, playH int, style practicalSubtitleStyle,
 }
 
 func practicalBlockTitleWindow(block dto.PracticalBlock) (int, int) {
-	startMS := maxInt(0, block.TopicStartMS+practicalBlockTransitionLeadMS()-practicalSubtitleLeadMS())
+	startMS := maxInt(0, block.TopicStartMS-practicalSubtitleLeadMS())
 	endMS := maxInt(startMS, block.TopicEndMS)
 	return startMS, endMS
 }
@@ -612,7 +668,7 @@ type practicalJapaneseCellGroup struct {
 	Cells []practicalCharCell
 }
 
-func buildPracticalJapaneseLineLayouts(language, text string, raw json.RawMessage, fontSize, maxWidth, maxChars, maxLines int) []practicalJapaneseLineLayout {
+func buildPracticalJapaneseLineLayouts(language, text string, raw json.RawMessage, style practicalSubtitleStyle, maxWidth, maxChars, maxLines int) []practicalJapaneseLineLayout {
 	if !strings.EqualFold(strings.TrimSpace(language), "ja") {
 		return nil
 	}
@@ -627,7 +683,7 @@ func buildPracticalJapaneseLineLayouts(language, text string, raw json.RawMessag
 		return nil
 	}
 
-	cells := buildPracticalJapaneseCells(baseRunes, fontSize)
+	cells := buildPracticalJapaneseCells(baseRunes, style)
 	if len(cells) == 0 {
 		return nil
 	}
@@ -675,7 +731,7 @@ func buildPracticalJapaneseLineLayouts(language, text string, raw json.RawMessag
 	return out
 }
 
-func buildPracticalJapaneseCells(baseRunes []rune, fontSize int) []practicalCharCell {
+func buildPracticalJapaneseCells(baseRunes []rune, style practicalSubtitleStyle) []practicalCharCell {
 	if len(baseRunes) == 0 {
 		return nil
 	}
@@ -686,8 +742,8 @@ func buildPracticalJapaneseCells(baseRunes []rune, fontSize int) []practicalChar
 			StartRune: index,
 			EndRune:   index + 1,
 			Char:      char,
-			Width:     estimatePracticalTextWidth(char, fontSize),
-			Gap:       practicalJapaneseCharGap(char, fontSize),
+			Width:     estimatePracticalJapaneseCellWidth(char, style),
+			Gap:       practicalJapaneseCharGap(char, style),
 		})
 	}
 	return cells
@@ -858,17 +914,24 @@ func practicalLineWidth(cells []practicalCharCell) float64 {
 	return total
 }
 
-func layoutPracticalLineCells(cells []practicalCharCell, centerX int) []practicalCharCell {
+func layoutPracticalLineCells(cells []practicalCharCell, centerX int, maxTextWidth int) []practicalCharCell {
 	if len(cells) == 0 {
 		return nil
 	}
 	totalWidth := practicalLineWidth(cells)
-	cursor := float64(centerX) - totalWidth/2
+	scale := 1.0
+	if maxTextWidth > 0 && totalWidth > float64(maxTextWidth) && totalWidth > 0 {
+		scale = float64(maxTextWidth) / totalWidth
+	}
+	cursor := float64(centerX) - (totalWidth*scale)/2
 	out := make([]practicalCharCell, len(cells))
 	for index, cell := range cells {
-		cell.CenterX = int(cursor + cell.Width/2)
+		width := cell.Width * scale
+		cell.CenterX = int(cursor + width/2)
+		cell.Width = width
+		cell.Gap = cell.Gap * scale
 		out[index] = cell
-		cursor += cell.Width
+		cursor += width
 		if index != len(cells)-1 {
 			cursor += cell.Gap
 		}
@@ -876,43 +939,34 @@ func layoutPracticalLineCells(cells []practicalCharCell, centerX int) []practica
 	return out
 }
 
-func practicalJapaneseCharGap(char string, fontSize int) float64 {
+func practicalJapaneseCharGap(char string, style practicalSubtitleStyle) float64 {
 	if strings.TrimSpace(char) == "" {
 		return 0
 	}
-	if isPracticalPunctuationRune([]rune(char)[0]) {
-		return float64(fontSize) * 0.16
+	if practicalIsPunctuationText(char) {
+		return style.TurnCharGap * style.PunctuationGapRatio
 	}
-	return float64(fontSize) * 0.08
+	return style.TurnCharGap
 }
 
-func buildPracticalLineCellsForLine(line practicalSubtitleLine, fontSize int, centerX int) []practicalCharCell {
+func buildPracticalLineCellsForLine(line practicalSubtitleLine, style practicalSubtitleStyle, centerX int, maxTextWidth int) []practicalCharCell {
 	text := line.Text
 	runes := []rune(strings.TrimSpace(text))
 	if len(runes) == 0 {
 		return nil
 	}
-	widths := make([]float64, len(runes))
-	totalWidth := 0.0
+	cells := make([]practicalCharCell, 0, len(runes))
 	for idx, r := range runes {
-		width := estimatePracticalTextWidth(string(r), fontSize)
-		widths[idx] = width
-		totalWidth += width
-	}
-	cursor := float64(centerX) - totalWidth/2
-	out := make([]practicalCharCell, 0, len(runes))
-	for idx, width := range widths {
 		startRune := line.StartRune + idx
-		out = append(out, practicalCharCell{
+		cells = append(cells, practicalCharCell{
 			StartRune: startRune,
 			EndRune:   startRune + 1,
-			Char:      string(runes[idx]),
-			Width:     width,
-			CenterX:   int(cursor + width/2),
+			Char:      string(r),
+			Width:     estimatePracticalJapaneseCellWidth(string(r), style),
+			Gap:       practicalJapaneseCharGap(string(r), style),
 		})
-		cursor += width
 	}
-	return out
+	return layoutPracticalLineCells(cells, centerX, maxTextWidth)
 }
 
 func practicalRubyCenter(span practicalTokenSpan, cells []practicalCharCell) (int, bool) {
@@ -1145,11 +1199,11 @@ func practicalTurnMaxTextWidth(playW int, style practicalSubtitleStyle) int {
 }
 
 func practicalTurnRubyHeight(style practicalSubtitleStyle) int {
-	return maxInt(style.RubyFontSize, int(float64(style.RubyFontSize)*1.08))
+	return maxInt(style.RubyFontSize, int(float64(style.RubyFontSize)*1.12))
 }
 
 func practicalTurnBaseHeight(style practicalSubtitleStyle) int {
-	return maxInt(style.TurnFontSize, int(float64(style.TurnFontSize)*1.08))
+	return maxInt(style.TurnFontSize, int(float64(style.TurnFontSize)*1.05))
 }
 
 func practicalBlockLineHeight(style practicalSubtitleStyle) int {
@@ -1178,6 +1232,56 @@ func estimatePracticalTextWidth(text string, fontSize int) float64 {
 	return width
 }
 
+func estimatePracticalJapaneseCellWidth(text string, style practicalSubtitleStyle) float64 {
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" {
+		return estimatePracticalWhitespaceWidth(text, float64(style.TurnFontSize))
+	}
+	width := estimatePracticalLayoutTextWidth(trimmed, float64(style.TurnFontSize), true)
+	if practicalIsPunctuationText(trimmed) {
+		width = maxPracticalFloat(width*0.60, float64(style.TurnFontSize)*0.48)
+	}
+	return width
+}
+
+func estimatePracticalLayoutTextWidth(text string, fontSize float64, cjk bool) float64 {
+	if strings.TrimSpace(text) == "" {
+		return 0
+	}
+	width := 0.0
+	for _, r := range []rune(text) {
+		switch {
+		case unicode.IsSpace(r):
+			width += fontSize * 0.28
+		case isPracticalPunctuationRune(r):
+			width += fontSize * 0.36
+		case cjk:
+			width += fontSize * 0.94
+		default:
+			width += fontSize * 0.58
+		}
+	}
+	return width
+}
+
+func estimatePracticalWhitespaceWidth(text string, fontSize float64) float64 {
+	width := 0.0
+	for _, r := range []rune(text) {
+		if unicode.IsSpace(r) {
+			width += fontSize * 0.12
+		}
+	}
+	return width
+}
+
+func practicalIsPunctuationText(text string) bool {
+	rs := []rune(strings.TrimSpace(text))
+	if len(rs) != 1 {
+		return false
+	}
+	return isPracticalPunctuationRune(rs[0])
+}
+
 func isPracticalWideRune(r rune) bool {
 	return unicode.In(r, unicode.Han, unicode.Hiragana, unicode.Katakana, unicode.Hangul)
 }
@@ -1185,6 +1289,20 @@ func isPracticalWideRune(r rune) bool {
 func isPracticalPunctuationRune(r rune) bool {
 	const punctuation = ".,!?;:()[]{}\"'，。！？；：（）【】《》「」『』、・ー〜…"
 	return strings.ContainsRune(punctuation, r)
+}
+
+func practicalASSSpacingText(value float64) string {
+	if math.Abs(value-math.Round(value)) < 0.000001 {
+		return strconv.Itoa(int(math.Round(value)))
+	}
+	return strconv.FormatFloat(value, 'f', -1, 64)
+}
+
+func maxPracticalFloat(a, b float64) float64 {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func escapeASSText(s string) string {

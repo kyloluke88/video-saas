@@ -849,7 +849,7 @@ func writeJapaneseASSHeader(b *strings.Builder, layout subtitleLayout) {
 	b.WriteString("Style: Box," + layout.HanziFontName + "," + strconv.Itoa(layout.HanziSize) + "," + layout.BoxColor + "," + layout.BoxColor + "," + layout.BoxColor + "," + layout.BoxColor + ",0,0,0,0,100,100,0,0,1,0,0,7,0,0,0,1\n")
 	b.WriteString("Style: Ruby," + layout.RubyFontName + "," + strconv.Itoa(layout.RubySize) + "," + layout.RubyColor + "," + layout.RubyColor + "," + layout.OutlineColor + ",&H64000000," + strconv.Itoa(layout.RubyBold) + ",0,0,0,100,100," + assSpacingText(layout.RubySpacing) + ",0,1,0,0,5,10,10,10,1\n")
 	b.WriteString("Style: JaBase," + layout.HanziFontName + "," + strconv.Itoa(layout.HanziSize) + "," + layout.HanziColor + "," + layout.HanziColor + "," + layout.OutlineColor + ",&H64000000," + strconv.Itoa(layout.HanziBold) + ",0,0,0,100,100," + assSpacingText(layout.HanziSpacing) + ",0,1,0,0,5,10,10,10,1\n")
-	b.WriteString("Style: JaActive," + layout.HanziFontName + "," + strconv.Itoa(layout.HanziSize) + "," + layout.HighlightColor + "," + layout.HighlightColor + "," + layout.OutlineColor + ",&H64000000,0,0,0,0,100,100," + assSpacingText(layout.HanziSpacing) + ",0,1,0,0,5,10,10,10,1\n")
+	b.WriteString("Style: JaActive," + layout.HanziFontName + "," + strconv.Itoa(layout.HanziSize) + "," + layout.HighlightColor + "," + layout.HighlightColor + "," + assColorRGB(0, 0, 0) + ",&H64000000,1,0,0,0,100,100," + assSpacingText(layout.HanziSpacing) + ",0,1,2,0,5,10,10,10,1\n")
 	b.WriteString("Style: English," + layout.EnglishFontName + "," + strconv.Itoa(layout.EnglishSize) + "," + layout.EnglishColor + "," + layout.EnglishColor + "," + layout.EnglishColor + ",&H00000000," + strconv.Itoa(layout.EnglishBold) + ",0,0,0,100,100," + assSpacingText(layout.EnglishSpacing) + ",0,1,0,0,5,10,10,10,1\n\n")
 
 	b.WriteString("[Events]\n")
@@ -882,7 +882,7 @@ func japaneseSubtitlePresetStyle1() subtitlePreset {
 	preset.BottomSectionTopInset = 0
 	preset.RubyColor = assColorRGB(255, 255, 255)
 	preset.HanziColor = assColorRGB(255, 255, 255)
-	preset.HighlightColor = assColorRGB(255, 222, 89)
+	preset.HighlightColor = assColorRGB(196, 236, 121)
 	preset.EnglishColor = assColorRGB(183, 236, 70)
 	preset.OutlineColor = assColorRGB(0, 0, 0)
 	applyJapaneseDesignType1Typography(&preset)
@@ -913,18 +913,18 @@ func japaneseSubtitlePresetStyle2() subtitlePreset {
 		EnglishSpacing:        0,  // 英文字距
 		PunctuationGapRatio:   0.4615384615,
 		MaxLineChars:          japaneseSubtitleMaxLineChars(),
-		RowGap:                1,                         // 假名与正文之间的垂直间距
-		TokenLineGap:          16,                        // 两行日文之间的垂直间距
-		EnglishLineGap:        8,                         // 英文多行时的行间距
-		BoxColor:              "&HFF000000",              // 底框颜色
-		RubyColor:             "&H00000000",              // 假名颜色
-		HanziColor:            "&H00000000",              // 日文正文颜色
-		HighlightColor:        assColorRGB(255, 222, 89), // 高亮颜色
-		EnglishColor:          assColorRGB(183, 236, 70), // 英文字幕颜色
-		OutlineColor:          "&H00DDD6CF",              // 轮廓/描边颜色
-		RubyBold:              0,                         // 假名是否粗体
-		HanziBold:             0,                         // 日文正文是否粗体
-		EnglishBold:           1,                         // 英文字幕是否粗体
+		RowGap:                1,                          // 假名与正文之间的垂直间距
+		TokenLineGap:          16,                         // 两行日文之间的垂直间距
+		EnglishLineGap:        8,                          // 英文多行时的行间距
+		BoxColor:              "&HFF000000",               // 底框颜色
+		RubyColor:             "&H00000000",               // 假名颜色
+		HanziColor:            "&H00000000",               // 日文正文颜色
+		HighlightColor:        assColorRGB(196, 236, 121), // 高亮颜色
+		EnglishColor:          assColorRGB(183, 236, 70),  // 英文字幕颜色
+		OutlineColor:          "&H00DDD6CF",               // 轮廓/描边颜色
+		RubyBold:              0,                          // 假名是否粗体
+		HanziBold:             0,                          // 日文正文是否粗体
+		EnglishBold:           1,                          // 英文字幕是否粗体
 	}
 	applyJapaneseDesignType1Typography(&preset)
 	return preset

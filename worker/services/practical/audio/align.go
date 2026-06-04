@@ -5,18 +5,22 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"unicode"
 
 	"worker/pkg/mfa"
+	"worker/pkg/x/fsx"
 	services "worker/services"
 	ffmpegcommon "worker/services/media/ffmpeg/common"
 	dto "worker/services/practical/model"
 )
 
 type AlignInput struct {
-	ProjectID string
-	Language  string
+	ProjectID   string
+	Language    string
+	BlockNums   []int
+	ChapterNums []int
 }
 
 type AlignResult struct {
@@ -46,6 +50,12 @@ type practicalTurnWindow struct {
 	HasMatch bool
 }
 
+type practicalTurnAudioSlice struct {
+	TurnIndex int
+	StartMS   int
+	EndMS     int
+}
+
 func Align(ctx context.Context, input AlignInput) (AlignResult, error) {
 	if strings.TrimSpace(input.ProjectID) == "" {
 		return AlignResult{}, fmt.Errorf("project_id is required")
@@ -63,21 +73,39 @@ func Align(ctx context.Context, input AlignInput) (AlignResult, error) {
 	if err := script.Validate(); err != nil {
 		return AlignResult{}, err
 	}
-
-	alignedScript, err := alignScriptTimings(ctx, projectDir, script)
+	requestedBlocks, err := buildRequestedBlockSet(input.BlockNums, len(script.Blocks))
 	if err != nil {
 		return AlignResult{}, err
 	}
-	dialoguePath, introDurations, err := buildDialogueAudio(ctx, projectDir, alignedScript)
+	requestedChapterNums, err := buildRequestedChapterSet(script, input.ChapterNums)
+	if err != nil {
+		return AlignResult{}, err
+	}
+	fullAlign := len(requestedBlocks) == 0 && len(requestedChapterNums) == 0
+
+	reusableLocalScript := dto.PracticalScript{}
+	if !fullAlign {
+		reusableLocalScript, err = loadReusableLocalAlignedScript(projectDir, language)
+		if err != nil {
+			return AlignResult{}, err
+		}
+	}
+
+	alignedScript, err := alignScriptTimings(ctx, projectDir, script, requestedBlocks, requestedChapterNums, fullAlign, reusableLocalScript)
+	if err != nil {
+		return AlignResult{}, err
+	}
+	dialoguePath, topicDurations, err := buildDialogueAudio(ctx, projectDir, alignedScript)
 	if err != nil {
 		return AlignResult{}, err
 	}
 	timelineScript := applyPracticalTimelineGaps(
 		alignedScript,
-		introDurations,
+		topicDurations,
 		practicalChapterGapMS(),
 		practicalBlockGapMS(),
 		practicalChapterTransitionLeadMS(),
+		practicalBlockTransitionLeadMS(),
 	)
 	if err := writeJSON(projectScriptAlignedPath(projectDir), timelineScript); err != nil {
 		return AlignResult{}, err
@@ -101,38 +129,135 @@ func loadScriptForAlignment(projectDir, language string) (dto.PracticalScript, e
 	return dto.PracticalScript{}, services.NonRetryableError{Err: fmt.Errorf("practical script input not found in project dir %s", projectDir)}
 }
 
-func alignScriptTimings(ctx context.Context, projectDir string, script dto.PracticalScript) (dto.PracticalScript, error) {
-	aligned := script
-	client := newMFAClient()
+func loadReusableLocalAlignedScript(projectDir, language string) (dto.PracticalScript, error) {
+	alignedScriptPath := projectScriptAlignedPath(projectDir)
+	if !fileExists(alignedScriptPath) {
+		return dto.PracticalScript{}, services.NonRetryableError{
+			Err: fmt.Errorf("partial practical align requires existing aligned script: %s", alignedScriptPath),
+		}
+	}
+	script, err := loadScriptFromPath(language, alignedScriptPath)
+	if err != nil {
+		return dto.PracticalScript{}, err
+	}
+	return localizePracticalScriptTimings(script), nil
+}
 
-	for blockIndex, block := range aligned.Blocks {
-		audioPath := blockAudioPath(projectDir, block.BlockID, blockIndex+1)
-		if !fileExists(audioPath) {
-			return dto.PracticalScript{}, services.NonRetryableError{Err: fmt.Errorf("block audio missing: %s", audioPath)}
-		}
-		durationMS, err := audioDurationMS(ctx, audioPath)
+func alignScriptTimings(
+	ctx context.Context,
+	projectDir string,
+	script dto.PracticalScript,
+	requestedBlocks map[int]struct{},
+	requestedChapterNums map[int]struct{},
+	fullAlign bool,
+	reusableLocalScript dto.PracticalScript,
+) (dto.PracticalScript, error) {
+	aligned := script
+	var err error
+	if !fullAlign {
+		aligned, err = mergeReusableLocalChapterTimings(script, reusableLocalScript)
 		if err != nil {
 			return dto.PracticalScript{}, err
 		}
-		alignedBlock, err := alignBlockTimings(ctx, client, aligned.Language, projectDir, block, audioPath, durationMS)
-		if err != nil {
+	}
+	client := newMFAClient()
+	tempo := practicalTempo()
+	turnGapMS := practicalTurnGapMS()
+	if turnGapMS > 0 && (fullAlign || len(requestedChapterNums) > 0) {
+		if err := createSilenceAudio(ctx, projectTurnGapPath(projectDir), turnGapMS); err != nil {
 			return dto.PracticalScript{}, err
 		}
-		aligned.Blocks[blockIndex] = alignedBlock
+	}
+
+	chapterCursor := 0
+	for blockIndex := range aligned.Blocks {
+		block := &aligned.Blocks[blockIndex]
+		finalTopicAudioPath := blockIntroAudioPath(projectDir, block.BlockID, blockIndex+1)
+		if fullAlign || practicalSelectionContains(requestedBlocks, blockIndex+1) {
+			rawTopicAudioPath := blockIntroRawAudioPath(projectDir, block.BlockID, blockIndex+1)
+			if !fileExists(rawTopicAudioPath) {
+				return dto.PracticalScript{}, services.NonRetryableError{
+					Err: fmt.Errorf("block topic raw audio missing for block %s: %s", strings.TrimSpace(block.BlockID), rawTopicAudioPath),
+				}
+			}
+			if err := renderTempoAdjustedAudio(ctx, rawTopicAudioPath, finalTopicAudioPath, tempo); err != nil {
+				return dto.PracticalScript{}, err
+			}
+		} else if !fileExists(finalTopicAudioPath) {
+			return dto.PracticalScript{}, services.NonRetryableError{
+				Err: fmt.Errorf("block topic audio missing for block %s: %s", strings.TrimSpace(block.BlockID), finalTopicAudioPath),
+			}
+		}
+
+		for chapterIndex := range block.Chapters {
+			chapter := block.Chapters[chapterIndex]
+			globalChapterNum := chapterCursor + chapterIndex + 1
+			finalAudioPath := chapterAudioPath(projectDir, block.BlockID, chapter.ChapterID, blockIndex+1, chapterIndex+1)
+			if !fullAlign && !practicalSelectionContains(requestedChapterNums, globalChapterNum) {
+				if !fileExists(finalAudioPath) {
+					return dto.PracticalScript{}, services.NonRetryableError{
+						Err: fmt.Errorf("chapter audio missing for block %s chapter %s: %s", strings.TrimSpace(block.BlockID), strings.TrimSpace(chapter.ChapterID), finalAudioPath),
+					}
+				}
+				if !practicalChapterHasLocalTiming(block.Chapters[chapterIndex]) {
+					return dto.PracticalScript{}, services.NonRetryableError{
+						Err: fmt.Errorf("chapter timing cache missing for block %s chapter %s", strings.TrimSpace(block.BlockID), strings.TrimSpace(chapter.ChapterID)),
+					}
+				}
+				continue
+			}
+
+			rawAudioPath := chapterRawAudioPath(projectDir, block.BlockID, chapter.ChapterID, blockIndex+1, chapterIndex+1)
+			if !fileExists(rawAudioPath) {
+				return dto.PracticalScript{}, services.NonRetryableError{
+					Err: fmt.Errorf("chapter audio missing for block %s chapter %s: %s", strings.TrimSpace(block.BlockID), strings.TrimSpace(chapter.ChapterID), rawAudioPath),
+				}
+			}
+			tempoAudioPath := chapterTempoAudioPath(projectDir, block.BlockID, chapter.ChapterID, blockIndex+1, chapterIndex+1)
+			if err := renderTempoAdjustedAudio(ctx, rawAudioPath, tempoAudioPath, tempo); err != nil {
+				return dto.PracticalScript{}, err
+			}
+
+			durationMS, err := audioDurationMS(ctx, tempoAudioPath)
+			if err != nil {
+				return dto.PracticalScript{}, err
+			}
+
+			alignedChapter, err := alignChapterTimings(ctx, client, aligned.Language, projectDir, chapter, tempoAudioPath, durationMS)
+			if err != nil {
+				return dto.PracticalScript{}, err
+			}
+
+			finalChapter, err := materializeChapterAudioWithTurnGaps(ctx, projectDir, tempoAudioPath, finalAudioPath, alignedChapter, durationMS)
+			if err != nil {
+				return dto.PracticalScript{}, err
+			}
+			block.Chapters[chapterIndex] = finalChapter
+		}
+		chapterCursor += len(block.Chapters)
 	}
 
 	setPracticalLocalHierarchyTimings(&aligned)
 	return aligned, nil
 }
 
-func alignBlockTimings(ctx context.Context, client *mfa.Client, language, workingDir string, block dto.PracticalBlock, audioPath string, durationMS int) (dto.PracticalBlock, error) {
-	specs, transcript := buildBlockTimingSpecs(language, block)
+func alignChapterTimings(
+	ctx context.Context,
+	client *mfa.Client,
+	language, workingDir string,
+	chapter dto.PracticalChapter,
+	audioPath string,
+	durationMS int,
+) (dto.PracticalChapter, error) {
+	specs, transcript := buildChapterTimingSpecs(language, chapter)
 	if len(specs) == 0 {
-		return block, nil
+		return chapter, nil
 	}
 
 	if client == nil || !client.Enabled() {
-		return fillBlockTimingsHeuristically(block, specs, durationMS), nil
+		return dto.PracticalChapter{}, services.NonRetryableError{
+			Err: fmt.Errorf("MFA alignment is required for practical chapter %s but MFA is not enabled", strings.TrimSpace(chapter.ChapterID)),
+		}
 	}
 
 	words, err := client.AlignWords(ctx, mfa.AlignRequest{
@@ -141,110 +266,94 @@ func alignBlockTimings(ctx context.Context, client *mfa.Client, language, workin
 		Transcript:   transcript,
 		WorkingDir:   workingDir,
 	})
-	if err != nil || len(words) == 0 {
-		return fillBlockTimingsHeuristically(block, specs, durationMS), nil
+	chapterID := strings.TrimSpace(chapter.ChapterID)
+	if err != nil {
+		return dto.PracticalChapter{}, services.NonRetryableError{
+			Err: fmt.Errorf("MFA chapter alignment failed for practical chapter %s: %w", chapterID, err),
+		}
 	}
-	aligned, ok := mapWordsToBlockTimings(block, specs, words, durationMS)
+	if len(words) == 0 {
+		return dto.PracticalChapter{}, services.NonRetryableError{
+			Err: fmt.Errorf("MFA returned no word timings for practical chapter %s", chapterID),
+		}
+	}
+	aligned, ok := mapWordsToChapterTimings(chapter, specs, words, durationMS)
 	if !ok {
-		return fillBlockTimingsHeuristically(block, specs, durationMS), nil
+		return dto.PracticalChapter{}, services.NonRetryableError{
+			Err: fmt.Errorf("MFA produced incomplete turn alignment for practical chapter %s", chapterID),
+		}
 	}
 	return aligned, nil
 }
 
-func buildBlockTimingSpecs(language string, block dto.PracticalBlock) ([]practicalTurnTimingSpec, string) {
-	specs := make([]practicalTurnTimingSpec, 0, practicalBlockTurnCount(block))
-	transcript := make([]rune, 0, 2048)
-	transcriptParts := make([]string, 0, practicalBlockTurnCount(block))
+func buildChapterTimingSpecs(language string, chapter dto.PracticalChapter) ([]practicalTurnTimingSpec, string) {
+	specs := make([]practicalTurnTimingSpec, 0, len(chapter.Turns))
+	transcriptParts := make([]string, 0, len(chapter.Turns))
 	cursor := 0
-	for _, chapter := range block.Chapters {
-		for _, turn := range chapter.Turns {
-			units := practicalAlignmentUnits(language, practicalSpeechText(turn))
-			if len(units) == 0 {
-				units = []string{strings.TrimSpace(practicalSpeechText(turn))}
-			}
-			normalized := normalizePracticalTextForAlignment(practicalSpeechText(turn))
-			specs = append(specs, practicalTurnTimingSpec{
-				UnitCount:       len(units),
-				Units:           units,
-				Normalized:      normalized,
-				GlobalNormStart: cursor,
-				GlobalNormEnd:   cursor + len(normalized),
-			})
-			transcript = append(transcript, normalized...)
-			transcriptParts = append(transcriptParts, strings.Join(units, " "))
-			cursor += len(normalized)
+	for _, turn := range chapter.Turns {
+		speechText := practicalSpeechText(turn)
+		units := practicalAlignmentUnits(language, speechText)
+		if len(units) == 0 {
+			units = []string{strings.TrimSpace(speechText)}
 		}
+		normalized := normalizePracticalTextForAlignment(speechText)
+		specs = append(specs, practicalTurnTimingSpec{
+			UnitCount:       len(units),
+			Units:           units,
+			Normalized:      normalized,
+			GlobalNormStart: cursor,
+			GlobalNormEnd:   cursor + len(normalized),
+		})
+		transcriptParts = append(transcriptParts, practicalTranscriptTextForMFA(language, speechText, units))
+		cursor += len(normalized)
 	}
 	return specs, strings.Join(transcriptParts, "\n")
 }
 
-func mapWordsToBlockTimings(block dto.PracticalBlock, specs []practicalTurnTimingSpec, words []mfa.WordTiming, durationMS int) (dto.PracticalBlock, bool) {
+func practicalTranscriptTextForMFA(language, text string, units []string) string {
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" {
+		return ""
+	}
+	if strings.EqualFold(strings.TrimSpace(language), "ja") || strings.EqualFold(strings.TrimSpace(language), "ja-jp") {
+		return trimmed
+	}
+	if len(units) == 0 {
+		return trimmed
+	}
+	return strings.Join(units, " ")
+}
+
+func mapWordsToChapterTimings(chapter dto.PracticalChapter, specs []practicalTurnTimingSpec, words []mfa.WordTiming, durationMS int) (dto.PracticalChapter, bool) {
 	transcript := buildPracticalTranscript(specs)
 	if len(transcript) == 0 || len(words) == 0 {
-		return dto.PracticalBlock{}, false
+		return dto.PracticalChapter{}, false
 	}
 
 	matches := matchPracticalWordsToTranscript(transcript, words)
 	if len(matches) == 0 {
-		return dto.PracticalBlock{}, false
+		return dto.PracticalChapter{}, false
 	}
 
 	windows := derivePracticalTurnWindows(specs, matches, durationMS)
 
-	aligned := block
-	turnCounter := 0
+	aligned := chapter
 	matchedTurns := 0
-	for chapterIndex := range aligned.Chapters {
-		chapter := &aligned.Chapters[chapterIndex]
-		for turnIndex := range chapter.Turns {
-			window := windows[turnCounter]
-			if window.EndMS <= window.StartMS {
-				window.EndMS = maxInt(window.StartMS+1, durationMS/maxInt(len(specs), 1))
-			}
-			chapter.Turns[turnIndex].StartMS = window.StartMS
-			chapter.Turns[turnIndex].EndMS = window.EndMS
-			if window.HasMatch {
-				matchedTurns++
-			}
-			turnCounter++
+	for turnIndex := range aligned.Turns {
+		if turnIndex >= len(windows) {
+			break
+		}
+		window := windows[turnIndex]
+		if window.EndMS <= window.StartMS {
+			window.EndMS = maxInt(window.StartMS+1, durationMS/maxInt(len(specs), 1))
+		}
+		aligned.Turns[turnIndex].StartMS = window.StartMS
+		aligned.Turns[turnIndex].EndMS = window.EndMS
+		if window.HasMatch {
+			matchedTurns++
 		}
 	}
-	return aligned, matchedTurns > 0
-}
-
-func fillBlockTimingsHeuristically(block dto.PracticalBlock, specs []practicalTurnTimingSpec, durationMS int) dto.PracticalBlock {
-	if durationMS <= 0 {
-		durationMS = 1000
-	}
-	totalUnits := 0
-	for _, spec := range specs {
-		totalUnits += maxInt(1, spec.UnitCount)
-	}
-	if totalUnits <= 0 {
-		totalUnits = len(specs)
-	}
-	if totalUnits <= 0 {
-		return block
-	}
-
-	aligned := block
-	cursor := 0
-	turnCounter := 0
-	for chapterIndex := range aligned.Chapters {
-		chapter := &aligned.Chapters[chapterIndex]
-		for turnIndex := range chapter.Turns {
-			spec := specs[turnCounter]
-			share := maxInt(1, durationMS*maxInt(1, spec.UnitCount)/totalUnits)
-			chapter.Turns[turnIndex].StartMS = cursor
-			chapter.Turns[turnIndex].EndMS = minInt(durationMS, cursor+share)
-			if chapter.Turns[turnIndex].EndMS <= chapter.Turns[turnIndex].StartMS {
-				chapter.Turns[turnIndex].EndMS = chapter.Turns[turnIndex].StartMS + 1
-			}
-			cursor = chapter.Turns[turnIndex].EndMS
-			turnCounter++
-		}
-	}
-	return aligned
+	return aligned, matchedTurns == len(specs)
 }
 
 func buildPracticalTranscript(specs []practicalTurnTimingSpec) []rune {
@@ -322,7 +431,7 @@ func findPracticalSubslice(haystack, needle []rune, from int) int {
 	return -1
 }
 
-func derivePracticalTurnWindows(specs []practicalTurnTimingSpec, matches []practicalTimedWordMatch, blockDurationMS int) []practicalTurnWindow {
+func derivePracticalTurnWindows(specs []practicalTurnTimingSpec, matches []practicalTimedWordMatch, totalDurationMS int) []practicalTurnWindow {
 	windows := make([]practicalTurnWindow, len(specs))
 	for index, spec := range specs {
 		start := -1
@@ -359,7 +468,7 @@ func derivePracticalTurnWindows(specs []practicalTurnTimingSpec, matches []pract
 		if i > 0 {
 			windowStart = windows[i-1].EndMS
 		}
-		windowEnd := blockDurationMS
+		windowEnd := totalDurationMS
 		if j < len(windows) && windows[j].HasMatch {
 			windowEnd = windows[j].StartMS
 		}
@@ -400,68 +509,249 @@ func setPracticalLocalHierarchyTimings(script *dto.PracticalScript) {
 		blockFirstSet := false
 		for chapterIndex := range block.Chapters {
 			chapter := &block.Chapters[chapterIndex]
-			chapter.StartMS = 0
-			chapter.EndMS = 0
-			chapterFirstSet := false
-			for turnIndex := range chapter.Turns {
-				turn := chapter.Turns[turnIndex]
-				if turn.EndMS <= turn.StartMS {
-					continue
-				}
-				if !blockFirstSet {
-					block.StartMS = turn.StartMS
-					blockFirstSet = true
-				}
-				if !chapterFirstSet {
-					chapter.StartMS = turn.StartMS
-					chapterFirstSet = true
-				}
-				chapter.EndMS = turn.EndMS
-				block.EndMS = turn.EndMS
-			}
-		}
-	}
-}
-
-func practicalBlockLocalRange(block dto.PracticalBlock) (int, int, bool) {
-	start := 0
-	end := 0
-	firstSet := false
-	for _, chapter := range block.Chapters {
-		for _, turn := range chapter.Turns {
-			if turn.EndMS <= turn.StartMS {
+			startMS, endMS, hasRange := practicalChapterLocalRange(*chapter)
+			if !hasRange {
+				chapter.StartMS = 0
+				chapter.EndMS = 0
 				continue
 			}
-			if !firstSet || turn.StartMS < start {
-				start = turn.StartMS
+			chapter.StartMS = startMS
+			chapter.EndMS = endMS
+			if !blockFirstSet {
+				block.StartMS = startMS
+				blockFirstSet = true
 			}
-			if !firstSet || turn.EndMS > end {
-				end = turn.EndMS
-			}
-			firstSet = true
+			block.EndMS = endMS
 		}
 	}
-	return start, end, firstSet
 }
 
-func shiftPracticalBlockTimings(block *dto.PracticalBlock, shift int) {
-	if block == nil || shift == 0 {
-		return
-	}
-	for chapterIndex := range block.Chapters {
-		chapter := &block.Chapters[chapterIndex]
-		for turnIndex := range chapter.Turns {
-			turn := &chapter.Turns[turnIndex]
-			if turn.StartMS > 0 {
-				turn.StartMS += shift
-			} else if shift > 0 {
-				turn.StartMS = shift
+func localizePracticalScriptTimings(script dto.PracticalScript) dto.PracticalScript {
+	localized := script
+	for blockIndex := range localized.Blocks {
+		block := &localized.Blocks[blockIndex]
+		block.TopicStartMS = 0
+		block.TopicEndMS = 0
+		block.StartMS = 0
+		block.EndMS = 0
+		for chapterIndex := range block.Chapters {
+			chapterLeadMS := 0
+			if chapterIndex > 0 {
+				chapterLeadMS = maxInt(0, practicalChapterTransitionLeadMS())
 			}
-			if turn.EndMS > 0 {
-				turn.EndMS += shift
-			}
+			block.Chapters[chapterIndex] = localizePracticalChapterTimings(block.Chapters[chapterIndex], chapterLeadMS)
 		}
 	}
+	setPracticalLocalHierarchyTimings(&localized)
+	return localized
+}
+
+func localizePracticalChapterTimings(chapter dto.PracticalChapter, chapterLeadMS int) dto.PracticalChapter {
+	localized := chapter
+	baseStart := maxInt(0, chapter.StartMS)
+	shiftBase := baseStart + maxInt(0, chapterLeadMS)
+	localized.StartMS = 0
+	if chapter.EndMS > shiftBase {
+		localized.EndMS = chapter.EndMS - shiftBase
+	} else {
+		localized.EndMS = 0
+	}
+	for turnIndex := range localized.Turns {
+		turn := &localized.Turns[turnIndex]
+		if turn.StartMS > shiftBase {
+			turn.StartMS -= shiftBase
+		} else if turn.StartMS > 0 {
+			turn.StartMS = 0
+		}
+		if turn.EndMS > shiftBase {
+			turn.EndMS -= shiftBase
+		} else {
+			turn.EndMS = 0
+		}
+	}
+	return localized
+}
+
+func mergeReusableLocalChapterTimings(script, reusable dto.PracticalScript) (dto.PracticalScript, error) {
+	if len(script.Blocks) != len(reusable.Blocks) {
+		return dto.PracticalScript{}, services.NonRetryableError{
+			Err: fmt.Errorf("partial practical align requires matching block structure"),
+		}
+	}
+	merged := script
+	for blockIndex := range merged.Blocks {
+		block := &merged.Blocks[blockIndex]
+		reusableBlock := reusable.Blocks[blockIndex]
+		if strings.TrimSpace(block.BlockID) != strings.TrimSpace(reusableBlock.BlockID) {
+			return dto.PracticalScript{}, services.NonRetryableError{
+				Err: fmt.Errorf("partial practical align block mismatch at index %d", blockIndex+1),
+			}
+		}
+		if len(block.Chapters) != len(reusableBlock.Chapters) {
+			return dto.PracticalScript{}, services.NonRetryableError{
+				Err: fmt.Errorf("partial practical align requires matching chapter structure for block %s", strings.TrimSpace(block.BlockID)),
+			}
+		}
+		for chapterIndex := range block.Chapters {
+			mergedChapter, err := mergeReusableLocalChapterTiming(block.Chapters[chapterIndex], reusableBlock.Chapters[chapterIndex])
+			if err != nil {
+				return dto.PracticalScript{}, err
+			}
+			block.Chapters[chapterIndex] = mergedChapter
+		}
+	}
+	return merged, nil
+}
+
+func mergeReusableLocalChapterTiming(chapter, reusable dto.PracticalChapter) (dto.PracticalChapter, error) {
+	if strings.TrimSpace(chapter.ChapterID) != strings.TrimSpace(reusable.ChapterID) {
+		return dto.PracticalChapter{}, services.NonRetryableError{
+			Err: fmt.Errorf("partial practical align chapter mismatch for %s", strings.TrimSpace(chapter.ChapterID)),
+		}
+	}
+	if len(chapter.Turns) != len(reusable.Turns) {
+		return dto.PracticalChapter{}, services.NonRetryableError{
+			Err: fmt.Errorf("partial practical align requires matching turn structure for chapter %s", strings.TrimSpace(chapter.ChapterID)),
+		}
+	}
+	merged := chapter
+	merged.StartMS = reusable.StartMS
+	merged.EndMS = reusable.EndMS
+	for turnIndex := range merged.Turns {
+		if strings.TrimSpace(merged.Turns[turnIndex].TurnID) != strings.TrimSpace(reusable.Turns[turnIndex].TurnID) {
+			return dto.PracticalChapter{}, services.NonRetryableError{
+				Err: fmt.Errorf("partial practical align turn mismatch for chapter %s", strings.TrimSpace(chapter.ChapterID)),
+			}
+		}
+		merged.Turns[turnIndex].StartMS = reusable.Turns[turnIndex].StartMS
+		merged.Turns[turnIndex].EndMS = reusable.Turns[turnIndex].EndMS
+	}
+	return merged, nil
+}
+
+func practicalSelectionContains(values map[int]struct{}, target int) bool {
+	if len(values) == 0 {
+		return false
+	}
+	_, ok := values[target]
+	return ok
+}
+
+func practicalChapterHasLocalTiming(chapter dto.PracticalChapter) bool {
+	_, _, hasRange := practicalChapterLocalRange(chapter)
+	return hasRange
+}
+
+func materializeChapterAudioWithTurnGaps(
+	ctx context.Context,
+	projectDir, rawAudioPath, outputPath string,
+	chapter dto.PracticalChapter,
+	rawDurationMS int,
+) (dto.PracticalChapter, error) {
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
+		return dto.PracticalChapter{}, err
+	}
+
+	turnGapMS := practicalTurnGapMS()
+	if turnGapMS <= 0 {
+		if err := fsx.CopyFile(rawAudioPath, outputPath); err != nil {
+			return dto.PracticalChapter{}, err
+		}
+		chapter.StartMS = 0
+		chapter.EndMS = maxInt(0, rawDurationMS)
+		return chapter, nil
+	}
+
+	shiftedChapter, slices := applyPracticalTurnGapToChapterTimings(chapter, turnGapMS, rawDurationMS)
+	if len(slices) == 0 {
+		if err := fsx.CopyFile(rawAudioPath, outputPath); err != nil {
+			return dto.PracticalChapter{}, err
+		}
+		return shiftedChapter, nil
+	}
+
+	turnGapPath := projectTurnGapPath(projectDir)
+	if !fileExists(turnGapPath) {
+		return dto.PracticalChapter{}, services.NonRetryableError{Err: fmt.Errorf("turn gap audio missing: %s", turnGapPath)}
+	}
+
+	files := make([]string, 0, len(slices)*2)
+	chunkPaths := make([]string, 0, len(slices))
+	defer func() {
+		for _, path := range chunkPaths {
+			_ = os.Remove(path)
+		}
+	}()
+
+	for sliceIndex, slice := range slices {
+		if sliceIndex > 0 {
+			files = append(files, turnGapPath)
+		}
+		chunkFile, err := os.CreateTemp(projectDir, fmt.Sprintf("turn_%02d_*.wav", slice.TurnIndex+1))
+		if err != nil {
+			return dto.PracticalChapter{}, err
+		}
+		chunkPath := chunkFile.Name()
+		if err := chunkFile.Close(); err != nil {
+			_ = os.Remove(chunkPath)
+			return dto.PracticalChapter{}, err
+		}
+		if err := extractAudioChunk(ctx, rawAudioPath, chunkPath, slice.StartMS, slice.EndMS); err != nil {
+			_ = os.Remove(chunkPath)
+			return dto.PracticalChapter{}, err
+		}
+		chunkPaths = append(chunkPaths, chunkPath)
+		files = append(files, chunkPath)
+	}
+
+	if err := concatAudioFiles(ctx, projectDir, files, outputPath); err != nil {
+		return dto.PracticalChapter{}, err
+	}
+	return shiftedChapter, nil
+}
+
+func applyPracticalTurnGapToChapterTimings(chapter dto.PracticalChapter, turnGapMS, rawDurationMS int) (dto.PracticalChapter, []practicalTurnAudioSlice) {
+	shifted := chapter
+	shifted.Turns = append([]dto.PracticalTurn(nil), chapter.Turns...)
+	slices := make([]practicalTurnAudioSlice, 0, len(chapter.Turns))
+	validTurnIndexes := make([]int, 0, len(chapter.Turns))
+	for turnIndex, turn := range chapter.Turns {
+		shifted.Turns[turnIndex].StartMS = 0
+		shifted.Turns[turnIndex].EndMS = 0
+		if turn.EndMS > turn.StartMS {
+			validTurnIndexes = append(validTurnIndexes, turnIndex)
+		}
+	}
+	if len(validTurnIndexes) == 0 {
+		shifted.StartMS = 0
+		shifted.EndMS = maxInt(0, rawDurationMS)
+		return shifted, nil
+	}
+
+	cumulativeGap := 0
+	segmentStartMS := 0
+	for position, turnIndex := range validTurnIndexes {
+		turn := chapter.Turns[turnIndex]
+		shifted.Turns[turnIndex].StartMS = turn.StartMS + cumulativeGap
+		shifted.Turns[turnIndex].EndMS = turn.EndMS + cumulativeGap
+		segmentEndMS := turn.EndMS
+		if position == len(validTurnIndexes)-1 {
+			segmentEndMS = maxInt(segmentEndMS, rawDurationMS)
+		}
+		slices = append(slices, practicalTurnAudioSlice{
+			TurnIndex: turnIndex,
+			StartMS:   segmentStartMS,
+			EndMS:     segmentEndMS,
+		})
+		segmentStartMS = turn.EndMS
+		if position < len(validTurnIndexes)-1 {
+			cumulativeGap += maxInt(0, turnGapMS)
+		}
+	}
+
+	shifted.StartMS = 0
+	shifted.EndMS = maxInt(maxInt(0, rawDurationMS), segmentStartMS) + maxInt(0, turnGapMS)*(len(validTurnIndexes)-1)
+	return shifted, slices
 }
 
 func buildDialogueAudio(ctx context.Context, projectDir string, script dto.PracticalScript) (string, []int, error) {
@@ -491,13 +781,7 @@ func buildDialogueAudio(ctx context.Context, projectDir string, script dto.Pract
 	}
 
 	files := make([]string, 0, len(script.Blocks)*4)
-	chunkPaths := make([]string, 0, len(script.Blocks)*4)
-	introDurations := make([]int, len(script.Blocks))
-	defer func() {
-		for _, path := range chunkPaths {
-			_ = os.Remove(path)
-		}
-	}()
+	topicDurations := make([]int, len(script.Blocks))
 
 	chapterGapPath := projectChapterGapPath(projectDir)
 	blockGapPath := projectBlockGapPath(projectDir)
@@ -508,53 +792,39 @@ func buildDialogueAudio(ctx context.Context, projectDir string, script dto.Pract
 		if !fileExists(introPath) {
 			return "", nil, services.NonRetryableError{Err: fmt.Errorf("block topic audio missing: %s", introPath)}
 		}
-		introDurationMS, err := audioDurationMS(ctx, introPath)
+		topicDurationMS, err := audioDurationMS(ctx, introPath)
 		if err != nil {
 			return "", nil, err
 		}
-		introSegmentDurationMS := introDurationMS
-		if blockIndex > 0 && blockTransitionLeadMS > 0 {
-			if !fileExists(blockTransitionLeadPath) {
-				return "", nil, services.NonRetryableError{Err: fmt.Errorf("block transition lead audio missing: %s", blockTransitionLeadPath)}
-			}
-			files = append(files, blockTransitionLeadPath)
-			introSegmentDurationMS += blockTransitionLeadMS
-		}
-		introDurations[blockIndex] = introSegmentDurationMS
+		topicDurations[blockIndex] = topicDurationMS
 		files = append(files, introPath)
 
-		audioPath := blockAudioPath(projectDir, block.BlockID, blockIndex+1)
-		if !fileExists(audioPath) {
-			return "", nil, services.NonRetryableError{Err: fmt.Errorf("block audio missing: %s", audioPath)}
-		}
-
 		for chapterIndex, chapter := range block.Chapters {
-			startMS, endMS, hasTurns := practicalChapterLocalRange(chapter)
+			_, _, hasTurns := practicalChapterLocalRange(chapter)
 			if !hasTurns {
 				continue
 			}
 
-			chunkFile, err := os.CreateTemp(projectDir, fmt.Sprintf("chapter_%02d_%02d_*.wav", blockIndex+1, chapterIndex+1))
-			if err != nil {
-				return "", nil, err
+			chapterPath := chapterAudioPath(projectDir, block.BlockID, chapter.ChapterID, blockIndex+1, chapterIndex+1)
+			if !fileExists(chapterPath) {
+				return "", nil, services.NonRetryableError{
+					Err: fmt.Errorf("chapter audio missing for block %s chapter %s: %s", strings.TrimSpace(block.BlockID), strings.TrimSpace(chapter.ChapterID), chapterPath),
+				}
 			}
-			chunkPath := chunkFile.Name()
-			if err := chunkFile.Close(); err != nil {
-				_ = os.Remove(chunkPath)
-				return "", nil, err
-			}
-			if err := extractAudioChunk(ctx, audioPath, chunkPath, startMS, endMS); err != nil {
-				_ = os.Remove(chunkPath)
-				return "", nil, err
-			}
-			chunkPaths = append(chunkPaths, chunkPath)
-			if chapterTransitionLeadMS > 0 {
+			if chapterIndex == 0 {
+				if blockTransitionLeadMS > 0 {
+					if !fileExists(blockTransitionLeadPath) {
+						return "", nil, services.NonRetryableError{Err: fmt.Errorf("block transition lead audio missing: %s", blockTransitionLeadPath)}
+					}
+					files = append(files, blockTransitionLeadPath)
+				}
+			} else if chapterTransitionLeadMS > 0 {
 				if !fileExists(chapterTransitionLeadPath) {
 					return "", nil, services.NonRetryableError{Err: fmt.Errorf("chapter transition lead audio missing: %s", chapterTransitionLeadPath)}
 				}
 				files = append(files, chapterTransitionLeadPath)
 			}
-			files = append(files, chunkPath)
+			files = append(files, chapterPath)
 
 			if chapterGapMS > 0 && chapterIndex < len(block.Chapters)-1 {
 				if !fileExists(chapterGapPath) {
@@ -574,10 +844,10 @@ func buildDialogueAudio(ctx context.Context, projectDir string, script dto.Pract
 	if err := concatAudioFiles(ctx, projectDir, files, outputPath); err != nil {
 		return "", nil, err
 	}
-	return outputPath, introDurations, nil
+	return outputPath, topicDurations, nil
 }
 
-func applyPracticalTimelineGaps(script dto.PracticalScript, introDurations []int, chapterGapMS, blockGapMS, chapterTransitionLeadMS int) dto.PracticalScript {
+func applyPracticalTimelineGaps(script dto.PracticalScript, topicDurations []int, chapterGapMS, blockGapMS, chapterTransitionLeadMS, blockTransitionLeadMS int) dto.PracticalScript {
 	shifted := script
 	cumulativeOffset := 0
 
@@ -588,13 +858,13 @@ func applyPracticalTimelineGaps(script dto.PracticalScript, introDurations []int
 		block.StartMS = 0
 		block.EndMS = 0
 		blockFirstSet := false
-		introDurationMS := 0
-		if blockIndex < len(introDurations) {
-			introDurationMS = maxInt(0, introDurations[blockIndex])
+		topicDurationMS := 0
+		if blockIndex < len(topicDurations) {
+			topicDurationMS = maxInt(0, topicDurations[blockIndex])
 		}
-		if introDurationMS > 0 {
+		if topicDurationMS > 0 {
 			block.TopicStartMS = cumulativeOffset
-			block.TopicEndMS = cumulativeOffset + introDurationMS
+			block.TopicEndMS = cumulativeOffset + topicDurationMS
 			cumulativeOffset = block.TopicEndMS
 			block.StartMS = block.TopicStartMS
 			blockFirstSet = true
@@ -602,17 +872,24 @@ func applyPracticalTimelineGaps(script dto.PracticalScript, introDurations []int
 
 		for chapterIndex := range block.Chapters {
 			chapter := &block.Chapters[chapterIndex]
-			localStart, _, hasTurns := practicalChapterLocalRange(*chapter)
-			if !hasTurns {
+			localStart, localEnd, hasRange := practicalChapterLocalRange(*chapter)
+			if !hasRange {
 				chapter.StartMS = 0
 				chapter.EndMS = 0
 				continue
 			}
 
-			chapter.StartMS = cumulativeOffset
-			shift := cumulativeOffset + maxInt(0, chapterTransitionLeadMS) - localStart
+			chapterLeadMS := maxInt(0, chapterTransitionLeadMS)
+			chapterStartMS := cumulativeOffset
+			if chapterIndex == 0 {
+				chapterLeadMS = 0
+				chapterStartMS += maxInt(0, blockTransitionLeadMS)
+			}
+
+			chapter.StartMS = chapterStartMS
+			shift := chapterStartMS + chapterLeadMS - localStart
 			shiftPracticalChapterTimings(chapter, shift)
-			_, chapter.EndMS, _ = practicalChapterLocalRange(*chapter)
+			chapter.EndMS = chapterStartMS + chapterLeadMS + maxInt(0, localEnd-localStart)
 			if !blockFirstSet {
 				block.StartMS = chapter.StartMS
 				blockFirstSet = true
@@ -633,6 +910,9 @@ func applyPracticalTimelineGaps(script dto.PracticalScript, introDurations []int
 }
 
 func practicalChapterLocalRange(chapter dto.PracticalChapter) (int, int, bool) {
+	if chapter.EndMS > chapter.StartMS {
+		return chapter.StartMS, chapter.EndMS, true
+	}
 	start := 0
 	end := 0
 	firstSet := false

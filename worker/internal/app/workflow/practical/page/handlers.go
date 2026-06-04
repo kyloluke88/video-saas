@@ -88,6 +88,9 @@ func buildPracticalPersistTaskPayload(payload dto.PracticalAudioGeneratePayload)
 	if tasks := compactNonEmptyStrings(payload.SpecifyTasks); len(tasks) > 0 && payload.RunMode == 1 {
 		out["specify_tasks"] = tasks
 	}
+	if chapterNums := compactPositiveInts(payload.ChapterNums); len(chapterNums) > 0 {
+		out["chapter_nums"] = chapterNums
+	}
 	return out
 }
 
@@ -116,6 +119,22 @@ func compactNonEmptyStrings(values []string) []string {
 		if trimmed := strings.TrimSpace(value); trimmed != "" {
 			out = append(out, trimmed)
 		}
+	}
+	return out
+}
+
+func compactPositiveInts(values []int) []int {
+	seen := make(map[int]struct{}, len(values))
+	out := make([]int, 0, len(values))
+	for _, value := range values {
+		if value <= 0 {
+			continue
+		}
+		if _, exists := seen[value]; exists {
+			continue
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
 	}
 	return out
 }

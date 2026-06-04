@@ -358,9 +358,8 @@ func (ctrl *VideoController) CreatePracticalDialogue(c *gin.Context) {
 		return
 	}
 
-	bgImgFilenames := compactStringSlice(req.BgImgFilenames)
-	blockBgImgFilenames := compactStringSlice(req.BlockBgImgFilenames)
 	blockNums := compactPositiveInts(req.BlockNums)
+	chapterNums := compactPositiveInts(req.ChapterNums)
 	if runMode == 0 {
 		if strings.TrimSpace(req.Lang) == "" {
 			response.BadRequest(c, fmt.Errorf("lang is required when run_mode is 0"), "lang is required when run_mode is 0")
@@ -370,13 +369,9 @@ func (ctrl *VideoController) CreatePracticalDialogue(c *gin.Context) {
 			response.BadRequest(c, fmt.Errorf("script_filename is required when run_mode is 0"), "script_filename is required when run_mode is 0")
 			return
 		}
-		if len(bgImgFilenames) == 0 {
-			response.BadRequest(c, fmt.Errorf("bg_img_filenames is required when run_mode is 0"), "bg_img_filenames is required when run_mode is 0")
-			return
-		}
 	}
 
-	requestPayload := buildPracticalRequestPayload(req, projectID, runMode, blockNums, bgImgFilenames, blockBgImgFilenames)
+	requestPayload := buildPracticalRequestPayload(req, projectID, runMode, blockNums, chapterNums)
 	trackedPayload := buildTrackedPracticalPayload(runMode, requestPayload)
 
 	requestSpecifyTasks := compactStringSlice(req.SpecifyTasks)
@@ -390,8 +385,8 @@ func (ctrl *VideoController) CreatePracticalDialogue(c *gin.Context) {
 			response.BadRequest(c, fmt.Errorf("specify_tasks is required when run_mode is 1"), "specify_tasks is required when run_mode is 1")
 			return
 		}
-		if practicalSpecifiesStage(specifyTasks, practicalStageGenerate) && len(blockNums) == 0 {
-			response.BadRequest(c, fmt.Errorf("block_nums is required when specify_tasks includes generate"), "block_nums is required when specify_tasks includes generate")
+		if practicalSpecifiesStage(specifyTasks, practicalStageGenerate) && len(blockNums) == 0 && len(chapterNums) == 0 {
+			response.BadRequest(c, fmt.Errorf("chapter_nums or block_nums is required when specify_tasks includes generate"), "chapter_nums or block_nums is required when specify_tasks includes generate")
 			return
 		}
 		trackedPayload["specify_tasks"] = specifyTasks
@@ -560,8 +555,7 @@ func buildPracticalRequestPayload(
 	projectID string,
 	runMode int,
 	blockNums []int,
-	bgImgFilenames []string,
-	blockBgImgFilenames []string,
+	chapterNums []int,
 ) map[string]interface{} {
 	payload := map[string]interface{}{
 		"content_type": "practical",
@@ -582,14 +576,11 @@ func buildPracticalRequestPayload(
 	if scriptFile := strings.TrimSpace(req.ScriptFilename); scriptFile != "" {
 		payload["script_filename"] = scriptFile
 	}
-	if len(bgImgFilenames) > 0 {
-		payload["bg_img_filenames"] = bgImgFilenames
-	}
-	if len(blockBgImgFilenames) > 0 {
-		payload["block_bg_img_filenames"] = blockBgImgFilenames
-	}
 	if len(blockNums) > 0 {
 		payload["block_nums"] = blockNums
+	}
+	if len(chapterNums) > 0 {
+		payload["chapter_nums"] = chapterNums
 	}
 	if resolution := strings.TrimSpace(req.Resolution); resolution != "" {
 		payload["resolution"] = resolution
@@ -623,14 +614,11 @@ func buildPracticalTaskPayload(payload map[string]interface{}) map[string]interf
 	if scriptFile := strings.TrimSpace(payloadString(payload, "script_filename")); scriptFile != "" {
 		out["script_filename"] = scriptFile
 	}
-	if backgrounds := compactStringSlice(payloadStringSlice(payload, "bg_img_filenames")); len(backgrounds) > 0 {
-		out["bg_img_filenames"] = backgrounds
-	}
-	if blockBackgrounds := compactStringSlice(payloadStringSlice(payload, "block_bg_img_filenames")); len(blockBackgrounds) > 0 {
-		out["block_bg_img_filenames"] = blockBackgrounds
-	}
 	if blockNums := compactPositiveInts(payloadIntSlice(payload, "block_nums")); len(blockNums) > 0 {
 		out["block_nums"] = blockNums
+	}
+	if chapterNums := compactPositiveInts(payloadIntSlice(payload, "chapter_nums")); len(chapterNums) > 0 {
+		out["chapter_nums"] = chapterNums
 	}
 	if resolution := strings.TrimSpace(payloadString(payload, "resolution")); resolution != "" {
 		out["resolution"] = resolution

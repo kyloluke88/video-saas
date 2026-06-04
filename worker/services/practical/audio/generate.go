@@ -18,12 +18,13 @@ type GenerateInput struct {
 	Language       string
 	ScriptFilename string
 	BlockNums      []int
+	ChapterNums    []int
 }
 
 type GenerateResult struct {
-	ScriptPath      string
-	BlockAudioPaths []string
-	Script          dto.PracticalScript
+	ScriptPath        string
+	ChapterAudioPaths []string
+	Script            dto.PracticalScript
 }
 
 func Generate(ctx context.Context, input GenerateInput) (GenerateResult, error) {
@@ -58,6 +59,11 @@ func Generate(ctx context.Context, input GenerateInput) (GenerateResult, error) 
 	if err != nil {
 		return GenerateResult{}, err
 	}
+	requestedChapterNums, err := buildRequestedChapterSet(script, input.ChapterNums)
+	if err != nil {
+		return GenerateResult{}, err
+	}
+	generateAll := len(requestedBlocks) == 0 && len(requestedChapterNums) == 0
 
 	client, err := newGoogleSpeechClient()
 	if err != nil {
@@ -72,39 +78,57 @@ func Generate(ctx context.Context, input GenerateInput) (GenerateResult, error) 
 		return GenerateResult{}, services.NonRetryableError{Err: fmt.Errorf("google narrator voice id is required")}
 	}
 
-	blockAudioPaths := make([]string, 0, len(script.Blocks))
+	chapterAudioPaths := make([]string, 0, len(script.Blocks)*2)
+	generatedAssetCount := 0
+	chapterCursor := 0
 	for blockIndex, block := range script.Blocks {
-		if len(requestedBlocks) > 0 {
-			if _, ok := requestedBlocks[blockIndex+1]; !ok {
-				continue
+		shouldGenerateBlockTopic := generateAll
+		if !shouldGenerateBlockTopic {
+			_, shouldGenerateBlockTopic = requestedBlocks[blockIndex+1]
+		}
+
+		chapterIndexes := practicalSelectedChapterIndexes(block, requestedChapterNums, generateAll, chapterCursor)
+		if !shouldGenerateBlockTopic && len(chapterIndexes) == 0 {
+			chapterCursor += len(block.Chapters)
+			continue
+		}
+
+		if shouldGenerateBlockTopic {
+			topicRawAudioPath := blockIntroRawAudioPath(projectDir, block.BlockID, blockIndex+1)
+			if err := synthesizeBlockTopicAudio(ctx, client, language, block, narratorVoice, topicRawAudioPath); err != nil {
+				return GenerateResult{}, err
+			}
+			generatedAssetCount++
+		}
+
+		if len(chapterIndexes) > 0 {
+			speakerVoicesByRole, err := block.SpeakerVoicesByRole()
+			if err != nil {
+				return GenerateResult{}, fmt.Errorf("block %s: %w", block.BlockID, err)
+			}
+			speakerNames := practicalSpeakerNamesForTTS(block)
+			for _, chapterIndex := range chapterIndexes {
+				chapter := block.Chapters[chapterIndex]
+				audioPath := chapterRawAudioPath(projectDir, block.BlockID, chapter.ChapterID, blockIndex+1, chapterIndex+1)
+				if err := synthesizeChapterAudio(ctx, client, language, block, chapter, speakerVoicesByRole, speakerNames, maleVoice, femaleVoice, audioPath); err != nil {
+					return GenerateResult{}, err
+				}
+				chapterAudioPaths = append(chapterAudioPaths, audioPath)
+				generatedAssetCount++
 			}
 		}
-
-		speakerVoicesByRole, err := block.SpeakerVoicesByRole()
-		if err != nil {
-			return GenerateResult{}, fmt.Errorf("block %s: %w", block.BlockID, err)
-		}
-		speakerNames := practicalSpeakerNamesForTTS(block)
-		audioPath := blockAudioPath(projectDir, block.BlockID, blockIndex+1)
-		if err := synthesizeBlockAudio(ctx, client, language, block, speakerVoicesByRole, speakerNames, maleVoice, femaleVoice, audioPath); err != nil {
-			return GenerateResult{}, err
-		}
-		topicAudioPath := blockIntroAudioPath(projectDir, block.BlockID, blockIndex+1)
-		if err := synthesizeBlockTopicAudio(ctx, client, language, block, narratorVoice, topicAudioPath); err != nil {
-			return GenerateResult{}, err
-		}
-		blockAudioPaths = append(blockAudioPaths, audioPath)
+		chapterCursor += len(block.Chapters)
 	}
 
-	if len(blockAudioPaths) == 0 {
-		return GenerateResult{}, services.NonRetryableError{Err: fmt.Errorf("no blocks selected for generation")}
+	if generatedAssetCount == 0 {
+		return GenerateResult{}, services.NonRetryableError{Err: fmt.Errorf("no practical audio targets selected for generation")}
 	}
 
 	log.Printf("📝 practical script cached project_id=%s source=%s path=%s", input.ProjectID, scriptPathFor(input.ScriptFilename), projectScriptInputPath(projectDir))
 	return GenerateResult{
-		ScriptPath:      projectScriptInputPath(projectDir),
-		BlockAudioPaths: blockAudioPaths,
-		Script:          script,
+		ScriptPath:        projectScriptInputPath(projectDir),
+		ChapterAudioPaths: chapterAudioPaths,
+		Script:            script,
 	}, nil
 }
 
@@ -153,11 +177,12 @@ func validatePracticalScriptLanguage(scriptLanguage, payloadLanguage string) err
 	return nil
 }
 
-func synthesizeBlockAudio(
+func synthesizeChapterAudio(
 	ctx context.Context,
 	client *googlecloud.Client,
 	language string,
 	block dto.PracticalBlock,
+	chapter dto.PracticalChapter,
 	speakerVoicesByRole map[string]string,
 	speakerNames map[string]string,
 	maleVoiceID, femaleVoiceID string,
@@ -170,8 +195,8 @@ func synthesizeBlockAudio(
 		return err
 	}
 
-	turns := make([]googlecloud.ConversationTurn, 0, practicalBlockTurnCount(block))
-	for _, turn := range practicalBlockTurns(block) {
+	turns := make([]googlecloud.ConversationTurn, 0, len(chapter.Turns))
+	for _, turn := range chapter.Turns {
 		speech := practicalSpeechText(turn)
 		if speech == "" {
 			continue
@@ -194,10 +219,10 @@ func synthesizeBlockAudio(
 		})
 	}
 	if len(turns) == 0 {
-		return services.NonRetryableError{Err: fmt.Errorf("block %s has no speakable turns", block.BlockID)}
+		return services.NonRetryableError{Err: fmt.Errorf("chapter %s has no speakable turns", chapter.ChapterID)}
 	}
 
-	prompt := buildPracticalTTSPrompt(language, block)
+	prompt := buildPracticalChapterTTSPrompt(language, block, chapter)
 	result, err := client.SynthesizeConversation(ctx, googlecloud.SynthesizeConversationRequest{
 		LanguageCode:  language,
 		Prompt:        prompt,
@@ -213,7 +238,7 @@ func synthesizeBlockAudio(
 	if err := os.WriteFile(outputPath, result.Audio, 0o644); err != nil {
 		return err
 	}
-	return applyAudioTempoToFile(ctx, outputPath, practicalTurnTempo())
+	return nil
 }
 
 func synthesizeBlockTopicAudio(
@@ -227,7 +252,7 @@ func synthesizeBlockTopicAudio(
 	if client == nil {
 		return fmt.Errorf("google tts client is required")
 	}
-	topic := strings.TrimSpace(block.Topic)
+	topic := normalizePracticalNarrationText(block.Topic)
 	if topic == "" {
 		return services.NonRetryableError{Err: fmt.Errorf("block %s topic is required for narration", block.BlockID)}
 	}
@@ -251,21 +276,28 @@ func synthesizeBlockTopicAudio(
 	if err := os.WriteFile(outputPath, result.Audio, 0o644); err != nil {
 		return err
 	}
-	return applyAudioTempoToFile(ctx, outputPath, practicalBlockTempo())
+	return nil
 }
 
-func buildPracticalTTSPrompt(language string, block dto.PracticalBlock) string {
+func buildPracticalChapterTTSPrompt(language string, block dto.PracticalBlock, chapter dto.PracticalChapter) string {
 	lines := []string{
-		"Read the dialogue naturally and clearly.",
-		"Keep the pace beginner-friendly and easy to understand.",
-		"Leave a noticeably longer pause between each turn so beginners can clearly follow the conversation.",
-		"Do not rush the next turn; let the pause feel calm and deliberate.",
+		"Read this chapter as a natural everyday conversation in the described scene.",
+		"Keep the acting subtle but alive.",
+		"Use light emotional variation such as greeting, hesitation, curiosity, confirmation, apology, gratitude, or emphasis when the line requires it.",
+		"Do not sound flat, over-careful, or like isolated textbook example sentences.",
 		"Keep each speaker's voice consistent and do not swap the female and male voices.",
 		"Keep every turn in the original order.",
 		"Do not add extra words.",
+		"Do not insert exaggerated long pauses between turns. Timing pauses are handled by the audio pipeline.",
 	}
 	if topic := strings.TrimSpace(block.Topic); topic != "" {
 		lines = append(lines, "Topic: "+topic)
+	}
+	if scene := strings.TrimSpace(chapter.Scene); scene != "" {
+		lines = append(lines, "Scene: "+scene)
+	}
+	if scenePrompt := strings.TrimSpace(chapter.ScenePrompt); scenePrompt != "" {
+		lines = append(lines, "Visual scene: "+scenePrompt)
 	}
 	if casting := practicalVoiceCastingNote(block); casting != "" {
 		lines = append(lines, casting)
@@ -274,7 +306,13 @@ func buildPracticalTTSPrompt(language string, block dto.PracticalBlock) string {
 		lines = append(lines, "Characters: "+strings.Join(placeholders, ", "))
 	}
 	if strings.EqualFold(strings.TrimSpace(language), "ja") {
-		lines = append(lines, "Language: Japanese.")
+		lines = append(lines,
+			"Language: Japanese.",
+			"Pronounce every Japanese word completely and clearly.",
+			"Do not swallow, clip, or drop the ending of a word or sentence.",
+			"Fully pronounce final verb endings and final morae such as ru, u, ku, tsu, and i.",
+			"Keep particles and polite endings audible and complete, including desu, masu, and dictionary-form endings.",
+		)
 	} else {
 		lines = append(lines, "Language: Chinese.")
 	}
@@ -283,20 +321,33 @@ func buildPracticalTTSPrompt(language string, block dto.PracticalBlock) string {
 
 func buildPracticalBlockTopicPrompt(language string, block dto.PracticalBlock) string {
 	lines := []string{
-		"Speak this section title as a natural transition narration.",
-		"Read only the title text exactly as written.",
-		"Use normal pronunciation and a natural speaking rhythm.",
-		"Do not sound flat, segmented, or overly slow.",
-	}
-	if prompt := strings.TrimSpace(block.BlockPrompt); prompt != "" {
-		lines = append(lines, "Visual scene: "+prompt)
+		"Speak this section title as a short transition narration.",
+		"Read only the title text exactly as written, once.",
+		"The title may be short. Even if it is short, pronounce every word, character, and ending completely before stopping.",
+		"Do not skip, swallow, clip, merge, paraphrase, or add any word.",
+		"Use a calm, steady, complete delivery.",
+		"Do not rush the final character or final mora.",
 	}
 	if strings.EqualFold(strings.TrimSpace(language), "ja") {
-		lines = append(lines, "Language: Japanese.")
+		lines = append(lines,
+			"Language: Japanese.",
+			"Pronounce every Japanese word completely and clearly.",
+			"Do not swallow, clip, or drop the ending of a word or sentence.",
+			"Fully pronounce final verb endings and final morae such as ru, u, ku, tsu, and i.",
+			"Keep particles and polite endings audible and complete, including desu, masu, and dictionary-form endings.",
+		)
 	} else {
 		lines = append(lines, "Language: Chinese.")
 	}
 	return strings.Join(lines, " ")
+}
+
+func normalizePracticalNarrationText(value string) string {
+	fields := strings.Fields(strings.TrimSpace(value))
+	if len(fields) == 0 {
+		return ""
+	}
+	return strings.Join(fields, " ")
 }
 
 func practicalBlockPromptPlaceholders(block dto.PracticalBlock) []string {
@@ -402,18 +453,45 @@ func buildRequestedBlockSet(values []int, total int) (map[int]struct{}, error) {
 	return out, nil
 }
 
-func practicalBlockTurnCount(block dto.PracticalBlock) int {
-	count := 0
-	for _, chapter := range block.Chapters {
-		count += len(chapter.Turns)
+func buildRequestedChapterSet(script dto.PracticalScript, values []int) (map[int]struct{}, error) {
+	cleaned := compactPositiveInts(values)
+	if len(cleaned) == 0 {
+		return nil, nil
 	}
-	return count
+	totalChapters := 0
+	for _, block := range script.Blocks {
+		totalChapters += len(block.Chapters)
+	}
+
+	out := make(map[int]struct{}, len(cleaned))
+	for _, chapterNum := range cleaned {
+		if chapterNum > totalChapters {
+			return nil, services.NonRetryableError{Err: fmt.Errorf("chapter_nums contains out-of-range chapter %d", chapterNum)}
+		}
+		out[chapterNum] = struct{}{}
+	}
+	if len(out) == 0 {
+		return nil, nil
+	}
+	return out, nil
 }
 
-func practicalBlockTurns(block dto.PracticalBlock) []dto.PracticalTurn {
-	out := make([]dto.PracticalTurn, 0, practicalBlockTurnCount(block))
-	for _, chapter := range block.Chapters {
-		out = append(out, chapter.Turns...)
+func practicalSelectedChapterIndexes(block dto.PracticalBlock, requested map[int]struct{}, generateAll bool, chapterCursor int) []int {
+	if generateAll {
+		out := make([]int, 0, len(block.Chapters))
+		for chapterIndex := range block.Chapters {
+			out = append(out, chapterIndex)
+		}
+		return out
+	}
+	if len(requested) == 0 {
+		return nil
+	}
+	out := make([]int, 0, len(block.Chapters))
+	for chapterIndex := range block.Chapters {
+		if _, ok := requested[chapterCursor+chapterIndex+1]; ok {
+			out = append(out, chapterIndex)
+		}
 	}
 	return out
 }

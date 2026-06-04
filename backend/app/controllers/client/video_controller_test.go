@@ -75,24 +75,27 @@ func TestBuildPodcastTaskPayloadDefaultsGoogleToMultiple(t *testing.T) {
 
 func TestBuildPracticalTaskPayloadIncludesSourceProjectIDForReplay(t *testing.T) {
 	payload := buildPracticalTaskPayload(map[string]interface{}{
-		"project_id":             "ja_practical_20260423162724__rm1__20260424001010",
-		"source_project_id":      "ja_practical_20260423162724",
-		"run_mode":               1,
-		"specify_tasks":          []string{"render", "persist"},
-		"block_bg_img_filenames": []string{"block1.png", "block2.png"},
+		"project_id":        "ja_practical_20260423162724__rm1__20260424001010",
+		"source_project_id": "ja_practical_20260423162724",
+		"run_mode":          1,
+		"specify_tasks":     []string{"images", "render", "persist"},
+		"chapter_nums":      []int{2, 6},
 	})
 
 	if got, _ := payload["source_project_id"].(string); got != "ja_practical_20260423162724" {
 		t.Fatalf("unexpected source_project_id: %#v", payload["source_project_id"])
 	}
-	if got, _ := payload["specify_tasks"].([]string); len(got) != 2 || got[0] != "render" || got[1] != "persist" {
+	if got, _ := payload["specify_tasks"].([]string); len(got) != 3 || got[0] != "images" || got[1] != "render" || got[2] != "persist" {
 		t.Fatalf("unexpected specify_tasks: %#v", payload["specify_tasks"])
+	}
+	if got, _ := payload["chapter_nums"].([]int); len(got) != 2 || got[0] != 2 || got[1] != 6 {
+		t.Fatalf("unexpected chapter_nums: %#v", payload["chapter_nums"])
 	}
 	if got, _ := payload["tts_type"].(int); got != 1 {
 		t.Fatalf("unexpected tts_type: %#v", payload["tts_type"])
 	}
-	if got, _ := payload["block_bg_img_filenames"].([]string); len(got) != 2 || got[0] != "block1.png" {
-		t.Fatalf("unexpected block_bg_img_filenames: %#v", payload["block_bg_img_filenames"])
+	if _, exists := payload["block_bg_img_filenames"]; exists {
+		t.Fatalf("unexpected legacy block_bg_img_filenames in payload: %#v", payload["block_bg_img_filenames"])
 	}
 }
 
@@ -185,11 +188,11 @@ func TestPracticalTaskTypeForInitialStageUsesStageEntryTask(t *testing.T) {
 }
 
 func TestNormalizePracticalSpecifyTasksOrdersByPipeline(t *testing.T) {
-	tasks, err := normalizePracticalSpecifyTasks([]string{"persist", "render", "finalize"})
+	tasks, err := normalizePracticalSpecifyTasks([]string{"persist", "images", "render"})
 	if err != nil {
 		t.Fatalf("normalizePracticalSpecifyTasks returned err: %v", err)
 	}
-	if len(tasks) != 3 || tasks[0] != "render" || tasks[1] != "finalize" || tasks[2] != "persist" {
+	if len(tasks) != 3 || tasks[0] != "images" || tasks[1] != "render" || tasks[2] != "persist" {
 		t.Fatalf("unexpected normalized tasks: %#v", tasks)
 	}
 }

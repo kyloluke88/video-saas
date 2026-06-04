@@ -1,6 +1,9 @@
 package model
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 func TestPracticalBlockSpeakerVoicesByRole(t *testing.T) {
 	block := PracticalBlock{
@@ -145,5 +148,79 @@ func TestPracticalScriptValidateRejectsSingleVoiceChannelBlock(t *testing.T) {
 
 	if err := script.Validate(); err == nil {
 		t.Fatalf("expected validate to reject block without female speaker")
+	}
+}
+
+func TestPracticalScriptPreservesSpeakerPromptOnJSONRoundTrip(t *testing.T) {
+	raw := []byte(`{
+		"language":"ja",
+		"blocks":[
+			{
+				"block_id":"block_01",
+				"topic":"スーパーで買い物",
+				"speakers":[
+					{
+						"speaker_id":"female",
+						"speaker_role":"customer",
+						"speaker_prompt":"A young woman in a casual shopping outfit."
+					},
+					{
+						"speaker_id":"male",
+						"speaker_role":"clerk",
+						"speaker_prompt":"A polite young store clerk in uniform."
+					}
+				],
+				"chapters":[
+					{
+						"chapter_id":"ch_01",
+						"turns":[
+							{"turn_id":"t_01","speaker_role":"customer","text":"すみません。"}
+						]
+					}
+				]
+			}
+		]
+	}`)
+
+	var script PracticalScript
+	if err := json.Unmarshal(raw, &script); err != nil {
+		t.Fatalf("unmarshal failed: %v", err)
+	}
+
+	script.Normalize()
+	if got := script.Blocks[0].Speakers[0].SpeakerPrompt; got != "A young woman in a casual shopping outfit." {
+		t.Fatalf("speaker prompt mismatch after normalize: %q", got)
+	}
+
+	encoded, err := json.Marshal(script)
+	if err != nil {
+		t.Fatalf("marshal failed: %v", err)
+	}
+	if !json.Valid(encoded) {
+		t.Fatalf("marshal output is not valid json: %s", string(encoded))
+	}
+
+	var decoded map[string]any
+	if err := json.Unmarshal(encoded, &decoded); err != nil {
+		t.Fatalf("decode round-trip failed: %v", err)
+	}
+	blocks, ok := decoded["blocks"].([]any)
+	if !ok || len(blocks) != 1 {
+		t.Fatalf("unexpected blocks payload: %#v", decoded["blocks"])
+	}
+	block, ok := blocks[0].(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected block payload: %#v", blocks[0])
+	}
+	speakers, ok := block["speakers"].([]any)
+	if !ok || len(speakers) != 2 {
+		t.Fatalf("unexpected speakers payload: %#v", block["speakers"])
+	}
+	firstSpeaker, ok := speakers[0].(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected first speaker payload: %#v", speakers[0])
+	}
+	if got := firstSpeaker["speaker_prompt"]; got != "A young woman in a casual shopping outfit." {
+		t.Fatalf("speaker_prompt missing after round-trip: %#v", got)
 	}
 }

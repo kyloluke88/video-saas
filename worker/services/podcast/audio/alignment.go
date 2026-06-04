@@ -3,6 +3,7 @@ package podcast_audio_service
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -55,8 +56,11 @@ func (a *blockAligner) AlignBlock(ctx context.Context, language string, block dt
 	if len(block.Segments) == 0 {
 		return block, nil
 	}
+	blockID := podcastAlignmentBlockID(block)
 	if a == nil || a.client == nil || !a.client.Enabled() {
-		return a.alignBlockHeuristically(language, block, durationMS), nil
+		aligned := a.alignBlockHeuristically(language, block, durationMS)
+		log.Printf("🎯 podcast align strategy block=%s strategy=heuristic reason=mfa_disabled segments=%d duration_ms=%d", blockID, len(block.Segments), durationMS)
+		return aligned, nil
 	}
 
 	alignmentAudioPath, err := extractAlignmentAudio(ctx, audioPath, a.workingDir)
@@ -74,14 +78,24 @@ func (a *blockAligner) AlignBlock(ctx context.Context, language string, block dt
 	if err == nil && len(words) > 0 {
 		aligned, ok := alignBlockWithTimedWords(language, block, words, durationMS)
 		if ok {
+			log.Printf("🎯 podcast align strategy block=%s strategy=block_mfa words=%d segments=%d duration_ms=%d", blockID, len(words), len(block.Segments), durationMS)
 			return aligned, nil
 		}
 	}
 
+	reason := "mfa_mapping_failed"
+	if err != nil {
+		reason = "mfa_error"
+	} else if len(words) == 0 {
+		reason = "mfa_no_words"
+	}
+	log.Printf("🔁 podcast align fallback block=%s from=block_mfa to=segment_mfa reason=%s segments=%d duration_ms=%d", blockID, reason, len(block.Segments), durationMS)
 	segmented, segErr := a.alignBlockBySegments(ctx, language, block, alignmentAudioPath, durationMS)
 	if segErr == nil {
+		log.Printf("🎯 podcast align strategy block=%s strategy=segment_mfa segments=%d duration_ms=%d", blockID, len(block.Segments), durationMS)
 		return segmented, nil
 	}
+	log.Printf("⛔ podcast align failed block=%s strategy=segment_mfa block_reason=%s block_err=%v segment_err=%v", blockID, reason, err, segErr)
 	if err != nil {
 		return dto.PodcastBlock{}, fmt.Errorf("%w; segment_retry=%v", err, segErr)
 	}
@@ -89,6 +103,16 @@ func (a *blockAligner) AlignBlock(ctx context.Context, language string, block dt
 		return dto.PodcastBlock{}, fmt.Errorf("mfa block alignment returned no words and segment retry failed: %w", segErr)
 	}
 	return dto.PodcastBlock{}, fmt.Errorf("mfa block alignment did not map cleanly and segment retry failed: %w", segErr)
+}
+
+func podcastAlignmentBlockID(block dto.PodcastBlock) string {
+	if value := strings.TrimSpace(block.BlockID); value != "" {
+		return value
+	}
+	if value := strings.TrimSpace(block.ChapterID); value != "" {
+		return value
+	}
+	return "unknown"
 }
 
 func extractAlignmentAudio(ctx context.Context, audioPath, workingDir string) (string, error) {

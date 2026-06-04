@@ -35,6 +35,10 @@ _cgo_export.*
 
 # Artifacts
 artifacts/
+.gocache/
+.gocache_worker/
+.gocache_backend/
+*.tsbuildinfo
 
 # Worker & Backend
 worker/storage/logs/

@@ -77,3 +77,47 @@ func TestEnsureReplayProjectDirCopiesWhenSourceExists(t *testing.T) {
 		t.Fatalf("expected copied request_payload.json, got err: %v", err)
 	}
 }
+
+func TestEnsureReplayProjectDirIgnoresMFAArtifacts(t *testing.T) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd failed: %v", err)
+	}
+	workDir := t.TempDir()
+	if err := os.Chdir(workDir); err != nil {
+		t.Fatalf("chdir temp dir failed: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chdir(cwd)
+	})
+
+	sourceDir := filepath.Join(workDir, "projects", "source-project")
+	if err := os.MkdirAll(filepath.Join(sourceDir, "blocks"), 0o755); err != nil {
+		t.Fatalf("mkdir source blocks dir failed: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(sourceDir, "request_payload.json"), []byte(`{"ok":true}`), 0o644); err != nil {
+		t.Fatalf("write source request payload failed: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(sourceDir, "blocks", "block_01.wav"), []byte("audio"), 0o644); err != nil {
+		t.Fatalf("write source block audio failed: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Join(sourceDir, "mfa_align_123", "tmp_attempt_1", "corpus", "alignment"), 0o755); err != nil {
+		t.Fatalf("mkdir source mfa dir failed: %v", err)
+	}
+	if err := os.Symlink(filepath.Join(sourceDir, "missing.ark"), filepath.Join(sourceDir, "mfa_align_123", "tmp_attempt_1", "corpus", "alignment", "ali.japanese_mfa.1.ark")); err != nil {
+		t.Fatalf("create broken symlink failed: %v", err)
+	}
+
+	if err := EnsureReplayProjectDir("source-project", "target-project"); err != nil {
+		t.Fatalf("EnsureReplayProjectDir failed: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(workDir, "projects", "target-project", "request_payload.json")); err != nil {
+		t.Fatalf("expected copied request_payload.json, got err: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(workDir, "projects", "target-project", "blocks", "block_01.wav")); err != nil {
+		t.Fatalf("expected copied block audio, got err: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(workDir, "projects", "target-project", "mfa_align_123")); !os.IsNotExist(err) {
+		t.Fatalf("expected replay copy to ignore mfa_align artifacts, got err=%v", err)
+	}
+}

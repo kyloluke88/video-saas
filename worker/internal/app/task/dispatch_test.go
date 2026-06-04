@@ -37,7 +37,7 @@ func TestBuildTaskMaterialsPodcastStages(t *testing.T) {
 				"lang":             "ja",
 				"bg_img_filenames": []interface{}{"assets/podcast/bg-images/ja7.png"},
 			},
-			want: []string{"ja7.png", "headphone.gif", "ja_logo.png", "dialogue.mp3"},
+			want: []string{"ja7.png", "ja_logo.png", "dialogue.mp3"},
 		},
 		{
 			name:     "compose-finalize",
@@ -50,18 +50,14 @@ func TestBuildTaskMaterialsPodcastStages(t *testing.T) {
 			want:     []string{"script_input.json", "blocks", "block topic audio", "block_gap.wav"},
 		},
 		{
-			name:     "practical-compose-render",
-			taskType: "practical.compose.render.v1",
-			payload: map[string]interface{}{
-				"bg_img_filenames":       []interface{}{"assets/practical/bg-images/bg1.png"},
-				"block_bg_img_filenames": []interface{}{"assets/practical/bg-images/block1.png"},
-			},
-			want: []string{"bg1.png", "block1.png", "dialogue.wav", "script_aligned.json"},
+			name:     "practical-image-generate",
+			taskType: "practical.image.generate.v1",
+			want:     []string{"script_aligned.json", "character reference images"},
 		},
 		{
-			name:     "practical-compose-finalize",
-			taskType: "practical.compose.finalize.v1",
-			want:     []string{"practical_base.mp4", "dialogue.wav", "script_aligned.json"},
+			name:     "practical-compose-render",
+			taskType: "practical.compose.render.v1",
+			want:     []string{"image_manifest.json", "dialogue.wav", "script_aligned.json"},
 		},
 		{
 			name:     "practical-page-persist",

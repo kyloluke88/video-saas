@@ -15,7 +15,7 @@
         "publish_title": "English Title | 日本語タイトル",
         "chapters": [
             {
-                "block_id": "ch_001",
+                "chapter_id": "ch_001",
                 "title_en": "Topic Hook",
                 "title": "話題の入り口"
             }

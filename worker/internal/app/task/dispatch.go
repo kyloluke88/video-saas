@@ -256,7 +256,6 @@ func buildTaskMaterials(task VideoTaskMessage) []string {
 		appendMaterial("block_states")
 	case "podcast.compose.render.v1":
 		appendMaterial(firstBackgroundAsset(task.Payload))
-		appendMaterial(podcastAnimationAsset(task.Payload))
 		appendMaterial(podcastLogoAsset(task.Payload))
 		appendMaterial("dialogue.mp3")
 	case "podcast.compose.finalize.v1":
@@ -272,21 +271,11 @@ func buildTaskMaterials(task VideoTaskMessage) []string {
 		appendMaterial("blocks")
 		appendMaterial("block topic audio")
 		appendMaterial("block_gap.wav")
-	case "practical.compose.render.v1":
-		if backgrounds := payloadStringSlice(task.Payload, "bg_img_filenames"); len(backgrounds) > 0 {
-			for _, bg := range backgrounds {
-				appendMaterial(filepath.Base(bg))
-			}
-		}
-		if blockBackgrounds := payloadStringSlice(task.Payload, "block_bg_img_filenames"); len(blockBackgrounds) > 0 {
-			for _, bg := range blockBackgrounds {
-				appendMaterial(filepath.Base(bg))
-			}
-		}
-		appendMaterial("dialogue.wav")
+	case "practical.image.generate.v1":
 		appendMaterial("script_aligned.json")
-	case "practical.compose.finalize.v1":
-		appendMaterial("practical_base.mp4")
+		appendMaterial("character reference images")
+	case "practical.compose.render.v1":
+		appendMaterial("image_manifest.json")
 		appendMaterial("dialogue.wav")
 		appendMaterial("script_aligned.json")
 	case "practical.page.persist.v1":
@@ -370,18 +359,6 @@ func firstBackgroundAsset(payload map[string]interface{}) string {
 		return ""
 	}
 	return filepath.Base(backgrounds[0])
-}
-
-func podcastAnimationAsset(payload map[string]interface{}) string {
-	lang := strings.ToLower(strings.TrimSpace(payloadString(payload, "lang")))
-	switch lang {
-	case "ja":
-		return "headphone.gif"
-	case "zh":
-		return "design2_480x480.gif"
-	default:
-		return ""
-	}
 }
 
 func podcastLogoAsset(payload map[string]interface{}) string {

@@ -13,7 +13,6 @@ import (
 	"unicode"
 
 	"worker/internal/persistence"
-	conf "worker/pkg/config"
 	services "worker/services"
 	dto "worker/services/practical/model"
 )
@@ -39,14 +38,12 @@ type PageSource struct {
 }
 
 type requestPayload struct {
-	Lang                string   `json:"lang"`
-	ScriptFilename      string   `json:"script_filename"`
-	RunMode             int      `json:"run_mode,omitempty"`
-	SourceProjectID     string   `json:"source_project_id,omitempty"`
-	BgImgFilenames      []string `json:"bg_img_filenames,omitempty"`
-	BlockBgImgFilenames []string `json:"block_bg_img_filenames,omitempty"`
-	Resolution          string   `json:"resolution,omitempty"`
-	DesignType          int      `json:"design_type,omitempty"`
+	Lang            string `json:"lang"`
+	ScriptFilename  string `json:"script_filename"`
+	RunMode         int    `json:"run_mode,omitempty"`
+	SourceProjectID string `json:"source_project_id,omitempty"`
+	Resolution      string `json:"resolution,omitempty"`
+	DesignType      int    `json:"design_type,omitempty"`
 }
 
 type youtubeMetadata struct {
@@ -60,9 +57,10 @@ type youtubeMetadata struct {
 }
 
 type youtubeChapter struct {
-	BlockID string `json:"block_id"`
-	TitleEN string `json:"title_en"`
-	Title   string `json:"title"`
+	BlockID   string `json:"block_id"`
+	ChapterID string `json:"chapter_id"`
+	TitleEN   string `json:"title_en"`
+	Title     string `json:"title"`
 }
 
 type srtCue struct {
@@ -109,8 +107,33 @@ func PersistSource(source PageSource) (PersistResult, error) {
 }
 
 func BuildPageSource(input PersistInput) (PageSource, error) {
-	projectDir := filepath.Join(conf.Get[string]("worker.ffmpeg_work_dir"), "projects", strings.TrimSpace(input.ProjectID))
+	projectDir := filepath.Join(practicalOutputsRoot(), "projects", strings.TrimSpace(input.ProjectID))
 	return BuildPageSourceFromProjectDir(projectDir, input)
+}
+
+func practicalOutputsRoot() string {
+	candidates := []string{
+		"outputs",
+		filepath.Join("worker", "outputs"),
+		"/app/outputs",
+	}
+	for _, candidate := range candidates {
+		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
+			return practicalAbsolutePath(candidate)
+		}
+	}
+	return practicalAbsolutePath(candidates[0])
+}
+
+func practicalAbsolutePath(path string) string {
+	if filepath.IsAbs(strings.TrimSpace(path)) {
+		return strings.TrimSpace(path)
+	}
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return path
+	}
+	return abs
 }
 
 func BuildPageSourceFromProjectDir(projectDir string, input PersistInput) (PageSource, error) {
@@ -347,20 +370,28 @@ func buildYouTubeChapterLines(script dto.PracticalScript, meta youtubeMetadata) 
 	if len(meta.Chapters) == 0 {
 		return nil
 	}
-	starts := make(map[string]int, len(script.Blocks))
+	blockStarts := make(map[string]int, len(script.Blocks))
+	orderedChapters := make([]dto.PracticalChapter, 0)
+	chapterStarts := make(map[string]int)
 	for _, block := range script.Blocks {
-		if strings.TrimSpace(block.BlockID) == "" || block.StartMS < 0 {
-			continue
+		if strings.TrimSpace(block.BlockID) != "" && block.StartMS >= 0 {
+			blockStarts[strings.TrimSpace(block.BlockID)] = block.StartMS
 		}
-		starts[strings.TrimSpace(block.BlockID)] = block.StartMS
+		for _, chapter := range block.Chapters {
+			chapterID := strings.TrimSpace(chapter.ChapterID)
+			if chapterID != "" && chapter.StartMS >= 0 {
+				chapterStarts[chapterID] = chapter.StartMS
+			}
+			orderedChapters = append(orderedChapters, chapter)
+		}
 	}
 	type chapterLine struct {
 		StartMS int
 		Title   string
 	}
 	items := make([]chapterLine, 0, len(meta.Chapters))
-	for _, chapter := range meta.Chapters {
-		startMS, ok := starts[strings.TrimSpace(chapter.BlockID)]
+	for idx, chapter := range meta.Chapters {
+		startMS, ok := practicalYouTubeChapterStartMS(chapter, idx, len(meta.Chapters), script, orderedChapters, chapterStarts, blockStarts)
 		if !ok {
 			continue
 		}
@@ -386,6 +417,33 @@ func buildYouTubeChapterLines(script dto.PracticalScript, meta youtubeMetadata) 
 	return out
 }
 
+func practicalYouTubeChapterStartMS(
+	chapter youtubeChapter,
+	index int,
+	metaChapterCount int,
+	script dto.PracticalScript,
+	orderedChapters []dto.PracticalChapter,
+	chapterStarts map[string]int,
+	blockStarts map[string]int,
+) (int, bool) {
+	if startMS, ok := chapterStarts[strings.TrimSpace(chapter.ChapterID)]; ok {
+		return startMS, true
+	}
+	if startMS, ok := chapterStarts[strings.TrimSpace(chapter.BlockID)]; ok {
+		return startMS, true
+	}
+	if len(script.Blocks) == 1 && metaChapterCount == len(orderedChapters) && index >= 0 && index < len(orderedChapters) {
+		scriptChapter := orderedChapters[index]
+		if scriptChapter.StartMS >= 0 {
+			return scriptChapter.StartMS, true
+		}
+	}
+	if startMS, ok := blockStarts[strings.TrimSpace(chapter.BlockID)]; ok {
+		return startMS, true
+	}
+	return 0, false
+}
+
 func generateYouTubeTranscripts(projectDir string, script dto.PracticalScript) ([]string, error) {
 	existing, err := filepath.Glob(filepath.Join(projectDir, "youtube_transcript_*.srt"))
 	if err != nil {
@@ -397,7 +455,7 @@ func generateYouTubeTranscripts(projectDir string, script dto.PracticalScript) (
 		}
 	}
 
-	locales := collectTranslationLocales(script)
+	locales := youtubeTranscriptLocales(script)
 	if len(locales) == 0 {
 		return nil, nil
 	}
@@ -410,7 +468,7 @@ func generateYouTubeTranscripts(projectDir string, script dto.PracticalScript) (
 			if turn.EndMS <= turn.StartMS {
 				continue
 			}
-			text := strings.TrimSpace(turn.TranslationFor(locale))
+			text := strings.TrimSpace(practicalTranscriptTextForLocale(turn, locale, script.Language))
 			if text == "" {
 				continue
 			}
@@ -430,6 +488,39 @@ func generateYouTubeTranscripts(projectDir string, script dto.PracticalScript) (
 		paths = append(paths, path)
 	}
 	return paths, nil
+}
+
+func youtubeTranscriptLocales(script dto.PracticalScript) []string {
+	out := make([]string, 0, 1+len(script.TranslationLocales))
+	seen := make(map[string]struct{}, 1+len(script.TranslationLocales))
+	appendLocale := func(raw string) {
+		locale := strings.TrimSpace(raw)
+		if locale == "" {
+			return
+		}
+		if _, exists := seen[locale]; exists {
+			return
+		}
+		seen[locale] = struct{}{}
+		out = append(out, locale)
+	}
+
+	appendLocale(script.Language)
+	for _, locale := range collectTranslationLocales(script) {
+		appendLocale(locale)
+	}
+	return out
+}
+
+func practicalTranscriptTextForLocale(turn dto.PracticalTurn, locale, sourceLanguage string) string {
+	locale = strings.TrimSpace(locale)
+	if locale == "" {
+		return ""
+	}
+	if strings.EqualFold(locale, strings.TrimSpace(sourceLanguage)) {
+		return coalesce(turn.SpeechText, turn.Text)
+	}
+	return turn.TranslationFor(locale)
 }
 
 func flattenTurns(script dto.PracticalScript) []dto.PracticalTurn {
@@ -588,7 +679,7 @@ func isEmptyYouTubeMetadata(meta youtubeMetadata) bool {
 func (m youtubeMetadata) ChaptersToStrings() []string {
 	out := make([]string, 0, len(m.Chapters))
 	for _, chapter := range m.Chapters {
-		if text := strings.TrimSpace(chapter.BlockID + chapter.TitleEN + chapter.Title); text != "" {
+		if text := strings.TrimSpace(chapter.BlockID + chapter.ChapterID + chapter.TitleEN + chapter.Title); text != "" {
 			out = append(out, text)
 		}
 	}

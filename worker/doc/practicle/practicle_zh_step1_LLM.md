@@ -111,7 +111,6 @@
    - `station_staff`
 5. 一个 block 可以有 2 个或以上角色。
 6. 多个角色允许共用同一个 `speaker_id`，因为 TTS 声线只有男女两种。
-
 示例：
 "speakers": [
   {
@@ -132,7 +131,7 @@
    - `scene_translations`
    - `scene_prompt`
    - `turns`
-3. 一个 block 建议拆成 2 到 4 个 chapters，具体取决于 `duration_minutes`。
+3. 一个 block 建议拆成多个 chapters，具体取决于 `duration_minutes`。
 4. `scene_prompt` 是后续生成背景图的提示词。
 5. `scene_prompt` 必须保留角色占位符，格式必须为：
    - `@[speaker_role]`
@@ -207,9 +206,9 @@
 
 【时长与体量建议】
 按每个 block 的 `duration_minutes` 估算内容量：
-- 5 分钟：建议 2 到 3 个 chapters，12 到 20 个 turns
-- 6 分钟：建议 3 到 4 个 chapters，16 到 24 个 turns
-- 8 分钟：建议 4 到 5 个 chapters，22 到 32 个 turns
+- 5 分钟：建议 4 到 5 个 chapters，12 到 20 个 turns
+- 6 分钟：建议 5 到 6 个 chapters，16 到 24 个 turns
+- 8 分钟：建议 6 到 8 个 chapters，22 到 32 个 turns
 
 【输出前自检要求】
 在输出最终 JSON 前，必须自行检查：

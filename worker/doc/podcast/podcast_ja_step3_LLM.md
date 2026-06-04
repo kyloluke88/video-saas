@@ -17,12 +17,8 @@
   - vi 越南语
   - ko 韩国语
   - id 印尼语
-  - pt-BR 葡萄牙语（巴西）
-  - th 泰语
   - fr 法语
-  - de 德语
   - ru 俄语
-  - mn 蒙古语
   - my 缅甸语
 - translations 的内容必须和原句语义一致，适合字幕阅读，表达自然、简洁、口语化
 - translations 里的每种语言都必须完整覆盖当前 segment 的意思，不要只翻一半
@@ -162,12 +158,8 @@
             "vi": "Đây là chủ đề mà gần đây tôi nghe rất nhiều.",
             "ko": "이 주제는 요즘 정말 자주 듣게 돼요.",
             "id": "Topik ini belakangan ini sering sekali saya dengar.",
-            "pt-BR": "Esse é um assunto sobre o qual tenho ouvido falar muito ultimamente.",
-            "th": "ช่วงนี้ฉันได้ยินเรื่องนี้บ่อยมากจริง ๆ",
             "fr": "C’est un sujet dont j’entends beaucoup parler ces derniers temps.",
-            "de": "Das ist ein Thema, über das ich in letzter Zeit wirklich oft etwas höre.",
             "ru": "Это тема, о которой я в последнее время действительно часто слышу.",
-            "mn": "Энэ сэдвийн талаар би сүүлийн үед их сонсож байна.",
             "my": "ဒီအကြောင်းကို လတ်တလော ကျွန်တော် ခဏခဏ ကြားနေရတယ်။"
           }
           "tokens": [

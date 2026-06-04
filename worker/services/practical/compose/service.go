@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	services "worker/services"
@@ -13,19 +14,13 @@ import (
 )
 
 type ComposeInput struct {
-	ProjectID           string
-	Language            string
-	BgImgFilenames      []string
-	BlockBgImgFilenames []string
-	Resolution          string
-	DesignType          int
+	ProjectID  string
+	Language   string
+	Resolution string
+	DesignType int
 }
 
 type RenderResult struct {
-	BaseVideoPath string
-}
-
-type FinalizeResult struct {
 	FinalVideoPath  string
 	SubtitleASSPath string
 }
@@ -37,9 +32,7 @@ type composeArtifacts struct {
 	DesignType           int
 	DialoguePath         string
 	ScriptPath           string
-	BaseVideoPath        string
 	FinalVideoPath       string
-	SubtitleASSPath      string
 	BackgroundPaths      []string
 	BlockBackgroundPaths []string
 	Script               dto.PracticalScript
@@ -50,31 +43,20 @@ func Render(ctx context.Context, input ComposeInput) (RenderResult, error) {
 	if err != nil {
 		return RenderResult{}, err
 	}
-	if err := renderBaseVideo(ctx, artifacts); err != nil {
-		return RenderResult{}, err
-	}
-	return RenderResult{BaseVideoPath: artifacts.BaseVideoPath}, nil
-}
-
-func Finalize(ctx context.Context, input ComposeInput) (FinalizeResult, error) {
-	artifacts, err := prepareFinalizeArtifacts(input)
-	if err != nil {
-		return FinalizeResult{}, err
-	}
 
 	assPath, err := writePracticalASS(artifacts.Script, artifacts.ProjectDir, artifacts.Resolution, artifacts.DesignType)
 	if err != nil {
-		return FinalizeResult{}, err
+		return RenderResult{}, err
 	}
 	if strings.TrimSpace(assPath) == "" {
-		return FinalizeResult{}, services.NonRetryableError{Err: fmt.Errorf("practical subtitle ass could not be generated")}
+		return RenderResult{}, services.NonRetryableError{Err: fmt.Errorf("practical subtitle ass could not be generated")}
 	}
 
-	if err := burnPracticalSubtitles(ctx, artifacts, assPath); err != nil {
-		return FinalizeResult{}, err
+	if err := renderFinalVideo(ctx, artifacts, assPath); err != nil {
+		return RenderResult{}, err
 	}
-	log.Printf("🎬 practical finalization complete project_id=%s ass=%s final=%s", filepath.Base(artifacts.ProjectDir), assPath, artifacts.FinalVideoPath)
-	return FinalizeResult{
+	log.Printf("🎬 practical render complete project_id=%s ass=%s final=%s", filepath.Base(artifacts.ProjectDir), assPath, artifacts.FinalVideoPath)
+	return RenderResult{
 		FinalVideoPath:  artifacts.FinalVideoPath,
 		SubtitleASSPath: assPath,
 	}, nil
@@ -92,15 +74,13 @@ func prepareBaseArtifacts(input ComposeInput) (composeArtifacts, error) {
 
 	projectDir := projectDirFor(projectID)
 	artifacts := composeArtifacts{
-		ProjectDir:      projectDir,
-		Language:        language,
-		Resolution:      strings.TrimSpace(input.Resolution),
-		DesignType:      normalizePracticalDesignType(input.DesignType),
-		DialoguePath:    projectDialoguePath(projectDir),
-		ScriptPath:      projectScriptAlignedPath(projectDir),
-		BaseVideoPath:   projectBaseVideoPath(projectDir),
-		FinalVideoPath:  projectFinalVideoPath(projectDir),
-		SubtitleASSPath: projectSubtitleASSPath(projectDir),
+		ProjectDir:     projectDir,
+		Language:       language,
+		Resolution:     strings.TrimSpace(input.Resolution),
+		DesignType:     normalizePracticalDesignType(input.DesignType),
+		DialoguePath:   projectDialoguePath(projectDir),
+		ScriptPath:     projectScriptAlignedPath(projectDir),
+		FinalVideoPath: projectFinalVideoPath(projectDir),
 	}
 	if artifacts.Resolution == "" {
 		artifacts.Resolution = "1080p"
@@ -131,66 +111,63 @@ func prepareRenderArtifacts(input ComposeInput) (composeArtifacts, error) {
 		return composeArtifacts{}, services.NonRetryableError{Err: fmt.Errorf("practical script has no chapters")}
 	}
 
-	backgroundNames := compactBackgroundNames(input.BgImgFilenames)
-	if len(backgroundNames) < len(chapters) {
-		return composeArtifacts{}, services.NonRetryableError{Err: fmt.Errorf("bg_img_filenames count %d is less than chapter count %d", len(backgroundNames), len(chapters))}
+	manifest, err := loadImageManifest(artifacts.ProjectDir)
+	if err != nil {
+		return composeArtifacts{}, err
 	}
 	artifacts.BackgroundPaths = make([]string, 0, len(chapters))
-	for idx := range chapters {
-		bgPath := practicalBackgroundImagePath(backgroundNames[idx])
+	chapterAssets := make(map[string]string, len(manifest.Chapters))
+	for _, asset := range manifest.Chapters {
+		chapterAssets[strings.TrimSpace(asset.ChapterID)] = strings.TrimSpace(asset.Filename)
+	}
+	for _, chapter := range chapters {
+		filename, ok := chapterAssets[strings.TrimSpace(chapter.Chapter.ChapterID)]
+		if !ok || strings.TrimSpace(filename) == "" {
+			return composeArtifacts{}, services.NonRetryableError{Err: fmt.Errorf("chapter image missing for %s", strings.TrimSpace(chapter.Chapter.ChapterID))}
+		}
+		bgPath := projectImageAssetPath(artifacts.ProjectDir, filename)
 		if !fileExists(bgPath) {
 			return composeArtifacts{}, services.NonRetryableError{Err: fmt.Errorf("background image missing: %s", bgPath)}
 		}
 		artifacts.BackgroundPaths = append(artifacts.BackgroundPaths, bgPath)
 	}
 
-	blockBackgroundNames := compactBackgroundNames(input.BlockBgImgFilenames)
-	if len(blockBackgroundNames) > 0 && len(blockBackgroundNames) < len(script.Blocks) {
-		return composeArtifacts{}, services.NonRetryableError{Err: fmt.Errorf("block_bg_img_filenames count %d is less than block count %d", len(blockBackgroundNames), len(script.Blocks))}
-	}
 	artifacts.BlockBackgroundPaths = make([]string, 0, len(script.Blocks))
-	if len(blockBackgroundNames) > 0 {
-		for idx := range script.Blocks {
-			bgPath := practicalBackgroundImagePath(blockBackgroundNames[idx])
-			if !fileExists(bgPath) {
-				return composeArtifacts{}, services.NonRetryableError{Err: fmt.Errorf("block background image missing: %s", bgPath)}
-			}
-			artifacts.BlockBackgroundPaths = append(artifacts.BlockBackgroundPaths, bgPath)
+	blockAssets := make(map[string]string, len(manifest.Blocks))
+	for _, asset := range manifest.Blocks {
+		blockAssets[strings.TrimSpace(asset.BlockID)] = strings.TrimSpace(asset.Filename)
+	}
+	for _, block := range script.Blocks {
+		filename, ok := blockAssets[strings.TrimSpace(block.BlockID)]
+		if !ok || strings.TrimSpace(filename) == "" {
+			return composeArtifacts{}, services.NonRetryableError{Err: fmt.Errorf("block image missing for %s", strings.TrimSpace(block.BlockID))}
 		}
-	} else {
-		chapterCursor := 0
-		for _, block := range script.Blocks {
-			if chapterCursor >= len(artifacts.BackgroundPaths) {
-				return composeArtifacts{}, services.NonRetryableError{Err: fmt.Errorf("block background fallback failed: missing chapter background")}
-			}
-			artifacts.BlockBackgroundPaths = append(artifacts.BlockBackgroundPaths, artifacts.BackgroundPaths[chapterCursor])
-			chapterCursor += len(block.Chapters)
+		bgPath := projectImageAssetPath(artifacts.ProjectDir, filename)
+		if !fileExists(bgPath) {
+			return composeArtifacts{}, services.NonRetryableError{Err: fmt.Errorf("block background image missing: %s", bgPath)}
 		}
+		artifacts.BlockBackgroundPaths = append(artifacts.BlockBackgroundPaths, bgPath)
 	}
 	return artifacts, nil
 }
 
-func prepareFinalizeArtifacts(input ComposeInput) (composeArtifacts, error) {
-	artifacts, err := prepareBaseArtifacts(input)
-	if err != nil {
-		return composeArtifacts{}, err
+func loadImageManifest(projectDir string) (dto.PracticalImageManifest, error) {
+	manifestPath := projectImageManifestPath(projectDir)
+	if !fileExists(manifestPath) {
+		return dto.PracticalImageManifest{}, services.NonRetryableError{Err: fmt.Errorf("image manifest missing: %s", manifestPath)}
 	}
-	if !fileExists(artifacts.BaseVideoPath) {
-		return composeArtifacts{}, services.NonRetryableError{Err: fmt.Errorf("practical base video missing: %s", artifacts.BaseVideoPath)}
+	var manifest dto.PracticalImageManifest
+	if err := readJSON(manifestPath, &manifest); err != nil {
+		return dto.PracticalImageManifest{}, err
 	}
-	if !fileExists(artifacts.ScriptPath) {
-		return composeArtifacts{}, services.NonRetryableError{Err: fmt.Errorf("aligned script missing: %s", artifacts.ScriptPath)}
-	}
-
-	script, err := loadAlignedScript(artifacts.ProjectDir, artifacts.Language)
-	if err != nil {
-		return composeArtifacts{}, err
-	}
-	artifacts.Script = script
-	return artifacts, nil
+	return manifest, nil
 }
 
-func renderBaseVideo(ctx context.Context, artifacts composeArtifacts) error {
+func renderFinalVideo(ctx context.Context, artifacts composeArtifacts, assPath string) error {
+	if strings.TrimSpace(assPath) == "" {
+		return fmt.Errorf("subtitle path is required")
+	}
+
 	segments := buildPracticalRenderSegments(
 		artifacts.Script,
 		artifacts.BackgroundPaths,
@@ -202,13 +179,9 @@ func renderBaseVideo(ctx context.Context, artifacts composeArtifacts) error {
 		return services.NonRetryableError{Err: fmt.Errorf("practical script has no chapters")}
 	}
 
-	fadeSec := 0.8
-	if fadeSec <= 0 {
-		fadeSec = 0.8
-	}
-	scale := ffmpegcommon.ResolutionToScale(artifacts.Resolution)
 	preset := practicalX264Preset()
-	timeout := practicalFFmpegTimeout()
+	threads := practicalX264Threads()
+	timeout := practicalFFmpegTimeout(artifacts.DialoguePath)
 
 	args := []string{"-y"}
 	for _, segment := range segments {
@@ -216,47 +189,30 @@ func renderBaseVideo(ctx context.Context, artifacts composeArtifacts) error {
 	}
 	args = append(args, "-i", artifacts.DialoguePath)
 
-	filterParts := make([]string, 0, len(segments)*2)
-	offsets := make([]float64, 0, len(segments))
-	cumulative := 0.0
-	for idx, segment := range segments {
-		segmentDuration := segment.DurationSec
-		if idx < len(segments)-1 {
-			segmentDuration += fadeSec
-		}
-		filterParts = append(filterParts, fmt.Sprintf("[%d:v]scale=%s:force_original_aspect_ratio=increase,crop=%s,setsar=1,fps=30,format=yuv420p,trim=duration=%.3f,setpts=PTS-STARTPTS[v%d]",
-			idx, scale, scale, segmentDuration, idx))
-		offsets = append(offsets, cumulative)
-		cumulative += segment.DurationSec
+	filterComplex, finalLabel, err := buildPracticalVideoFilter(segments)
+	if err != nil {
+		return services.NonRetryableError{Err: err}
 	}
-
-	finalLabel := "[v0]"
-	if len(segments) > 1 {
-		for idx := 1; idx < len(segments); idx++ {
-			prev := finalLabel
-			next := fmt.Sprintf("[v%d]", idx)
-			out := fmt.Sprintf("[x%d]", idx)
-			filterParts = append(filterParts, fmt.Sprintf("%s%sxfade=transition=fade:duration=%.3f:offset=%.3f%s", prev, next, fadeSec, offsets[idx], out))
-			finalLabel = out
-		}
-	}
-
-	filterComplex := strings.Join(filterParts, ";")
-	audioInputIndex := len(artifacts.BackgroundPaths)
-	audioInputIndex = len(segments)
-	if strings.TrimSpace(filterComplex) == "" {
-		return services.NonRetryableError{Err: fmt.Errorf("practical render filter is empty")}
-	}
+	subtitleLabel := "[vsub]"
+	filterComplex += fmt.Sprintf(";%ssubtitles=%s:fontsdir=%s%s",
+		finalLabel,
+		escapeFFmpegPath(assPath),
+		escapeFFmpegPath(practicalFontsDir()),
+		subtitleLabel,
+	)
+	finalLabel = subtitleLabel
+	audioInputIndex := len(segments)
 	args = append(args,
 		"-filter_complex", filterComplex,
 		"-map", finalLabel,
 		"-map", fmt.Sprintf("%d:a:0", audioInputIndex),
 		"-c:v", "libx264",
 		"-preset", preset,
+		"-threads", strconv.Itoa(threads),
 		"-pix_fmt", "yuv420p",
 		"-c:a", "aac",
 		"-shortest",
-		artifacts.BaseVideoPath,
+		artifacts.FinalVideoPath,
 	)
 	return ffmpegcommon.RunFFmpegWithTimeoutContext(ctx, timeout, args...)
 }
@@ -266,23 +222,42 @@ type practicalRenderSegment struct {
 	DurationSec    float64
 }
 
-func buildPracticalRenderSegments(script dto.PracticalScript, chapterBackgroundPaths, blockBackgroundPaths []string, chapterGapMS, blockGapMS int) []practicalRenderSegment {
+func buildPracticalVideoFilter(segments []practicalRenderSegment) (string, string, error) {
+	if len(segments) == 0 {
+		return "", "", fmt.Errorf("practical render filter is empty")
+	}
+
+	fps := practicalVideoFPS()
+	filterParts := make([]string, 0, len(segments)+1)
+	labels := make([]string, 0, len(segments))
+	for idx, segment := range segments {
+		label := fmt.Sprintf("[v%d]", idx)
+		filterParts = append(filterParts, fmt.Sprintf("[%d:v]setsar=1,fps=%d,format=yuv420p,trim=duration=%.3f,setpts=PTS-STARTPTS%s",
+			idx, fps, segment.DurationSec, label))
+		labels = append(labels, label)
+	}
+
+	if len(labels) == 1 {
+		return strings.Join(filterParts, ";"), labels[0], nil
+	}
+
+	finalLabel := "[vout]"
+	filterParts = append(filterParts, fmt.Sprintf("%sconcat=n=%d:v=1:a=0%s", strings.Join(labels, ""), len(labels), finalLabel))
+	return strings.Join(filterParts, ";"), finalLabel, nil
+}
+
+func buildPracticalRenderSegments(script dto.PracticalScript, chapterBackgroundPaths, blockBackgroundPaths []string, _ int, _ int) []practicalRenderSegment {
 	segments := make([]practicalRenderSegment, 0, len(chapterBackgroundPaths)+len(blockBackgroundPaths))
 	chapterCursor := 0
-	chapterGapSec := float64(maxInt(0, chapterGapMS)) / 1000.0
-	blockGapSec := float64(maxInt(0, blockGapMS)) / 1000.0
 
 	for blockIndex, block := range script.Blocks {
-		introDurationSec := float64(maxInt(0, block.TopicEndMS-block.TopicStartMS)) / 1000.0
-		if introDurationSec > 0 {
-			if blockIndex < len(blockBackgroundPaths) {
-				segmentDuration := introDurationSec
-				if blockIndex > 0 {
-					segmentDuration += blockGapSec
-				}
+		firstChapterStartMS := practicalFirstChapterStartMS(block)
+		if blockIndex < len(blockBackgroundPaths) && block.TopicEndMS > block.TopicStartMS {
+			segmentEndMS := maxInt(block.TopicEndMS, firstChapterStartMS)
+			if segmentEndMS > block.TopicStartMS {
 				segments = append(segments, practicalRenderSegment{
 					BackgroundPath: blockBackgroundPaths[blockIndex],
-					DurationSec:    segmentDuration,
+					DurationSec:    float64(segmentEndMS-block.TopicStartMS) / 1000.0,
 				})
 			}
 		}
@@ -292,13 +267,21 @@ func buildPracticalRenderSegments(script dto.PracticalScript, chapterBackgroundP
 				return segments
 			}
 			startMS, endMS := chapterStartEndMS(chapter)
-			durationSec := float64(maxInt(1, endMS-startMS)) / 1000.0
+			segmentEndMS := endMS
 			if chapterIndex < len(block.Chapters)-1 {
-				durationSec += chapterGapSec
+				nextStartMS, _ := chapterStartEndMS(block.Chapters[chapterIndex+1])
+				if nextStartMS > startMS {
+					segmentEndMS = maxInt(segmentEndMS, nextStartMS)
+				}
+			} else if blockIndex < len(script.Blocks)-1 {
+				nextBlock := script.Blocks[blockIndex+1]
+				if nextBlock.TopicStartMS > startMS {
+					segmentEndMS = maxInt(segmentEndMS, nextBlock.TopicStartMS)
+				}
 			}
 			segments = append(segments, practicalRenderSegment{
 				BackgroundPath: chapterBackgroundPaths[chapterCursor],
-				DurationSec:    durationSec,
+				DurationSec:    float64(maxInt(1, segmentEndMS-startMS)) / 1000.0,
 			})
 			chapterCursor++
 		}
@@ -307,19 +290,12 @@ func buildPracticalRenderSegments(script dto.PracticalScript, chapterBackgroundP
 	return segments
 }
 
-func burnPracticalSubtitles(ctx context.Context, artifacts composeArtifacts, assPath string) error {
-	if strings.TrimSpace(assPath) == "" {
-		return fmt.Errorf("subtitle path is required")
+func practicalFirstChapterStartMS(block dto.PracticalBlock) int {
+	for _, chapter := range block.Chapters {
+		startMS, endMS := chapterStartEndMS(chapter)
+		if endMS > startMS {
+			return startMS
+		}
 	}
-	filter := fmt.Sprintf("subtitles=%s:fontsdir=%s", escapeFFmpegPath(assPath), escapeFFmpegPath(practicalFontsDir()))
-	return ffmpegcommon.RunFFmpegWithTimeoutContext(ctx, practicalFFmpegTimeout(),
-		"-y",
-		"-i", artifacts.BaseVideoPath,
-		"-vf", filter,
-		"-c:v", "libx264",
-		"-preset", practicalX264Preset(),
-		"-pix_fmt", "yuv420p",
-		"-c:a", "copy",
-		artifacts.FinalVideoPath,
-	)
+	return 0
 }

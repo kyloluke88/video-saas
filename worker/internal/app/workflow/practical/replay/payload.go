@@ -134,21 +134,28 @@ func BuildGeneratePayloadFromSavedAndCurrent(saved, current dto.PracticalAudioGe
 		return dto.PracticalAudioGeneratePayload{}, fmt.Errorf("lang must be zh or ja")
 	}
 
+	blockNums, chapterNums := resolveReplaySelection(saved, current)
+
 	return dto.PracticalAudioGeneratePayload{
-		ProjectID:           targetProjectID,
-		SourceProjectID:     strings.TrimSpace(current.SourceProjectID),
-		Lang:                lang,
-		TTSType:             normalizePracticalTTSType(firstPositive(current.TTSType, saved.TTSType, 1)),
-		RunMode:             firstPositive(current.RunMode, saved.RunMode),
-		SpecifyTasks:        firstNonEmptyStrings(current.SpecifyTasks, saved.SpecifyTasks),
-		BlockNums:           firstPositiveInts(current.BlockNums, saved.BlockNums),
-		ScriptFilename:      firstNonEmpty(saved.ScriptFilename, current.ScriptFilename),
-		BgImgFilenames:      firstNonEmptyStrings(current.BgImgFilenames, saved.BgImgFilenames),
-		BlockBgImgFilenames: firstNonEmptyStrings(current.BlockBgImgFilenames, saved.BlockBgImgFilenames),
-		Resolution:          firstNonEmpty(current.Resolution, saved.Resolution),
-		AspectRatio:         firstNonEmpty(current.AspectRatio, saved.AspectRatio),
-		DesignType:          normalizePracticalDesignType(firstPositive(current.DesignType, saved.DesignType, 1)),
+		ProjectID:       targetProjectID,
+		SourceProjectID: strings.TrimSpace(current.SourceProjectID),
+		Lang:            lang,
+		TTSType:         normalizePracticalTTSType(firstPositive(current.TTSType, saved.TTSType, 1)),
+		RunMode:         firstPositive(current.RunMode, saved.RunMode),
+		SpecifyTasks:    firstNonEmptyStrings(current.SpecifyTasks, saved.SpecifyTasks),
+		BlockNums:       blockNums,
+		ChapterNums:     chapterNums,
+		ScriptFilename:  firstNonEmpty(saved.ScriptFilename, current.ScriptFilename),
+		Resolution:      firstNonEmpty(current.Resolution, saved.Resolution),
+		AspectRatio:     firstNonEmpty(current.AspectRatio, saved.AspectRatio),
+		DesignType:      normalizePracticalDesignType(firstPositive(current.DesignType, saved.DesignType, 1)),
 	}, nil
+}
+
+func resolveReplaySelection(saved, current dto.PracticalAudioGeneratePayload) ([]int, []int) {
+	currentBlockNums := compactPositiveInts(current.BlockNums)
+	currentChapterNums := compactPositiveInts(current.ChapterNums)
+	return currentBlockNums, currentChapterNums
 }
 
 func firstPositive(values ...int) int {
@@ -158,16 +165,6 @@ func firstPositive(values ...int) int {
 		}
 	}
 	return 0
-}
-
-func firstPositiveInts(values ...[]int) []int {
-	for _, group := range values {
-		cleaned := compactPositiveInts(group)
-		if len(cleaned) > 0 {
-			return cleaned
-		}
-	}
-	return nil
 }
 
 func firstNonEmptyStrings(values ...[]string) []string {

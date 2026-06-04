@@ -10,11 +10,12 @@ import (
 	"time"
 
 	conf "worker/pkg/config"
+	ffmpegcommon "worker/services/media/ffmpeg/common"
 	dto "worker/services/practical/model"
 )
 
 func projectDirFor(projectID string) string {
-	return filepath.Join(conf.Get[string]("worker.ffmpeg_work_dir"), "projects", strings.TrimSpace(projectID))
+	return filepath.Join(practicalOutputsRoot(), "projects", strings.TrimSpace(projectID))
 }
 
 func projectScriptAlignedPath(projectDir string) string {
@@ -25,10 +26,6 @@ func projectDialoguePath(projectDir string) string {
 	return filepath.Join(projectDir, "dialogue.wav")
 }
 
-func projectBaseVideoPath(projectDir string) string {
-	return filepath.Join(projectDir, "practical_base.mp4")
-}
-
 func projectFinalVideoPath(projectDir string) string {
 	return filepath.Join(projectDir, "practical_final.mp4")
 }
@@ -37,15 +34,26 @@ func projectSubtitleASSPath(projectDir string) string {
 	return filepath.Join(projectDir, "practical_subtitles.ass")
 }
 
+func projectImageManifestPath(projectDir string) string {
+	return filepath.Join(projectDir, "image_manifest.json")
+}
+
 func projectYouTubeTranscriptPath(projectDir, language string) string {
 	return filepath.Join(projectDir, fmt.Sprintf("youtube_transcript_%s.srt", strings.TrimSpace(language)))
+}
+
+func projectImageAssetPath(projectDir, filename string) string {
+	if filepath.IsAbs(strings.TrimSpace(filename)) {
+		return strings.TrimSpace(filename)
+	}
+	return filepath.Join(projectDir, filepath.Clean(strings.TrimSpace(filename)))
 }
 
 func practicalBackgroundImagePath(filename string) string {
 	base := filepath.Base(strings.TrimSpace(filename))
 	candidates := []string{
-		filepath.Join(conf.Get[string]("worker.worker_assets_dir"), "practical", "bg-images", base),
-		filepath.Join(conf.Get[string]("worker.worker_assets_dir"), "practicle", "bg-images", base),
+		filepath.Join(practicalAssetsRoot(), "practical", "bg-images", base),
+		filepath.Join(practicalAssetsRoot(), "practicle", "bg-images", base),
 	}
 	for _, candidate := range candidates {
 		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
@@ -68,6 +76,45 @@ func compactBackgroundNames(values []string) []string {
 func fileExists(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && !info.IsDir()
+}
+
+func practicalAssetsRoot() string {
+	candidates := []string{
+		"assets",
+		filepath.Join("worker", "assets"),
+		"/app/assets",
+	}
+	for _, candidate := range candidates {
+		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
+			return practicalAbsolutePath(candidate)
+		}
+	}
+	return practicalAbsolutePath(candidates[0])
+}
+
+func practicalOutputsRoot() string {
+	candidates := []string{
+		"outputs",
+		filepath.Join("worker", "outputs"),
+		"/app/outputs",
+	}
+	for _, candidate := range candidates {
+		if info, err := os.Stat(candidate); err == nil && info.IsDir() {
+			return practicalAbsolutePath(candidate)
+		}
+	}
+	return practicalAbsolutePath(candidates[0])
+}
+
+func practicalAbsolutePath(path string) string {
+	if filepath.IsAbs(strings.TrimSpace(path)) {
+		return strings.TrimSpace(path)
+	}
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return path
+	}
+	return abs
 }
 
 func readJSON(path string, out interface{}) error {
@@ -110,18 +157,59 @@ func escapeFFmpegPath(path string) string {
 }
 
 func practicalX264Preset() string {
-	preset := strings.TrimSpace(conf.Get[string]("worker.practical_x264_preset", ""))
-	if preset == "" {
-		preset = strings.TrimSpace(conf.Get[string]("worker.podcast_x264_preset", "veryfast"))
-	}
-	if preset == "" {
-		preset = "veryfast"
-	}
-	return preset
+	return strings.TrimSpace(conf.Get[string]("worker.practical_x264_preset", "veryfast"))
 }
 
-func practicalFFmpegTimeout() time.Duration {
-	return time.Duration(firstPositive(conf.Get[int]("worker.ffmpeg_timeout_sec"), 300)) * time.Second
+func practicalX264Threads() int {
+	value := conf.Get[int]("worker.practical_x264_threads")
+	if value <= 0 {
+		return 4
+	}
+	return value
+}
+
+func practicalVideoFPS() int {
+	value := conf.Get[int]("worker.practical_fps")
+	if value <= 0 {
+		return 24
+	}
+	return value
+}
+
+func practicalFFmpegTimeout(dialogueAudioPath string) time.Duration {
+	configured := time.Duration(conf.Get[int]("worker.practical_ffmpeg_timeout_sec")) * time.Second
+	fallback := time.Duration(conf.Get[int]("worker.ffmpeg_timeout_sec", 300)) * time.Second
+	durationSec := 0.0
+	if measured, err := ffmpegcommon.AudioDurationSec(dialogueAudioPath); err == nil && measured > 0 {
+		durationSec = measured
+	}
+	return computePracticalComposeTimeout(configured, fallback, durationSec)
+}
+
+func computePracticalComposeTimeout(configured, fallback time.Duration, audioDurationSec float64) time.Duration {
+	if configured > 0 {
+		return configured
+	}
+
+	timeout := fallback
+	if timeout <= 0 {
+		timeout = 5 * time.Minute
+	}
+
+	if audioDurationSec > 0 {
+		estimated := time.Duration(audioDurationSec*float64(time.Second))*2 + 10*time.Minute
+		if estimated > timeout {
+			timeout = estimated
+		}
+	}
+
+	if timeout < 20*time.Minute {
+		timeout = 20 * time.Minute
+	}
+	if timeout > 2*time.Hour {
+		timeout = 2 * time.Hour
+	}
+	return timeout
 }
 
 func practicalChapterGapMS() int {

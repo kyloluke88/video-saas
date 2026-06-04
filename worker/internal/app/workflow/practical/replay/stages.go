@@ -10,24 +10,24 @@ type PracticalStage string
 const (
 	PracticalStageGenerate PracticalStage = "generate"
 	PracticalStageAlign    PracticalStage = "align"
+	PracticalStageImages   PracticalStage = "images"
 	PracticalStageRender   PracticalStage = "render"
-	PracticalStageFinalize PracticalStage = "finalize"
 	PracticalStagePersist  PracticalStage = "persist"
 )
 
 var practicalStageOrder = []PracticalStage{
 	PracticalStageGenerate,
 	PracticalStageAlign,
+	PracticalStageImages,
 	PracticalStageRender,
-	PracticalStageFinalize,
 	PracticalStagePersist,
 }
 
 var practicalStageTaskTypes = map[PracticalStage]string{
 	PracticalStageGenerate: "practical.audio.generate.v1",
 	PracticalStageAlign:    "practical.audio.align.v1",
+	PracticalStageImages:   "practical.image.generate.v1",
 	PracticalStageRender:   "practical.compose.render.v1",
-	PracticalStageFinalize: "practical.compose.finalize.v1",
 	PracticalStagePersist:  "practical.page.persist.v1",
 }
 
@@ -37,10 +37,10 @@ func parsePracticalStage(value string) (PracticalStage, bool) {
 		return PracticalStageGenerate, true
 	case string(PracticalStageAlign):
 		return PracticalStageAlign, true
+	case string(PracticalStageImages):
+		return PracticalStageImages, true
 	case string(PracticalStageRender):
 		return PracticalStageRender, true
-	case string(PracticalStageFinalize):
-		return PracticalStageFinalize, true
 	case string(PracticalStagePersist):
 		return PracticalStagePersist, true
 	default:
@@ -54,10 +54,10 @@ func PracticalStageForTaskType(taskType string) (PracticalStage, bool) {
 		return PracticalStageGenerate, true
 	case "practical.audio.align.v1":
 		return PracticalStageAlign, true
+	case "practical.image.generate.v1":
+		return PracticalStageImages, true
 	case "practical.compose.render.v1":
 		return PracticalStageRender, true
-	case "practical.compose.finalize.v1":
-		return PracticalStageFinalize, true
 	case "practical.page.persist.v1":
 		return PracticalStagePersist, true
 	default:
@@ -82,19 +82,20 @@ func NormalizeSpecifyTasks(values []string) ([]string, error) {
 		return nil, nil
 	}
 
-	seen := make(map[PracticalStage]struct{}, len(values))
+	seen := make(map[PracticalStage]string, len(values))
 	for _, raw := range values {
-		if strings.TrimSpace(raw) == "" {
+		normalizedRaw := strings.ToLower(strings.TrimSpace(raw))
+		if normalizedRaw == "" {
 			continue
 		}
-		stage, ok := parsePracticalStage(raw)
+		stage, ok := parsePracticalStage(normalizedRaw)
 		if !ok {
-			return nil, fmt.Errorf("unsupported specify_tasks value: %s", strings.TrimSpace(raw))
+			return nil, fmt.Errorf("unsupported specify_tasks value: %s", normalizedRaw)
 		}
 		if _, exists := seen[stage]; exists {
 			return nil, fmt.Errorf("specify_tasks contains duplicate stage %q", stage)
 		}
-		seen[stage] = struct{}{}
+		seen[stage] = normalizedRaw
 	}
 
 	out := make([]string, 0, len(seen))

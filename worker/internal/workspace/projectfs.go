@@ -3,6 +3,7 @@ package workspace
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -59,7 +60,7 @@ func EnsureReplayProjectDir(sourceProjectID, targetProjectID string) error {
 		}
 		return err
 	}
-	return fsx.CopyDir(sourceDir, targetDir)
+	return copyReplayProjectDir(sourceDir, targetDir)
 }
 
 func WriteRequestPayload(projectID string, payload interface{}) error {
@@ -88,4 +89,39 @@ func LoadRequestPayloadMap(projectID string) (map[string]interface{}, error) {
 		return nil, fmt.Errorf("project request payload invalid for %s: %w", projectID, err)
 	}
 	return payload, nil
+}
+
+func copyReplayProjectDir(src, dst string) error {
+	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		if isReplayTransientPath(rel, d) {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		targetPath := filepath.Join(dst, rel)
+		if d.IsDir() {
+			return os.MkdirAll(targetPath, 0o755)
+		}
+		return fsx.CopyFile(path, targetPath)
+	})
+}
+
+func isReplayTransientPath(rel string, d fs.DirEntry) bool {
+	if strings.TrimSpace(rel) == "." {
+		return false
+	}
+	if !d.IsDir() {
+		return false
+	}
+	name := strings.TrimSpace(filepath.Base(rel))
+	return strings.HasPrefix(name, "mfa_align_")
 }

@@ -35,12 +35,15 @@ func RegisterApiRoutes(r *gin.Engine) {
 	}
 
 	publicPodcastScriptCtrl := new(clientCtrl.PublicPodcastScriptController)
+	publicPracticalScriptCtrl := new(clientCtrl.PublicPracticalScriptController)
 	publicProductCtrl := new(clientCtrl.PublicProductController)
 	publicGroup := v1.Group("/public")
 	publicGroup.Use(middlewares.LimitIP("1000-H"))
 	{
 		publicGroup.GET("/podcast/scripts", publicPodcastScriptCtrl.ListPages)
 		publicGroup.GET("/podcast/scripts/:slug", publicPodcastScriptCtrl.ShowPage)
+		publicGroup.GET("/practical/scripts", publicPracticalScriptCtrl.ListPages)
+		publicGroup.GET("/practical/scripts/:slug", publicPracticalScriptCtrl.ShowPage)
 		publicGroup.GET("/products/:locale", publicProductCtrl.ListProducts)
 		publicGroup.GET("/products/:locale/:slug", publicProductCtrl.ShowProduct)
 	}

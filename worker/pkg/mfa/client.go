@@ -3,6 +3,7 @@ package mfa
 import (
 	"context"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -20,6 +21,9 @@ type Config struct {
 	TemporaryDirectory string
 	Beam               int
 	RetryBeam          int
+	Verbose            bool
+	Debug              bool
+	UsePostgres        bool
 
 	MandarinDictionary    string
 	MandarinAcousticModel string
@@ -111,10 +115,11 @@ func (c *Client) AlignWords(ctx context.Context, req AlignRequest) ([]WordTiming
 		lastErr    error
 		lastOutput string
 		outputDir  string
+		tempDir    string
 	)
 	for attemptIndex, attempt := range attempts {
 		outputDir = filepath.Join(runDir, fmt.Sprintf("output_attempt_%d", attemptIndex+1))
-		tempDir := firstNonEmpty(strings.TrimSpace(c.cfg.TemporaryDirectory), filepath.Join(runDir, fmt.Sprintf("tmp_attempt_%d", attemptIndex+1)))
+		tempDir = firstNonEmpty(strings.TrimSpace(c.cfg.TemporaryDirectory), filepath.Join(runDir, fmt.Sprintf("tmp_attempt_%d", attemptIndex+1)))
 		if err := os.MkdirAll(outputDir, 0o755); err != nil {
 			return nil, err
 		}
@@ -137,6 +142,15 @@ func (c *Client) AlignWords(ctx context.Context, req AlignRequest) ([]WordTiming
 			"--retry_beam", strconv.Itoa(attempt.RetryBeam),
 			"-q",
 		}
+		if c.cfg.Verbose {
+			args = append(args, "--verbose")
+		}
+		if c.cfg.Debug {
+			args = append(args, "--debug")
+		}
+		if c.cfg.UsePostgres {
+			args = append(args, "--use_postgres")
+		}
 		if strings.TrimSpace(g2pModel) != "" {
 			args = append(args, "--g2p_model_path", g2pModel)
 		}
@@ -154,12 +168,20 @@ func (c *Client) AlignWords(ctx context.Context, req AlignRequest) ([]WordTiming
 		}
 	}
 	if lastErr != nil {
+		recoverErrMsg := ""
+		if shouldAttemptArchiveRecovery(lastOutput) {
+			if words, recoverErr := extractWordTimingsFromAlignmentArchive(ctx, commandPath, filepath.Join(tempDir, "corpus")); recoverErr == nil && len(words) > 0 {
+				return words, nil
+			} else if recoverErr != nil {
+				recoverErrMsg = fmt.Sprintf(" archive_recovery_error=%v", recoverErr)
+			}
+		}
 		keepRunDir = true
 		debugPath, writeErr := preserveFailureOutput(runDir, lastOutput)
 		if writeErr != nil {
-			return nil, services.NonRetryableError{Err: fmt.Errorf("mfa align failed: %w output=%s debug_write_error=%v", lastErr, lastOutput, writeErr)}
+			return nil, services.NonRetryableError{Err: fmt.Errorf("mfa align failed: %w output=%s debug_write_error=%v%s", lastErr, lastOutput, writeErr, recoverErrMsg)}
 		}
-		return nil, services.NonRetryableError{Err: fmt.Errorf("mfa align failed: %w output=%s debug_dir=%s", lastErr, lastOutput, debugPath)}
+		return nil, services.NonRetryableError{Err: fmt.Errorf("mfa align failed: %w output=%s debug_dir=%s%s", lastErr, lastOutput, debugPath, recoverErrMsg)}
 	}
 
 	csvPath, err := firstAlignmentCSVFile(outputDir)
@@ -169,6 +191,11 @@ func (c *Client) AlignWords(ctx context.Context, req AlignRequest) ([]WordTiming
 	words, err := parseCSVWordTimings(csvPath)
 	if err != nil {
 		return nil, err
+	}
+	if len(words) == 0 {
+		if recovered, recoverErr := extractWordTimingsFromAlignmentArchive(ctx, commandPath, filepath.Join(tempDir, "corpus")); recoverErr == nil && len(recovered) > 0 {
+			return recovered, nil
+		}
 	}
 	return words, nil
 }
@@ -210,6 +237,189 @@ func preserveFailureOutput(runDir, output string) (string, error) {
 	}
 	return runDir, nil
 }
+
+func shouldAttemptArchiveRecovery(output string) bool {
+	value := strings.ToLower(strings.TrimSpace(output))
+	return strings.Contains(value, "word_interval_temp") ||
+		strings.Contains(value, "phone_interval_temp") ||
+		strings.Contains(value, "collecting phone and word alignments")
+}
+
+type archiveWordTiming struct {
+	Text    string `json:"text"`
+	StartMS int    `json:"start_ms"`
+	EndMS   int    `json:"end_ms"`
+}
+
+func extractWordTimingsFromAlignmentArchive(ctx context.Context, mfaCommandPath, corpusRoot string) ([]WordTiming, error) {
+	if strings.TrimSpace(corpusRoot) == "" {
+		return nil, fmt.Errorf("mfa archive recovery corpus root is required")
+	}
+	pythonPath, err := resolveMFAPythonPath(mfaCommandPath)
+	if err != nil {
+		return nil, err
+	}
+
+	scriptFile, err := os.CreateTemp("", "mfa_extract_*.py")
+	if err != nil {
+		return nil, err
+	}
+	scriptPath := scriptFile.Name()
+	if err := scriptFile.Close(); err != nil {
+		_ = os.Remove(scriptPath)
+		return nil, err
+	}
+	defer os.Remove(scriptPath)
+
+	if err := os.WriteFile(scriptPath, []byte(mfaArchiveExtractionScript), 0o644); err != nil {
+		return nil, err
+	}
+
+	cmd := exec.CommandContext(ctx, pythonPath, scriptPath, corpusRoot)
+	raw, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("mfa archive recovery failed: %w output=%s", err, strings.TrimSpace(string(raw)))
+	}
+
+	var recovered []archiveWordTiming
+	if err := json.Unmarshal(raw, &recovered); err != nil {
+		return nil, fmt.Errorf("mfa archive recovery parse failed: %w output=%s", err, strings.TrimSpace(string(raw)))
+	}
+	words := make([]WordTiming, 0, len(recovered))
+	for _, item := range recovered {
+		text := strings.TrimSpace(item.Text)
+		if text == "" {
+			continue
+		}
+		startMS := item.StartMS
+		endMS := item.EndMS
+		if endMS <= startMS {
+			endMS = startMS + 1
+		}
+		words = append(words, WordTiming{
+			Text:    text,
+			StartMS: startMS,
+			EndMS:   endMS,
+		})
+	}
+	return words, nil
+}
+
+func resolveMFAPythonPath(mfaCommandPath string) (string, error) {
+	candidates := make([]string, 0, 4)
+	dir := filepath.Dir(strings.TrimSpace(mfaCommandPath))
+	if dir != "." && dir != "" {
+		candidates = append(candidates,
+			filepath.Join(dir, "python"),
+			filepath.Join(dir, "python3"),
+		)
+	}
+	candidates = append(candidates, "python3", "python")
+
+	for _, candidate := range candidates {
+		if strings.TrimSpace(candidate) == "" {
+			continue
+		}
+		if filepath.IsAbs(candidate) {
+			if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+				return candidate, nil
+			}
+			continue
+		}
+		path, err := exec.LookPath(candidate)
+		if err == nil {
+			return path, nil
+		}
+	}
+	return "", fmt.Errorf("python executable for MFA archive recovery not found")
+}
+
+const mfaArchiveExtractionScript = `
+import json
+import sys
+from pathlib import Path
+
+from kalpy.gmm.data import AlignmentArchive
+from kalpy.gmm.utils import read_transition_model
+from montreal_forced_aligner.db import Utterance
+from montreal_forced_aligner.db import Dictionary as MFADictionary
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+
+def pick_file(root: Path, patterns):
+    for pattern in patterns:
+        matches = sorted(root.glob(pattern))
+        for match in matches:
+            if match.exists() and match.is_file():
+                return match.resolve()
+    return None
+
+
+def main():
+    corpus_root = Path(sys.argv[1]).resolve()
+    db_path = corpus_root / "corpus.db"
+    alignment_dir = corpus_root / "alignment"
+    if not db_path.exists():
+        raise FileNotFoundError(f"corpus.db not found: {db_path}")
+    if not alignment_dir.exists():
+        raise FileNotFoundError(f"alignment dir not found: {alignment_dir}")
+
+    ali_path = pick_file(alignment_dir, ["ali.*.ark", "ali_first_pass.*.ark"])
+    words_path = pick_file(alignment_dir, ["words.*.ark", "words_first_pass.*.ark"])
+    likes_path = pick_file(alignment_dir, ["likelihoods.*.ark", "likelihoods_first_pass.*.ark"])
+    model_path = alignment_dir / "final.alimdl"
+    if ali_path is None or words_path is None or likes_path is None:
+        raise FileNotFoundError("alignment archive files not found")
+    if not model_path.exists():
+        raise FileNotFoundError(f"alignment model not found: {model_path}")
+
+    engine = create_engine("sqlite:///" + str(db_path))
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    dictionary = session.query(MFADictionary).first()
+    if dictionary is None:
+        raise RuntimeError("mfa dictionary row not found")
+
+    transition_model = read_transition_model(str(model_path))
+    archive = None
+    out = []
+    try:
+        archive = AlignmentArchive(str(ali_path), words_file_name=str(words_path), likelihood_file_name=str(likes_path))
+        for alignment in archive:
+            intervals = alignment.generate_ctm(transition_model, dictionary.lexicon_compiler.phone_table, 0.01)
+            utterance_id = int(str(alignment.utterance_id).split("-")[-1])
+            text = session.query(Utterance.normalized_text).filter(Utterance.id == utterance_id).scalar()
+            ctm = dictionary.lexicon_compiler.phones_to_pronunciations(
+                alignment.words,
+                intervals,
+                transcription=False,
+                text=text,
+            )
+            for word_interval in ctm.word_intervals:
+                label = str(getattr(word_interval, "label", "")).strip()
+                if label == "" or label in {"<eps>", "sil", "sp", "spn"}:
+                    continue
+                start_ms = int(round(float(word_interval.begin) * 1000))
+                end_ms = int(round(float(word_interval.end) * 1000))
+                if end_ms <= start_ms:
+                    end_ms = start_ms + 1
+                out.append({
+                    "text": label,
+                    "start_ms": start_ms,
+                    "end_ms": end_ms,
+                })
+    finally:
+        if archive is not None:
+            archive.close()
+        session.close()
+
+    print(json.dumps(out, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()
+`
 
 func (c *Client) modelsForLanguage(language string) (string, string, string, error) {
 	switch strings.ToLower(strings.TrimSpace(language)) {

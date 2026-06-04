@@ -4,100 +4,106 @@
 你的任务是读取“第一阶段 JSON”，并在其基础上补全最终版 JSON。
 
 你现在要做的是：
-1. 生成顶层 `vocabulary`
-2. 生成顶层 `grammar`
-3. 生成 `blocks.chapter.block.tokens`
-4. 精致修改输入的第一阶段的 json 的数据，制作字段补齐操作
-4. 输出最终完整 JSON
+1. 生成顶层 `youtube`
+2. 生成顶层 `vocabulary`
+3. 生成顶层 `grammar`
+4. 补全 `blocks[].chapters[].turns[].tokens`
+5. 输出最终完整 JSON
+
+注意：
+- 第一阶段 JSON 中已有的结构和文本内容原则上保持不变。
+- 只补全第二阶段需要新增或完善的字段。
+- `blocks` 内除 `turns[].tokens` 外，不要随意改写原有内容。
 
 【YouTube 规则】
-- youtube.publish_title 格式必须为：English Title | 日本語タイトル
-- youtube.publish_title 要自然、有吸引力、适合语言学习频道
-- youtube.hashtags 必须提供 5 到 6 个适合写进标题或 description 的 hashtag，格式必须带 #
-- youtube.video_tags 必须提供 6 到 10 个适合 YouTube Studio Tags 字段的普通关键词，不能带 #
-- 所有 hashtag 和 video_tags 必须与日语频道一致，禁止出现中文学习、汉语学习、HSK、mandarin、中文、汉语等标签
-- youtube.in_this_episode_you_will_learn 必须包含 3 到 5 条自然英文 bullet
-- youtube.description_intro 必须包含 2 到 4 段英文简介
-- youtube.chapters 必须完整，适合 YouTube description 使用
-- chapter 每个 chapter 对应一个block 标题必须是用户可读标题
-- 每个 chapter 应当对应一个清晰的讨论阶段或主题角度
+- `youtube.publish_title` 格式必须为：`English Title | 日本語タイトル`
+- `youtube.publish_title` 要自然、有吸引力、适合语言学习频道。
+- `youtube.hashtags` 必须提供 5 到 6 个适合写进标题或 description 的 hashtag，格式必须带 `#`。
+- `youtube.video_tags` 必须提供 6 到 10 个适合 YouTube Studio Tags 字段的普通关键词，不能带 `#`。
+- 所有 hashtag 和 video_tags 必须与日语频道一致，禁止出现中文学习、汉语学习、HSK、mandarin、中文、汉语等标签。
+- `youtube.in_this_episode_you_will_learn` 必须包含 3 到 5 条自然英文 bullet。
+- `youtube.description_intro` 必须包含 2 到 4 段英文简介。
+- `youtube.chapters` 必须完整，适合 YouTube description 使用。
+- `youtube.chapters` 中每一项对应一个实际 chapter。
+- `youtube.chapters[].chapter_id` 必须引用 `blocks[].chapters[].chapter_id`。
+- 每个 chapter 标题必须是用户可读标题，并对应一个清晰的具体场景。
 
 【vocabulary 规则】
-- vocabulary 是给脚本页直接入库使用的顶层 JSON 数组
-- 建议输出 5 到 8 个词汇
-- 只选择本集最值得学习、最适合页面展示的词汇
+- `vocabulary` 是给脚本页直接入库使用的顶层 JSON 数组。
+- 建议输出 5 到 8 个词汇。
+- 只选择本集最值得学习、最适合页面展示的词汇。
 - 每个词汇必须包含：
-  - term
-  - tokens
-  - meaning
-  - explanation
-  - examples
-- term 必须是日文原文
-- tokens 必须用于给 term 中出现的汉字或汉字词补全读音
-- meaning 必须使用英文表述
-- explanation 必须使用英文表述
-- examples 至少 2 条
+  - `term`
+  - `tokens`
+  - `meaning`
+  - `explanation`
+  - `examples`
+- `term` 必须是日文原文。
+- `tokens` 必须用于给 `term` 中出现的汉字或汉字词补全读音。
+- `meaning` 必须使用英文表述。
+- `explanation` 必须使用英文表述。
+- `examples` 至少 2 条。
 - 每条 example 必须包含：
-  - text
-  - tokens
-  - translation
-- example.tokens 必须用于给 example.text 中出现的汉字或汉字词补全读音
-- 第一个 example 优先直接使用 transcript 原句，或者只做轻微改写
-- 第二个 example 可以自由发挥，但必须通俗易懂、自然、适合学习者理解
+  - `text`
+  - `tokens`
+  - `translation`
+- `example.tokens` 必须用于给 `example.text` 中出现的汉字或汉字词补全读音。
+- 第一个 example 优先直接使用 transcript 原句，或者只做轻微改写。
+- 第二个 example 可以自由发挥，但必须通俗易懂、自然、适合学习者理解。
 
 【grammar 规则】
-- grammar 是给脚本页直接入库使用的顶层 JSON 数组
-- 建议输出 3 到 5 个语法点
-- 只选择本集最值得讲解、最有学习价值的语法结构
+- `grammar` 是给脚本页直接入库使用的顶层 JSON 数组。
+- 建议输出 3 到 5 个语法点。
+- 只选择本集最值得讲解、最有学习价值的语法结构。
 - 每个语法点必须包含：
-  - pattern
-  - tokens
-  - meaning
-  - explanation
-  - examples
-- pattern 必须是日文语法模式
-- tokens 必须用于给 pattern 中出现的汉字或汉字词补全读音
-- meaning 必须使用英文表述
-- explanation 必须使用英文表述
-- 如果 pattern 中没有汉字，也必须显式输出空数组：tokens: []
-- examples 至少 2 条
+  - `pattern`
+  - `tokens`
+  - `meaning`
+  - `explanation`
+  - `examples`
+- `pattern` 必须是日文语法模式。
+- `tokens` 必须用于给 `pattern` 中出现的汉字或汉字词补全读音。
+- 如果 `pattern` 中没有汉字，也必须显式输出空数组：`tokens: []`。
+- `meaning` 必须使用英文表述。
+- `explanation` 必须使用英文表述。
+- `examples` 至少 2 条。
 - 每条 example 必须包含：
-  - text
-  - tokens
-  - translation
-- example.tokens 必须用于给 example.text 中出现的汉字或汉字词补全读音
-- 第一个 example 优先使用 transcript 原句，或者只做轻微改写
-- 第二个 example 可以自由发挥，但必须通俗易懂、自然、适合学习者理解
+  - `text`
+  - `tokens`
+  - `translation`
+- `example.tokens` 必须用于给 `example.text` 中出现的汉字或汉字词补全读音。
+- 第一个 example 优先使用 transcript 原句，或者只做轻微改写。
+- 第二个 example 可以自由发挥，但必须通俗易懂、自然、适合学习者理解。
 
 【turns.tokens 规则】
-- turns.tokens 用于给 turns.text 中出现的需要注音的汉字或汉字词补全平假名读音
-- 每个 token 格式为：{ "char": "text 中出现的原文子串", "reading": "对应平假名读音" }
-- tokens 必须严格按 text 中汉字或汉字词从左到右顺序排列
-- token.char 中只能出现汉字，不能带平假名、片假名、标点、英文字符
-- 允许按自然词组标注，例如 { "char": "最近", "reading": "さいきん" }
-- 也允许在必要时按单个汉字标注，例如 { "char": "気", "reading": "き" }
-- 不能写成跨越汉字和假名的整段，例如不能写 { "char": "今日の話題", "reading": "きょうのわだい" }
-- text 中只要出现汉字或汉字词，就必须提供对应 tokens
-- 不允许漏标，不允许顺序错乱，不允许给不存在于 text 中的内容添加 token
+- `turns.tokens` 用于给 `turns.text` 中出现的需要注音的汉字或汉字词补全平假名读音。
+- 每个 token 格式为：`{ "char": "text 中出现的原文子串", "reading": "对应平假名读音" }`
+- tokens 必须严格按 text 中汉字或汉字词从左到右顺序排列。
+- `token.char` 中只能出现汉字，不能带平假名、片假名、标点、英文字符。
+- 允许按自然词组标注，例如 `{ "char": "最近", "reading": "さいきん" }`。
+- 也允许在必要时按单个汉字标注，例如 `{ "char": "気", "reading": "き" }`。
+- 不能写成跨越汉字和假名的整段，例如不能写 `{ "char": "今日の話題", "reading": "きょうのわだい" }`。
+- text 中只要出现汉字或汉字词，就必须提供对应 tokens。
+- 不允许漏标，不允许顺序错乱，不允许给不存在于 text 中的内容添加 token。
 
 【输出前处理要求】
 在输出前必须检查：
-1. 顶层结构是否与要求一致
-2. 是否新增了 `youtube` / `vocabulary` / `grammar`
-3. `blocks` 是否保持完全不变
-4. `youtube.chapters[].block_id` 是否都能在 `blocks[].block_id` 中找到
-5. `vocabulary` 是否有 5 到 8 项
-6. `grammar` 是否有 3 到 5 项
-7. `vocabulary.tokens` 和 `grammar.tokens` 是否都使用 `char` / `reading`
-8. 是否没有输出 `seo_*`
+1. 顶层结构是否与要求一致。
+2. 是否新增了 `youtube` / `vocabulary` / `grammar`。
+3. `blocks` 原有结构和文本内容是否保持不变。
+4. `turns.tokens` 是否已按规则补全。
+5. `youtube.chapters[].chapter_id` 是否都能在 `blocks[].chapters[].chapter_id` 中找到。
+6. `vocabulary` 是否有 5 到 8 项。
+7. `grammar` 是否有 3 到 5 项。
+8. `vocabulary.tokens`、`grammar.tokens`、`turns.tokens` 是否都使用 `char` / `reading`。
 
 【输出要求】
-- 只输出合法 JSON
-- 不输出 Markdown
-- 不输出代码块
-- 不输出注释
-- 不输出任何解释性文字
-- 不得输出未定义的额外字段
+- 只输出合法 JSON。
+- 不输出 Markdown。
+- 不输出代码块。
+- 不输出注释。
+- 不输出任何解释性文字。
+- 不得输出未定义的额外字段。
 
 【最终输出格式】
 {
@@ -117,9 +123,9 @@
         "publish_title": "English Title | 日本語タイトル",
         "chapters": [
             {
-                "block_id": "ch_001",
-                "title_en": "Topic Hook",
-                "title": "話題の入り口"
+                "chapter_id": "ch_01",
+                "title_en": "Ordering Food at a Japanese Restaurant",
+                "title": "飲食店で注文する"
             }
         ],
         "in_this_episode_you_will_learn": [
@@ -130,12 +136,17 @@
         "hashtags": [
             "#StudyJapanese",
             "#JapaneseListening",
-            "#LearnJapanese"
+            "#LearnJapanese",
+            "#JapanesePodcast",
+            "#JLPT"
         ],
         "video_tags": [
             "learn japanese",
             "japanese listening practice",
-            "japanese podcast"
+            "japanese podcast",
+            "jlpt listening",
+            "practical japanese",
+            "japanese conversation"
         ],
         "description_intro": [
             "First English paragraph for YouTube description.",
@@ -242,7 +253,7 @@
     "blocks": [
         {
             "block_id": "block_01",
-            "block_scene_prompt": "prompt"
+            "block_prompt": "prompt",
             "topic": "スーパーで買い物",
             "topic_translations": {
                 "en": "Shopping at the supermarket",
@@ -259,7 +270,7 @@
                 },
                 {
                     "speaker_id": "male",
-                    "speaker_role": "waiter"
+                    "speaker_role": "clerk"
                 }
             ],
             "chapters": [
@@ -280,7 +291,7 @@
                             "turn_id": "ch01_t01",
                             "speaker_role": "customer",
                             "text": "すみません。牛乳はどこですか？",
-                            "speech_text": "すみません。ぎゅうにゅう は どこ です か？",
+                            "speech_text": "すみません。牛乳はどこですか？",
                             "translations": {
                                 "en": "Excuse me. Where is the milk?",
                                 "es-419": "Disculpe. ¿Dónde está la leche?",
@@ -303,4 +314,4 @@
     ]
 }
 
-文件为第一阶段的 JSON 文件，请在其基础上补全最终结果，并且给我可以下载的完整的 JSON 文件，文件名称设置为 en_title 的snake的形式。
+文件为第一阶段的 JSON 文件，请在其基础上补全最终结果，并且给我可以下载的完整的 JSON 文件，文件名称设置为 `en_title` 的 snake_case 形式。

@@ -106,6 +106,100 @@ export interface PodcastScriptListItem {
   published_at?: string;
 }
 
+export interface PracticalScriptSpeaker {
+  speaker_id?: string;
+  speaker_role: string;
+  speaker_prompt?: string;
+  name?: string;
+}
+
+export interface PracticalScriptTurn {
+  turn_id: string;
+  speaker_role?: string;
+  speaker_id?: string;
+  text: string;
+  speech_text?: string;
+  translations?: Record<string, string>;
+  tokens?: PhoneticToken[];
+  start_ms?: number;
+  end_ms?: number;
+}
+
+export interface PracticalScriptChapter {
+  chapter_id: string;
+  scene?: string;
+  scene_translations?: Record<string, string>;
+  scene_prompt?: string;
+  turns: PracticalScriptTurn[];
+  start_ms?: number;
+  end_ms?: number;
+}
+
+export interface PracticalScriptBlock {
+  block_id: string;
+  topic: string;
+  block_prompt?: string;
+  topic_translations?: Record<string, string>;
+  speakers?: PracticalScriptSpeaker[];
+  chapters: PracticalScriptChapter[];
+  topic_start_ms?: number;
+  topic_end_ms?: number;
+  start_ms?: number;
+  end_ms?: number;
+}
+
+export interface PracticalScriptDocument {
+  schema_version?: string;
+  series_id?: string;
+  episode_id?: string;
+  language?: string;
+  audience_language?: string;
+  difficulty_level?: string;
+  title?: string;
+  en_title?: string;
+  subtitle?: string;
+  summary?: string;
+  translation_locales?: string[];
+  blocks: PracticalScriptBlock[];
+}
+
+export interface PracticalScriptPage {
+  id: number;
+  slug: string;
+  title: string;
+  en_title?: string;
+  subtitle?: string;
+  summary?: string;
+  language: string;
+  audience_language?: string;
+  project_id: string;
+  cover_image_url?: string;
+  video_url?: string;
+  youtube_video_id?: string;
+  youtube_video_url?: string;
+  translation_locales?: string[];
+  seo_title?: string;
+  seo_description?: string;
+  seo_keywords?: string[];
+  canonical_url?: string;
+  published_at?: string;
+  downloads?: DownloadAsset[];
+  script: PracticalScriptDocument;
+  vocabulary?: VocabularyItem[];
+  grammar?: GrammarItem[];
+}
+
+export interface PracticalScriptListItem {
+  id: number;
+  slug: string;
+  title: string;
+  en_title?: string;
+  summary?: string;
+  youtube_video_id?: string;
+  youtube_video_url?: string;
+  published_at?: string;
+}
+
 export interface ProductListItem {
   id: number;
   slug: string;
