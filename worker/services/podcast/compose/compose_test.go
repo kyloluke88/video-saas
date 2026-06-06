@@ -19,6 +19,16 @@ func TestBackgroundImagePathsForUsesOnlyFirstBackground(t *testing.T) {
 	}
 }
 
+func TestBackgroundImagePathsForSupportsJPEGFilename(t *testing.T) {
+	path, err := backgroundImagePathForRequest([]string{"ja10.jpeg"})
+	if err != nil {
+		t.Fatalf("backgroundImagePathForRequest returned err: %v", err)
+	}
+	if got := filepath.Base(path); got != "ja10.jpeg" {
+		t.Fatalf("expected jpeg background filename to be preserved, got %s", got)
+	}
+}
+
 func TestBackgroundImagePathsForRequiresBackgrounds(t *testing.T) {
 	if _, err := backgroundImagePathForRequest(nil); err == nil {
 		t.Fatalf("expected bg_img_filenames required error")
@@ -63,6 +73,9 @@ func TestRenderUsesBaseVideoPath(t *testing.T) {
 		called = true
 		wantBase := filepath.Join(projectDir, "podcast_base.mp4")
 		wantFinal := filepath.Join(projectDir, "podcast_final.mp4")
+		if got := filepath.Base(input.BackgroundImagePath); got != "ja10.jpeg" {
+			t.Fatalf("expected jpeg background path, got %s", got)
+		}
 		if input.OutputPath != wantBase {
 			t.Fatalf("expected render output path %s, got %s", wantBase, input.OutputPath)
 		}
@@ -75,7 +88,7 @@ func TestRenderUsesBaseVideoPath(t *testing.T) {
 	result, err := Render(context.Background(), ComposeInput{
 		ProjectID:      projectID,
 		Language:       "ja",
-		BgImgFilenames: []string{"ja1.png"},
+		BgImgFilenames: []string{"ja10.jpeg"},
 		Resolution:     "480p",
 		DesignStyle:    1,
 	})

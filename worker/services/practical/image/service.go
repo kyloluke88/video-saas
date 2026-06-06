@@ -25,7 +25,7 @@ type GenerateResult struct {
 	Manifest     dto.PracticalImageManifest
 }
 
-func Generate(_ context.Context, input GenerateInput) (GenerateResult, error) {
+func Generate(ctx context.Context, input GenerateInput) (GenerateResult, error) {
 	if strings.TrimSpace(input.ProjectID) == "" {
 		return GenerateResult{}, fmt.Errorf("project_id is required")
 	}
@@ -42,6 +42,7 @@ func Generate(_ context.Context, input GenerateInput) (GenerateResult, error) {
 	}
 
 	return generateFromLocalAssets(
+		ctx,
 		projectDir,
 		script,
 		selectedBlocks,
@@ -50,7 +51,7 @@ func Generate(_ context.Context, input GenerateInput) (GenerateResult, error) {
 	)
 }
 
-func generateFromLocalAssets(projectDir string, script dto.PracticalScript, blocks []dto.PracticalBlock, resolution, aspectRatio string) (GenerateResult, error) {
+func generateFromLocalAssets(ctx context.Context, projectDir string, script dto.PracticalScript, blocks []dto.PracticalBlock, resolution, aspectRatio string) (GenerateResult, error) {
 	plan := buildStaticImagePlan(blocks, resolution, aspectRatio)
 	normalizeLocalPlanAssetFilenames(&plan)
 	if err := writeJSON(projectImagePlanPath(projectDir), plan); err != nil {
@@ -76,7 +77,7 @@ func generateFromLocalAssets(projectDir string, script dto.PracticalScript, bloc
 		item.Filename = resolvedFilename
 
 		targetPath := projectImageAbsolutePath(projectDir, item.Filename)
-		if err := copyFile(sourcePath, targetPath); err != nil {
+		if err := normalizeImageAsset(ctx, sourcePath, targetPath, resolution); err != nil {
 			return GenerateResult{}, err
 		}
 
@@ -98,7 +99,7 @@ func generateFromLocalAssets(projectDir string, script dto.PracticalScript, bloc
 	if err := writeJSON(projectImageManifestPath(projectDir), manifest); err != nil {
 		return GenerateResult{}, err
 	}
-	log.Printf("🖼️ practical image asset-copy mode project_dir=%s manifest=%s", projectDir, projectImageManifestPath(projectDir))
+	log.Printf("🖼️ practical image asset-normalize mode project_dir=%s manifest=%s", projectDir, projectImageManifestPath(projectDir))
 	return GenerateResult{
 		PlanPath:     projectImagePlanPath(projectDir),
 		ManifestPath: projectImageManifestPath(projectDir),

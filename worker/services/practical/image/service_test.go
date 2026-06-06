@@ -1,12 +1,13 @@
 package practical_image_service
 
 import (
-	"bytes"
+	"context"
 	"image"
 	"image/color"
 	"image/jpeg"
 	"image/png"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -35,7 +36,31 @@ func TestBuildStaticImagePlanUsesBundledPNGAssets(t *testing.T) {
 	}
 }
 
-func TestGenerateFromLocalAssetsCopiesExpectedImages(t *testing.T) {
+func requireFFmpeg(t *testing.T) {
+	t.Helper()
+	if _, err := exec.LookPath("ffmpeg"); err != nil {
+		t.Skip("ffmpeg not available")
+	}
+}
+
+func decodeImageConfig(t *testing.T, path string) (image.Config, string) {
+	t.Helper()
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatalf("open %s: %v", path, err)
+	}
+	defer file.Close()
+
+	cfg, format, err := image.DecodeConfig(file)
+	if err != nil {
+		t.Fatalf("decode config %s: %v", path, err)
+	}
+	return cfg, format
+}
+
+func TestGenerateFromLocalAssetsNormalizesExpectedImages(t *testing.T) {
+	requireFFmpeg(t)
+
 	prevWD, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("getwd: %v", err)
@@ -99,15 +124,25 @@ func TestGenerateFromLocalAssetsCopiesExpectedImages(t *testing.T) {
 		},
 	}
 
-	result, err := generateFromLocalAssets(projectDir, script, script.Blocks, "1080p", "16:9")
+	result, err := generateFromLocalAssets(context.Background(), projectDir, script, script.Blocks, "1080p", "16:9")
 	if err != nil {
 		t.Fatalf("generateFromLocalAssets returned error: %v", err)
 	}
-	if !fileExists(projectImageAbsolutePath(projectDir, "images/blocks/block_01.png")) {
+	blockPath := projectImageAbsolutePath(projectDir, "images/blocks/block_01.png")
+	chapterPath := projectImageAbsolutePath(projectDir, "images/chapters/ch_01.png")
+	if !fileExists(blockPath) {
 		t.Fatalf("expected copied block image")
 	}
-	if !fileExists(projectImageAbsolutePath(projectDir, "images/chapters/ch_01.png")) {
+	if !fileExists(chapterPath) {
 		t.Fatalf("expected copied chapter image")
+	}
+	blockCfg, blockFormat := decodeImageConfig(t, blockPath)
+	chapterCfg, chapterFormat := decodeImageConfig(t, chapterPath)
+	if blockCfg.Width != 1920 || blockCfg.Height != 1080 || blockFormat != "png" {
+		t.Fatalf("unexpected block output: %#v format=%s", blockCfg, blockFormat)
+	}
+	if chapterCfg.Width != 1920 || chapterCfg.Height != 1080 || chapterFormat != "png" {
+		t.Fatalf("unexpected chapter output: %#v format=%s", chapterCfg, chapterFormat)
 	}
 	if got := result.Manifest.Provider; got != "local-assets" {
 		t.Fatalf("unexpected provider: %s", got)
@@ -117,7 +152,9 @@ func TestGenerateFromLocalAssetsCopiesExpectedImages(t *testing.T) {
 	}
 }
 
-func TestGenerateFromLocalAssetsPreservesOriginalBytes(t *testing.T) {
+func TestGenerateFromLocalAssetsNormalizesDeclaredExtension(t *testing.T) {
+	requireFFmpeg(t)
+
 	prevWD, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("getwd: %v", err)
@@ -137,25 +174,28 @@ func TestGenerateFromLocalAssetsPreservesOriginalBytes(t *testing.T) {
 		}
 	}
 
-	writeJPEGNamedAsPNG := func(path string, c color.RGBA) []byte {
+	writeJPEGNamedAsPNG := func(path string, c color.RGBA) {
 		img := image.NewRGBA(image.Rect(0, 0, 8, 8))
 		for y := 0; y < 8; y++ {
 			for x := 0; x < 8; x++ {
 				img.Set(x, y, c)
 			}
 		}
-		var buf bytes.Buffer
-		if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 85}); err != nil {
+		file, err := os.Create(path)
+		if err != nil {
+			t.Fatalf("create %s: %v", path, err)
+		}
+		if err := jpeg.Encode(file, img, &jpeg.Options{Quality: 85}); err != nil {
+			_ = file.Close()
 			t.Fatalf("encode jpeg %s: %v", path, err)
 		}
-		if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
-			t.Fatalf("write %s: %v", path, err)
+		if err := file.Close(); err != nil {
+			t.Fatalf("close %s: %v", path, err)
 		}
-		return buf.Bytes()
 	}
 
-	sourceBlock := writeJPEGNamedAsPNG(filepath.Join(bgDir, "blocks", "block_01.png"), color.RGBA{R: 255, A: 255})
-	sourceChapter := writeJPEGNamedAsPNG(filepath.Join(bgDir, "chapters", "ch_01.png"), color.RGBA{B: 255, A: 255})
+	writeJPEGNamedAsPNG(filepath.Join(bgDir, "blocks", "block_01.png"), color.RGBA{R: 255, A: 255})
+	writeJPEGNamedAsPNG(filepath.Join(bgDir, "chapters", "ch_01.png"), color.RGBA{B: 255, A: 255})
 
 	projectDir := projectDirFor("local-preserve")
 	script := dto.PracticalScript{
@@ -183,29 +223,25 @@ func TestGenerateFromLocalAssetsPreservesOriginalBytes(t *testing.T) {
 		},
 	}
 
-	if _, err := generateFromLocalAssets(projectDir, script, script.Blocks, "720p", "16:9"); err != nil {
+	if _, err := generateFromLocalAssets(context.Background(), projectDir, script, script.Blocks, "720p", "16:9"); err != nil {
 		t.Fatalf("generateFromLocalAssets returned error: %v", err)
 	}
 
 	targetBlock := projectImageAbsolutePath(projectDir, "images/blocks/block_01.png")
 	targetChapter := projectImageAbsolutePath(projectDir, "images/chapters/ch_01.png")
-	gotBlock, err := os.ReadFile(targetBlock)
-	if err != nil {
-		t.Fatalf("read target block: %v", err)
+	blockCfg, blockFormat := decodeImageConfig(t, targetBlock)
+	chapterCfg, chapterFormat := decodeImageConfig(t, targetChapter)
+	if blockCfg.Width != 1280 || blockCfg.Height != 720 || blockFormat != "png" {
+		t.Fatalf("unexpected block output: %#v format=%s", blockCfg, blockFormat)
 	}
-	gotChapter, err := os.ReadFile(targetChapter)
-	if err != nil {
-		t.Fatalf("read target chapter: %v", err)
-	}
-	if !bytes.Equal(gotBlock, sourceBlock) {
-		t.Fatalf("block asset bytes changed during local copy")
-	}
-	if !bytes.Equal(gotChapter, sourceChapter) {
-		t.Fatalf("chapter asset bytes changed during local copy")
+	if chapterCfg.Width != 1280 || chapterCfg.Height != 720 || chapterFormat != "png" {
+		t.Fatalf("unexpected chapter output: %#v format=%s", chapterCfg, chapterFormat)
 	}
 }
 
 func TestGenerateFromLocalAssetsUsesJPEGNamedAssets(t *testing.T) {
+	requireFFmpeg(t)
+
 	prevWD, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("getwd: %v", err)
@@ -273,7 +309,7 @@ func TestGenerateFromLocalAssetsUsesJPEGNamedAssets(t *testing.T) {
 		},
 	}
 
-	result, err := generateFromLocalAssets(projectDir, script, script.Blocks, "1080p", "16:9")
+	result, err := generateFromLocalAssets(context.Background(), projectDir, script, script.Blocks, "1080p", "16:9")
 	if err != nil {
 		t.Fatalf("generateFromLocalAssets returned error: %v", err)
 	}
@@ -283,10 +319,20 @@ func TestGenerateFromLocalAssetsUsesJPEGNamedAssets(t *testing.T) {
 	if got := result.Manifest.Chapters[0].Filename; got != "images/chapters/ch_01.jpeg" {
 		t.Fatalf("unexpected chapter filename: %s", got)
 	}
-	if !fileExists(projectImageAbsolutePath(projectDir, "images/blocks/block_01.jpeg")) {
+	blockPath := projectImageAbsolutePath(projectDir, "images/blocks/block_01.jpeg")
+	chapterPath := projectImageAbsolutePath(projectDir, "images/chapters/ch_01.jpeg")
+	if !fileExists(blockPath) {
 		t.Fatalf("expected copied jpeg block image")
 	}
-	if !fileExists(projectImageAbsolutePath(projectDir, "images/chapters/ch_01.jpeg")) {
+	if !fileExists(chapterPath) {
 		t.Fatalf("expected copied jpeg chapter image")
+	}
+	blockCfg, blockFormat := decodeImageConfig(t, blockPath)
+	chapterCfg, chapterFormat := decodeImageConfig(t, chapterPath)
+	if blockCfg.Width != 1920 || blockCfg.Height != 1080 || blockFormat != "jpeg" {
+		t.Fatalf("unexpected block output: %#v format=%s", blockCfg, blockFormat)
+	}
+	if chapterCfg.Width != 1920 || chapterCfg.Height != 1080 || chapterFormat != "jpeg" {
+		t.Fatalf("unexpected chapter output: %#v format=%s", chapterCfg, chapterFormat)
 	}
 }

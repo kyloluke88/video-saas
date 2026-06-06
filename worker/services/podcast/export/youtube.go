@@ -987,10 +987,10 @@ func youtubeIntroAnimationPath(language string) string {
 		return ""
 	}
 	candidates := []string{
-		filepath.Join(conf.Get[string]("worker.worker_assets_dir"), "podcast", "animation", language+"_open.mp4"),
-		filepath.Join("assets", "podcast", "animation", language+"_open.mp4"),
-		filepath.Join("worker", "assets", "podcast", "animation", language+"_open.mp4"),
-		filepath.Join("/Users/luca/go/github.com/luca/video-saas/worker/assets/podcast/animation", language+"_open.mp4"),
+		filepath.Join(conf.Get[string]("worker.worker_assets_dir"), "animation", language+"_open.mp4"),
+		filepath.Join("assets", "animation", language+"_open.mp4"),
+		filepath.Join("worker", "assets", "animation", language+"_open.mp4"),
+		filepath.Join("/Users/luca/go/github.com/luca/video-saas/worker/assets/animation", language+"_open.mp4"),
 	}
 	for _, candidate := range candidates {
 		if fileExists(candidate) {

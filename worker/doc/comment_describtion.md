@@ -14,9 +14,9 @@ https://podcast.lucayo.com/podcast/scripts/daily-morning-routines-and-habits
 ### 日本語
 
 📚 Full script + vocabulary & grammar here 👇
-https://podcast.lucayo.com/practical/scripts/ja-restaurant-ordering-conversation-practice
+https://podcast.lucayo.com/practical/scripts/ja-hotel-check-in-conversation-practice
 Hope this helps with your Japanese study! 😊
 
 📚 完全なスクリプト＋語彙・文法はこちら 👇
-https://podcast.lucayo.com/practical/scripts/ja-restaurant-ordering-conversation-practice
+https://podcast.lucayo.com/practical/scripts/ja-hotel-check-in-conversation-practice
 日本語学習のお役に立てれば嬉しいです！😊

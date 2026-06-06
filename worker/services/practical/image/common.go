@@ -1,14 +1,15 @@
 package practical_image_service
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
+	ffmpegcommon "worker/services/media/ffmpeg/common"
 	dto "worker/services/practical/model"
 )
 
@@ -160,26 +161,45 @@ func fileExists(path string) bool {
 	return err == nil && !info.IsDir()
 }
 
-func copyFile(srcPath, dstPath string) error {
-	src, err := os.Open(srcPath)
-	if err != nil {
-		return err
+func practicalResolutionDimensions(resolution string) (int, int) {
+	switch normalizeResolution(resolution) {
+	case "720p":
+		return 1280, 720
+	default:
+		return 1920, 1080
 	}
-	defer src.Close()
+}
 
+func practicalImageNormalizeFilter(resolution string) string {
+	width, height := practicalResolutionDimensions(resolution)
+	return fmt.Sprintf(
+		"scale=%d:%d:force_original_aspect_ratio=increase:flags=lanczos,crop=%d:%d",
+		width,
+		height,
+		width,
+		height,
+	)
+}
+
+func normalizeImageAsset(ctx context.Context, srcPath, dstPath, resolution string) error {
 	if err := os.MkdirAll(filepath.Dir(dstPath), 0o755); err != nil {
 		return err
 	}
-	dst, err := os.Create(dstPath)
-	if err != nil {
-		return err
-	}
 
-	if _, err := io.Copy(dst, src); err != nil {
-		_ = dst.Close()
-		return err
+	args := []string{
+		"-y",
+		"-i", srcPath,
+		"-vf", practicalImageNormalizeFilter(resolution),
+		"-frames:v", "1",
 	}
-	return dst.Close()
+	switch strings.ToLower(filepath.Ext(dstPath)) {
+	case ".jpg", ".jpeg":
+		args = append(args, "-q:v", "2")
+	case ".webp":
+		args = append(args, "-quality", "95")
+	}
+	args = append(args, dstPath)
+	return ffmpegcommon.RunFFmpegContext(ctx, args...)
 }
 
 func readJSON(path string, out interface{}) error {

@@ -77,7 +77,7 @@ en_title 规则】
 【按 target_duration_minutes 的推荐内容体量】
 - 10 分钟内容：建议 3 到 4 个 chapter、5 到 6 个 block、55 到 70 个 segments
 - 15 分钟内容：建议 5 到 6 个 chapter、7 到 8 个 block、105 到 120 个 segments
-- 20 分钟内容：建议 7 到 8 个 chapter、10 到 11 个 block、120 到 140 个 segments
+- 20 分钟内容：建议 7 到 8 个 chapter、9 到 10 个 block、110 到 130 个 segments
 
 【segment 规则】
 - segment_id 必须按 seg_001、seg_002、seg_003 递增
@@ -206,9 +206,9 @@ Audio events / special（播客场景一般不建议使用）:
 }
 
 现在根据以下输入生成内容：
-topic：ぶっちゃけ年収いくらあれば幸せになれるのか
+topic：喧嘩の仲直り術、男女でアプローチが正反対だった
 difficulty_level：N3
-target_duration_minutes：15
+target_duration_minutes：20
 tts_type: google
 
 请按照规则要求给我生成内容并且给我可以下载的json文件，内容要丰富，chapter，block，segment 数量要足够要求
