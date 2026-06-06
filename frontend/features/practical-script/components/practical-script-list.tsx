@@ -68,7 +68,7 @@ export default function PracticalScriptList({
   heading = "Practical Scripts",
   copy = "Browse all published practical conversation scripts. Click any card to open the full transcript page.",
 }: PracticalScriptListProps) {
-  const recentItems = items.slice(0, 6);
+  const recentItems = items.slice(0, 25);
 
   if (!items.length) {
     return (

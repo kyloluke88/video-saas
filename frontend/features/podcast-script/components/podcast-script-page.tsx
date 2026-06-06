@@ -307,6 +307,34 @@ function downloadLabel(asset: DownloadAsset | undefined, copy: ScriptPageCopy) {
   return asset.label || copy.downloadPDF;
 }
 
+const SPEAKER_BADGE_TONES = [
+  "border-[#f1ca97] bg-[#f9e1bc] text-[#9c6a28]",
+  "border-[#c8cef4] bg-[#d9dcff] text-[#4c689c]",
+  "border-[#bfded8] bg-[#d7ece7] text-[#196d73]",
+  "border-[#ebc1ca] bg-[#f5d4db] text-[#9d586b]",
+];
+
+function podcastSpeakerLabel(line: { speaker?: string; speaker_name?: string }) {
+  return line.speaker_name?.trim() || line.speaker?.trim() || "speaker";
+}
+
+function stablePodcastSpeakerToneIndex(label: string, orderedLabels: string[]) {
+  const directIndex = orderedLabels.indexOf(label);
+  if (directIndex >= 0) {
+    return directIndex % SPEAKER_BADGE_TONES.length;
+  }
+
+  let hash = 0;
+  for (const char of label) {
+    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  }
+  return hash % SPEAKER_BADGE_TONES.length;
+}
+
+function podcastSpeakerBadgeClassName(line: { speaker?: string; speaker_name?: string }, orderedLabels: string[]) {
+  return SPEAKER_BADGE_TONES[stablePodcastSpeakerToneIndex(podcastSpeakerLabel(line), orderedLabels)];
+}
+
 export default function PodcastScriptPageView({
   page,
   sidebarPages,
@@ -321,6 +349,13 @@ export default function PodcastScriptPageView({
   const vocabulary = page.vocabulary ?? [];
   const grammar = page.grammar ?? [];
   const summaryBlocks = summaryParagraphs(page.summary);
+  const speakerLabels = Array.from(
+    new Set(
+      sections.flatMap((section) =>
+        (section.lines ?? []).map((line) => podcastSpeakerLabel(line)).filter(Boolean),
+      ),
+    ),
+  );
   const youtubeVideoId = extractYouTubeVideoId(page);
   const youtubeEmbedUrl = youtubeVideoId ? `https://www.youtube.com/embed/${youtubeVideoId}` : null;
 
@@ -451,12 +486,14 @@ export default function PodcastScriptPageView({
                   <div className="mt-5 space-y-8">
                     {section.lines.map((line, lineIndex) => (
                       <div className="transcript-line" key={`${line.speaker}-${lineIndex}`}>
-                        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-2">
-                          <p className="pt-2 text-lg font-semibold tracking-[0.16em] text-primary md:text-xl">
-                            {(line.speaker_name || line.speaker) + "："}
-                          </p>
+                        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-1.5">
+                          <div
+                            className={`inline-flex min-h-10 items-center justify-center whitespace-nowrap rounded-[1.05rem] border px-2.5 py-1 text-[0.95rem] font-semibold leading-none shadow-[inset_0_1px_0_rgba(255,255,255,0.42)] md:min-h-11 md:px-3.5 md:py-1.5 md:text-[1.02rem] ${podcastSpeakerBadgeClassName(line, speakerLabels)}`}
+                          >
+                            {podcastSpeakerLabel(line)}：
+                          </div>
 
-                          <div className="space-y-2">
+                          <div className="space-y-1.5 pt-0.5">
                             <p className={`${styles.transcriptLineText} text-[1.2rem] leading-[2.2] text-foreground`}>
                               {renderTextWithRuby(line.text, line.ruby)}
                             </p>

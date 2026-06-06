@@ -541,7 +541,7 @@ export default function PracticalScriptPageView({
                                   <div className="transcript-line" key={turn.turn_id || `${chapter.chapter_id}-${turnIndex}`}>
                                     <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-1.5">
                                       <div
-                                        className={`inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-[1.2rem] border px-3.5 py-2 text-base font-semibold leading-none shadow-[inset_0_1px_0_rgba(255,255,255,0.42)] md:min-h-12 md:px-5 md:text-[1.15rem] ${speakerBadgeClassName(turn, block)}`}
+                                        className={`inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-[1.2rem] border px-3 py-1.5 text-base font-semibold leading-none shadow-[inset_0_1px_0_rgba(255,255,255,0.42)] md:min-h-12 md:px-4 md:py-1.5 md:text-[1.15rem] ${speakerBadgeClassName(turn, block)}`}
                                       >
                                         {displaySpeaker(turn, block)}：
                                       </div>

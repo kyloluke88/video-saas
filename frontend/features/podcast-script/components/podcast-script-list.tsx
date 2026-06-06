@@ -64,7 +64,7 @@ type PodcastScriptListProps = {
 };
 
 export default function PodcastScriptList({ items, heading = "Podcast Scripts", copy = "主标题显示 `title`，副标题显示 `en_title`，摘要最多两行，点击卡片进入详情页。" }: PodcastScriptListProps) {
-  const recentItems = items.slice(0, 6);
+  const recentItems = items.slice(0, 25);
 
   if (!items.length) {
     return (

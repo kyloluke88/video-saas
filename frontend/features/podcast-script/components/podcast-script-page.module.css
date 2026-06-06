@@ -97,7 +97,7 @@
 }
 
 .transcriptLineText rt {
-  @apply pb-0.5 text-[0.7em] font-medium tracking-[0.01em] text-primary/80;
+  @apply pb-0.5 text-[0.6em] font-medium tracking-[0.01em] text-primary/80;
 }
 
 .transcriptShell summary::-webkit-details-marker {
@@ -128,13 +128,9 @@
 @media (min-width: 1280px) {
   .sidebarRecentCard {
     --sidebar-list-gap: 0.25rem;
-    --sidebar-list-item-height: 21rem;
   }
 
   .sidebarRecentList {
-    max-height: calc((var(--sidebar-list-item-height) * 8.5) + (var(--sidebar-list-gap) * 7.5));
-    overflow-y: auto;
     padding-right: 0.25rem;
-    scrollbar-gutter: stable;
   }
 }

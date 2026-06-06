@@ -55,6 +55,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function PracticalScriptDetailPage({ params }: Props) {
+  const sidebarPageLimit = 25;
   const { slug } = await params;
   const page = await getPracticalScriptPage(normalizeSlug(slug)).catch(() => null);
 
@@ -73,8 +74,8 @@ export default async function PracticalScriptDetailPage({ params }: Props) {
   };
 
   const language = normalizeScriptLanguage(page.language);
-  const sidebarPages = await getPracticalScriptList(10, language)
-    .then((items) => items.filter((item) => item.slug !== page.slug).slice(0, 6))
+  const sidebarPages = await getPracticalScriptList(sidebarPageLimit + 1, language)
+    .then((items) => items.filter((item) => item.slug !== page.slug).slice(0, sidebarPageLimit))
     .catch(() => []);
 
   return (
