@@ -12,35 +12,6 @@ import (
 	dto "worker/services/podcast/model"
 )
 
-func TestBuildPageUpsertFromProjectDir(t *testing.T) {
-	projectID := "ja_podcast_20260501082944"
-	projectDir := filepath.Clean(filepath.Join("..", "..", "..", "outputs", "projects", projectID))
-
-	upsert, err := BuildPageUpsertFromProjectDir(projectDir, PersistInput{
-		ProjectID: projectID,
-		VideoURL:  "https://cdn.example.com/projects/zh_podcast_20260401165006_json/final.mp4",
-	})
-	if err != nil {
-		t.Fatalf("BuildPageUpsertFromProjectDir failed: %v", err)
-	}
-
-	if upsert.ProjectID != projectID {
-		t.Fatalf("unexpected project_id: %s", upsert.ProjectID)
-	}
-	if upsert.Title == "" || !strings.Contains(upsert.Title, "ゴールデンウィークの小さな旅") {
-		t.Fatalf("unexpected title: %s", upsert.Title)
-	}
-	if upsert.VideoURL == "" || !strings.Contains(upsert.VideoURL, "cdn.example.com") {
-		t.Fatalf("unexpected video_url: %s", upsert.VideoURL)
-	}
-	if len(upsert.Script) == 0 || !strings.Contains(string(upsert.Script), "\"sections\"") {
-		t.Fatalf("script json was not built correctly: %s", string(upsert.Script))
-	}
-	if upsert.Slug != "golden-week-mini-trip-kamakura" {
-		t.Fatalf("unexpected slug: %s", upsert.Slug)
-	}
-}
-
 func TestBuildPageUpsertFromProjectDirIncludesVocabularyAndGrammar(t *testing.T) {
 	projectDir := t.TempDir()
 
@@ -220,15 +191,14 @@ func TestBuildPageSlugStripsPunctuationFromEnTitle(t *testing.T) {
 	}
 }
 
-func TestBuildPageUpsertFromReplayProjectDirKeepsBaseSlug(t *testing.T) {
+func TestBuildPageUpsertFromProjectDirKeepsBaseSlug(t *testing.T) {
 	projectDir := t.TempDir()
 
 	requestPayload := `{
 		"lang":"ja",
 		"title":"テストタイトル",
 		"script_filename":"test.json",
-		"run_mode":1,
-		"source_project_id":"ja_podcast_source"
+		"run_mode":1
 	}`
 	scriptAligned := `{
 		"language":"ja",
@@ -268,15 +238,8 @@ func TestBuildPageUpsertFromReplayProjectDirKeepsBaseSlug(t *testing.T) {
 	}
 }
 
-func TestBuildReplayPageSlugUsesLanguageSuffix(t *testing.T) {
-	slug := buildReplayPageSlug("what-happened-in-the-first-episode", "ja")
-	if slug != "what-happened-in-the-first-episode-ja" {
-		t.Fatalf("unexpected slug: %s", slug)
-	}
-}
-
-func TestBuildReplayPageSlugFallsBackToBaseWhenLanguageMissing(t *testing.T) {
-	slug := buildReplayPageSlug("what-happened-in-the-first-episode", "")
+func TestBuildPageSlugUsesEnglishTitle(t *testing.T) {
+	slug := buildPageSlug(dto.PodcastScript{EnTitle: "What Happened in the First Episode"})
 	if slug != "what-happened-in-the-first-episode" {
 		t.Fatalf("unexpected slug: %s", slug)
 	}

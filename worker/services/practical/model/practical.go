@@ -8,18 +8,18 @@ import (
 )
 
 type PracticalAudioGeneratePayload struct {
-	ProjectID       string   `json:"project_id"`
-	SourceProjectID string   `json:"source_project_id,omitempty"`
-	Lang            string   `json:"lang"`
-	TTSType         int      `json:"tts_type,omitempty"`
-	RunMode         int      `json:"run_mode"`
-	SpecifyTasks    []string `json:"specify_tasks,omitempty"`
-	BlockNums       []int    `json:"block_nums,omitempty"`
-	ChapterNums     []int    `json:"chapter_nums,omitempty"`
-	ScriptFilename  string   `json:"script_filename"`
-	Resolution      string   `json:"resolution,omitempty"`
-	AspectRatio     string   `json:"aspect_ratio,omitempty"`
-	DesignType      int      `json:"design_type,omitempty"`
+	ProjectID      string `json:"project_id"`
+	Lang           string `json:"lang"`
+	TTSType        int    `json:"tts_type,omitempty"`
+	RunMode        int    `json:"run_mode"`
+	StartFrom      string `json:"start_from,omitempty"`
+	StopAt         string `json:"stop_at,omitempty"`
+	BlockNums      []int  `json:"block_nums,omitempty"`
+	ChapterNums    []int  `json:"chapter_nums,omitempty"`
+	ScriptFilename string `json:"script_filename"`
+	Resolution     string `json:"resolution,omitempty"`
+	AspectRatio    string `json:"aspect_ratio,omitempty"`
+	DesignType     int    `json:"design_type,omitempty"`
 }
 
 type PracticalScript struct {

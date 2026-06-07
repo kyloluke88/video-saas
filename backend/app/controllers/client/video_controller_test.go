@@ -3,6 +3,8 @@ package client
 import (
 	"regexp"
 	"testing"
+
+	"api/app/requests/client/video"
 )
 
 func TestBuildPodcastProjectIDUsesFixedTimestampPattern(t *testing.T) {
@@ -13,49 +15,63 @@ func TestBuildPodcastProjectIDUsesFixedTimestampPattern(t *testing.T) {
 	}
 }
 
-func TestBuildPodcastReplayProjectIDUsesFixedReplayPattern(t *testing.T) {
-	projectID := buildPodcastReplayProjectID("zh_podcast_20260408154607")
-	pattern := regexp.MustCompile(`^zh_podcast_20260408154607__rm1__\d{14}$`)
-	if !pattern.MatchString(projectID) {
-		t.Fatalf("unexpected replay project_id format: %s", projectID)
+func TestResolvePodcastProjectIDKeepsOriginalProjectForRerun(t *testing.T) {
+	projectID, err := resolvePodcastProjectID(video.CreatePodcastDialogueRequest{
+		ProjectID: "zh_podcast_20260408154607",
+	}, 1)
+	if err != nil {
+		t.Fatalf("resolvePodcastProjectID returned err: %v", err)
+	}
+	if projectID != "zh_podcast_20260408154607" {
+		t.Fatalf("unexpected rerun project id: %s", projectID)
 	}
 }
 
-func TestBuildPodcastReplayProjectIDAlwaysUsesRootProjectID(t *testing.T) {
-	projectID := buildPodcastReplayProjectID("zh_podcast_20260408154607__rm1__20260409171630")
-	pattern := regexp.MustCompile(`^zh_podcast_20260408154607__rm1__\d{14}$`)
-	if !pattern.MatchString(projectID) {
-		t.Fatalf("unexpected replay project_id format: %s", projectID)
+func TestResolvePracticalProjectIDKeepsOriginalProjectForRerun(t *testing.T) {
+	projectID, err := resolvePracticalProjectID(video.CreatePracticalDialogueRequest{
+		ProjectID: "ja_practical_20260423162724",
+	}, 1)
+	if err != nil {
+		t.Fatalf("resolvePracticalProjectID returned err: %v", err)
+	}
+	if projectID != "ja_practical_20260423162724" {
+		t.Fatalf("unexpected rerun project id: %s", projectID)
 	}
 }
 
-func TestBuildPracticalReplayProjectIDAlwaysUsesRootProjectID(t *testing.T) {
-	projectID := buildPracticalReplayProjectID("ja_practical_20260423162724__rm1__20260424000101")
-	pattern := regexp.MustCompile(`^ja_practical_20260423162724__rm1__\d{14}$`)
-	if !pattern.MatchString(projectID) {
-		t.Fatalf("unexpected practical replay project_id format: %s", projectID)
-	}
-}
-
-func TestBuildPodcastTaskPayloadIncludesSourceProjectIDForReplay(t *testing.T) {
+func TestBuildPodcastTaskPayloadUsesStageRange(t *testing.T) {
 	payload := buildPodcastTaskPayload(map[string]interface{}{
-		"project_id":        "zh_podcast_20260408154607__rm1__20260409171630",
-		"source_project_id": "zh_podcast_20260408154607__rm1__20260409171630",
-		"run_mode":          1,
-		"tts_type":          2,
-		"specify_tasks":     []string{"generate", "render"},
-		"lang":              "zh",
-		"bg_img_filenames":  []string{"bg-a.png"},
+		"project_id":       "zh_podcast_20260408154607",
+		"run_mode":         1,
+		"tts_type":         2,
+		"start_from":       "render",
+		"stop_at":          "persist",
+		"lang":             "zh",
+		"bg_img_filenames": []string{"bg-a.png"},
+		"target_platform":  "tiktok",
+		"aspect_ratio":     "9:16",
 	})
 
-	if got, _ := payload["source_project_id"].(string); got != "zh_podcast_20260408154607__rm1__20260409171630" {
-		t.Fatalf("unexpected source_project_id: %#v", payload["source_project_id"])
+	if got, _ := payload["start_from"].(string); got != "render" {
+		t.Fatalf("unexpected start_from: %#v", payload["start_from"])
 	}
-	if got, _ := payload["specify_tasks"].([]string); len(got) != 2 || got[0] != "generate" {
-		t.Fatalf("unexpected specify_tasks: %#v", payload["specify_tasks"])
+	if got, _ := payload["stop_at"].(string); got != "persist" {
+		t.Fatalf("unexpected stop_at: %#v", payload["stop_at"])
+	}
+	if _, exists := payload["source_project_id"]; exists {
+		t.Fatalf("unexpected source_project_id in payload: %#v", payload["source_project_id"])
+	}
+	if _, exists := payload["specify_tasks"]; exists {
+		t.Fatalf("unexpected specify_tasks in payload: %#v", payload["specify_tasks"])
 	}
 	if got, _ := payload["tts_type"].(int); got != 2 {
 		t.Fatalf("unexpected tts_type: %#v", payload["tts_type"])
+	}
+	if got, _ := payload["target_platform"].(string); got != "tiktok" {
+		t.Fatalf("unexpected target_platform: %#v", payload["target_platform"])
+	}
+	if got, _ := payload["aspect_ratio"].(string); got != "9:16" {
+		t.Fatalf("unexpected aspect_ratio: %#v", payload["aspect_ratio"])
 	}
 }
 
@@ -66,6 +82,7 @@ func TestBuildPodcastTaskPayloadDefaultsGoogleToMultiple(t *testing.T) {
 		"tts_type":         1,
 		"lang":             "zh",
 		"bg_img_filenames": []string{"bg-a.png"},
+		"start_from":       "generate",
 	})
 
 	if got, _ := payload["is_multiple"].(int); got != 1 {
@@ -73,126 +90,88 @@ func TestBuildPodcastTaskPayloadDefaultsGoogleToMultiple(t *testing.T) {
 	}
 }
 
-func TestBuildPracticalTaskPayloadIncludesSourceProjectIDForReplay(t *testing.T) {
-	payload := buildPracticalTaskPayload(map[string]interface{}{
-		"project_id":        "ja_practical_20260423162724__rm1__20260424001010",
-		"source_project_id": "ja_practical_20260423162724",
-		"run_mode":          1,
-		"specify_tasks":     []string{"images", "render", "persist"},
-		"chapter_nums":      []int{2, 6},
-	})
+func TestBuildPodcastRequestPayloadStoresDefaultMetadata(t *testing.T) {
+	payload := buildPodcastRequestPayload(video.CreatePodcastDialogueRequest{
+		Lang:           "ja",
+		ScriptFilename: "lesson.json",
+	}, "ja_podcast_20260607010101", 0, nil, []string{"bg-a.png"}, 0)
 
-	if got, _ := payload["source_project_id"].(string); got != "ja_practical_20260423162724" {
-		t.Fatalf("unexpected source_project_id: %#v", payload["source_project_id"])
+	if got, _ := payload["start_from"].(string); got != "generate" {
+		t.Fatalf("unexpected start_from: %#v", payload["start_from"])
 	}
-	if got, _ := payload["specify_tasks"].([]string); len(got) != 3 || got[0] != "images" || got[1] != "render" || got[2] != "persist" {
-		t.Fatalf("unexpected specify_tasks: %#v", payload["specify_tasks"])
+	if got, _ := payload["target_platform"].(string); got != "youtube" {
+		t.Fatalf("unexpected target_platform: %#v", payload["target_platform"])
 	}
-	if got, _ := payload["chapter_nums"].([]int); len(got) != 2 || got[0] != 2 || got[1] != 6 {
-		t.Fatalf("unexpected chapter_nums: %#v", payload["chapter_nums"])
+	if got, _ := payload["aspect_ratio"].(string); got != "16:9" {
+		t.Fatalf("unexpected aspect_ratio: %#v", payload["aspect_ratio"])
+	}
+	if got, _ := payload["resolution"].(string); got != defaultPodcastResolution() {
+		t.Fatalf("unexpected resolution: %#v", payload["resolution"])
+	}
+	if got, _ := payload["design_style"].(int); got != 1 {
+		t.Fatalf("unexpected design_style: %#v", payload["design_style"])
 	}
 	if got, _ := payload["tts_type"].(int); got != 1 {
 		t.Fatalf("unexpected tts_type: %#v", payload["tts_type"])
 	}
-	if _, exists := payload["block_bg_img_filenames"]; exists {
-		t.Fatalf("unexpected legacy block_bg_img_filenames in payload: %#v", payload["block_bg_img_filenames"])
-	}
 }
 
-func TestBuildPodcastTaskPayloadPassesIsMultipleFlag(t *testing.T) {
-	payload := buildPodcastTaskPayload(map[string]interface{}{
-		"project_id":       "zh_podcast_20260408154607",
-		"run_mode":         0,
-		"tts_type":         1,
-		"lang":             "zh",
-		"is_multiple":      0,
-		"bg_img_filenames": []string{"bg-a.png"},
+func TestBuildPracticalTaskPayloadUsesStageRange(t *testing.T) {
+	payload := buildPracticalTaskPayload(map[string]interface{}{
+		"project_id":   "ja_practical_20260423162724",
+		"run_mode":     1,
+		"start_from":   "images",
+		"stop_at":      "render",
+		"chapter_nums": []int{2, 6},
 	})
-	if got, _ := payload["is_multiple"].(int); got != 0 {
-		t.Fatalf("unexpected is_multiple=0 payload: %#v", payload["is_multiple"])
-	}
 
-	payload = buildPodcastTaskPayload(map[string]interface{}{
-		"project_id":       "zh_podcast_20260408154607",
-		"run_mode":         0,
-		"tts_type":         1,
-		"lang":             "zh",
-		"is_multiple":      1,
-		"bg_img_filenames": []string{"bg-a.png"},
-	})
-	if got, _ := payload["is_multiple"].(int); got != 1 {
-		t.Fatalf("unexpected is_multiple=1 payload: %#v", payload["is_multiple"])
+	if got, _ := payload["start_from"].(string); got != "images" {
+		t.Fatalf("unexpected start_from: %#v", payload["start_from"])
+	}
+	if got, _ := payload["stop_at"].(string); got != "render" {
+		t.Fatalf("unexpected stop_at: %#v", payload["stop_at"])
+	}
+	if got, _ := payload["chapter_nums"].([]int); len(got) != 2 || got[0] != 2 || got[1] != 6 {
+		t.Fatalf("unexpected chapter_nums: %#v", payload["chapter_nums"])
+	}
+	if _, exists := payload["source_project_id"]; exists {
+		t.Fatalf("unexpected source_project_id in payload: %#v", payload["source_project_id"])
+	}
+	if _, exists := payload["specify_tasks"]; exists {
+		t.Fatalf("unexpected specify_tasks in payload: %#v", payload["specify_tasks"])
 	}
 }
 
-func TestPodcastTaskTypeForInitialStageUsesStageEntryTask(t *testing.T) {
-	cases := map[int]string{
-		0: "podcast.audio.generate.v1",
-		1: "podcast.audio.generate.v1",
-	}
-
-	for runMode, want := range cases {
-		got, err := podcastTaskTypeForInitialStage(1, runMode, []string{"generate"})
-		if err != nil {
-			t.Fatalf("podcastTaskTypeForInitialStage returned err: %v", err)
-		}
-		if got != want {
-			t.Fatalf("run_mode=%d task type mismatch: got=%s want=%s", runMode, got, want)
-		}
-	}
-
-	type2Render, err := podcastTaskTypeForInitialStage(2, 1, []string{"finalize", "render"})
+func TestResolvePodcastStagePlanUsesStartStageTask(t *testing.T) {
+	plan, err := resolvePodcastStagePlan(1, 1, "render", "persist")
 	if err != nil {
-		t.Fatalf("podcastTaskTypeForInitialStage returned err: %v", err)
+		t.Fatalf("resolvePodcastStagePlan returned err: %v", err)
 	}
-	if type2Render != "podcast.compose.render.v1" {
-		t.Fatalf("unexpected type2 replay entry: %s", type2Render)
-	}
-}
-
-func TestNormalizePodcastSpecifyTasksOrdersByPipeline(t *testing.T) {
-	tasks, err := normalizePodcastSpecifyTasks(1, []string{"persist", "generate", "render"})
+	got, err := podcastTaskTypeForPlan(1, plan)
 	if err != nil {
-		t.Fatalf("normalizePodcastSpecifyTasks returned err: %v", err)
+		t.Fatalf("podcastTaskTypeForPlan returned err: %v", err)
 	}
-	if len(tasks) != 3 || tasks[0] != "generate" || tasks[1] != "render" || tasks[2] != "persist" {
-		t.Fatalf("unexpected normalized tasks: %#v", tasks)
+	if got != "podcast.compose.render.v1" {
+		t.Fatalf("unexpected task type: %s", got)
 	}
 }
 
-func TestNormalizePodcastSpecifyTasksRejectsAlignForType2(t *testing.T) {
-	if _, err := normalizePodcastSpecifyTasks(2, []string{"generate", "align"}); err == nil {
+func TestResolvePodcastStagePlanRejectsAlignForType2(t *testing.T) {
+	if _, err := resolvePodcastStagePlan(2, 1, "align", "render"); err == nil {
 		t.Fatalf("expected type2 align validation error")
 	}
 }
 
-func TestPracticalTaskTypeForInitialStageUsesStageEntryTask(t *testing.T) {
-	cases := map[int]string{
-		0: "practical.audio.generate.v1",
-		1: "practical.compose.render.v1",
-	}
-
-	for runMode, want := range cases {
-		specifyTasks := []string(nil)
-		if runMode == 1 {
-			specifyTasks = []string{"render", "persist"}
-		}
-		got, err := practicalTaskTypeForInitialStage(runMode, specifyTasks)
-		if err != nil {
-			t.Fatalf("practicalTaskTypeForInitialStage returned err: %v", err)
-		}
-		if got != want {
-			t.Fatalf("run_mode=%d task type mismatch: got=%s want=%s", runMode, got, want)
-		}
-	}
-}
-
-func TestNormalizePracticalSpecifyTasksOrdersByPipeline(t *testing.T) {
-	tasks, err := normalizePracticalSpecifyTasks([]string{"persist", "images", "render"})
+func TestResolvePracticalStagePlanUsesStartStageTask(t *testing.T) {
+	plan, err := resolvePracticalStagePlan(1, "render", "persist")
 	if err != nil {
-		t.Fatalf("normalizePracticalSpecifyTasks returned err: %v", err)
+		t.Fatalf("resolvePracticalStagePlan returned err: %v", err)
 	}
-	if len(tasks) != 3 || tasks[0] != "images" || tasks[1] != "render" || tasks[2] != "persist" {
-		t.Fatalf("unexpected normalized tasks: %#v", tasks)
+	got, err := practicalTaskTypeForPlan(plan)
+	if err != nil {
+		t.Fatalf("practicalTaskTypeForPlan returned err: %v", err)
+	}
+	if got != "practical.compose.render.v1" {
+		t.Fatalf("unexpected task type: %s", got)
 	}
 }

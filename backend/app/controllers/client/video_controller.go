@@ -44,8 +44,6 @@ type referenceImage struct {
 	ImageURL string `json:"image_url,omitempty"`
 }
 
-var podcastReplayProjectPattern = regexp.MustCompile(`^(.*)__rm\d+__\d{14}$`)
-
 // CreateIdiomStory 由 backend 同步调用 DeepSeek 规划，成功后再入队给 worker 执行生成流水线。
 func (ctrl *VideoController) CreateIdiomStory(c *gin.Context) {
 	var req video.CreateIdiomStoryRequest
@@ -265,10 +263,6 @@ func (ctrl *VideoController) CreatePodcastDialogue(c *gin.Context) {
 			response.BadRequest(c, fmt.Errorf("lang is required when run_mode is 0"), "lang is required when run_mode is 0")
 			return
 		}
-		if strings.TrimSpace(req.ContentProfile) == "" {
-			response.BadRequest(c, fmt.Errorf("content_profile is required when run_mode is 0"), "content_profile is required when run_mode is 0")
-			return
-		}
 		if strings.TrimSpace(req.ScriptFilename) == "" {
 			response.BadRequest(c, fmt.Errorf("script_filename is required when run_mode is 0"), "script_filename is required when run_mode is 0")
 			return
@@ -289,32 +283,22 @@ func (ctrl *VideoController) CreatePodcastDialogue(c *gin.Context) {
 	trackedPayload := buildTrackedPodcastPayload(runMode, requestPayload)
 
 	ttsType := normalizePodcastTTSType(payloadInt(trackedPayload, "tts_type", req.TTSType))
-	requestSpecifyTasks := compactStringSlice(req.SpecifyTasks)
-	if runMode == 1 {
-		specifyTasks, err := normalizePodcastSpecifyTasks(ttsType, requestSpecifyTasks)
-		if err != nil {
-			response.BadRequest(c, err, err.Error())
-			return
-		}
-		if len(specifyTasks) == 0 {
-			response.BadRequest(c, fmt.Errorf("specify_tasks is required when run_mode is 1"), "specify_tasks is required when run_mode is 1")
-			return
-		}
-		if podcastSpecifiesStage(specifyTasks, podcastStageGenerate) && len(blockNums) == 0 {
-			response.BadRequest(c, fmt.Errorf("block_nums is required when specify_tasks includes generate"), "block_nums is required when specify_tasks includes generate")
-			return
-		}
-		trackedPayload["specify_tasks"] = specifyTasks
-		trackedPayload["source_project_id"] = strings.TrimSpace(req.ProjectID)
-	} else {
-		delete(trackedPayload, "specify_tasks")
-		delete(trackedPayload, "source_project_id")
+	plan, err := resolvePodcastStagePlan(ttsType, runMode, req.StartFrom, req.StopAt)
+	if err != nil {
+		response.BadRequest(c, err, err.Error())
+		return
 	}
 	trackedPayload["tts_type"] = ttsType
 	trackedPayload["run_mode"] = runMode
 	trackedPayload["project_id"] = projectID
+	trackedPayload["start_from"] = string(plan.Start)
+	if plan.Stop != "" {
+		trackedPayload["stop_at"] = string(plan.Stop)
+	} else {
+		delete(trackedPayload, "stop_at")
+	}
 
-	taskType, err := podcastTaskTypeForInitialStage(ttsType, runMode, payloadStringSlice(trackedPayload, "specify_tasks"))
+	taskType, err := podcastTaskTypeForPlan(ttsType, plan)
 	if err != nil {
 		response.BadRequest(c, err, err.Error())
 		return
@@ -374,38 +358,28 @@ func (ctrl *VideoController) CreatePracticalDialogue(c *gin.Context) {
 	requestPayload := buildPracticalRequestPayload(req, projectID, runMode, blockNums, chapterNums)
 	trackedPayload := buildTrackedPracticalPayload(runMode, requestPayload)
 
-	requestSpecifyTasks := compactStringSlice(req.SpecifyTasks)
-	if runMode == 1 {
-		specifyTasks, err := normalizePracticalSpecifyTasks(requestSpecifyTasks)
-		if err != nil {
-			response.BadRequest(c, err, err.Error())
-			return
-		}
-		if len(specifyTasks) == 0 {
-			response.BadRequest(c, fmt.Errorf("specify_tasks is required when run_mode is 1"), "specify_tasks is required when run_mode is 1")
-			return
-		}
-		if practicalSpecifiesStage(specifyTasks, practicalStageGenerate) && len(blockNums) == 0 && len(chapterNums) == 0 {
-			response.BadRequest(c, fmt.Errorf("chapter_nums or block_nums is required when specify_tasks includes generate"), "chapter_nums or block_nums is required when specify_tasks includes generate")
-			return
-		}
-		trackedPayload["specify_tasks"] = specifyTasks
-		trackedPayload["source_project_id"] = strings.TrimSpace(req.ProjectID)
-	} else {
-		delete(trackedPayload, "specify_tasks")
-		delete(trackedPayload, "source_project_id")
+	plan, err := resolvePracticalStagePlan(runMode, req.StartFrom, req.StopAt)
+	if err != nil {
+		response.BadRequest(c, err, err.Error())
+		return
 	}
 	trackedPayload["run_mode"] = runMode
 	trackedPayload["project_id"] = projectID
+	trackedPayload["start_from"] = string(plan.Start)
+	if plan.Stop != "" {
+		trackedPayload["stop_at"] = string(plan.Stop)
+	} else {
+		delete(trackedPayload, "stop_at")
+	}
 
-	taskType, err := practicalTaskTypeForInitialStage(runMode, payloadStringSlice(trackedPayload, "specify_tasks"))
+	taskType, err := practicalTaskTypeForPlan(plan)
 	if err != nil {
 		response.BadRequest(c, err, err.Error())
 		return
 	}
 	payload := buildPracticalTaskPayload(trackedPayload)
 
-	trackPracticalProject(projectID, runMode, taskType, trackedPayload)
+	trackPracticalProject(projectID, runMode, taskType, payload)
 
 	taskID, err := queue.PublishVideoTask(taskType, payload)
 	if err != nil {
@@ -463,11 +437,11 @@ func buildPodcastSeed(projectID string) int {
 
 func resolvePodcastProjectID(req video.CreatePodcastDialogueRequest, runMode int) (string, error) {
 	if runMode == 1 {
-		sourceProjectID := strings.TrimSpace(req.ProjectID)
-		if sourceProjectID == "" {
+		projectID := strings.TrimSpace(req.ProjectID)
+		if projectID == "" {
 			return "", fmt.Errorf("project_id is required when run_mode is 1")
 		}
-		return buildPodcastReplayProjectID(sourceProjectID), nil
+		return projectID, nil
 	}
 
 	lang := normalizePodcastLang(req.Lang)
@@ -476,11 +450,11 @@ func resolvePodcastProjectID(req video.CreatePodcastDialogueRequest, runMode int
 
 func resolvePracticalProjectID(req video.CreatePracticalDialogueRequest, runMode int) (string, error) {
 	if runMode == 1 {
-		sourceProjectID := strings.TrimSpace(req.ProjectID)
-		if sourceProjectID == "" {
+		projectID := strings.TrimSpace(req.ProjectID)
+		if projectID == "" {
 			return "", fmt.Errorf("project_id is required when run_mode is 1")
 		}
-		return buildPracticalReplayProjectID(sourceProjectID), nil
+		return projectID, nil
 	}
 
 	lang := normalizePodcastLang(req.Lang)
@@ -500,44 +474,44 @@ func buildPodcastRequestPayload(
 		"project_id":   projectID,
 		"run_mode":     runMode,
 	}
-	if title := strings.TrimSpace(req.Title); title != "" {
-		payload["title"] = title
+	if runMode == 0 {
+		payload["start_from"] = string(podcastStageGenerate)
+	} else if startFrom := strings.TrimSpace(req.StartFrom); startFrom != "" {
+		payload["start_from"] = startFrom
+	}
+	if stopAt := strings.TrimSpace(req.StopAt); stopAt != "" {
+		payload["stop_at"] = stopAt
 	}
 	if lang := strings.TrimSpace(req.Lang); lang != "" {
 		payload["lang"] = lang
-	}
-	if profile := strings.TrimSpace(req.ContentProfile); profile != "" {
-		payload["content_profile"] = profile
 	}
 	if scriptFile := strings.TrimSpace(req.ScriptFilename); scriptFile != "" {
 		payload["script_filename"] = scriptFile
 	}
 	if platform := strings.TrimSpace(req.TargetPlatform); platform != "" {
 		payload["target_platform"] = platform
+	} else if runMode == 0 {
+		payload["target_platform"] = "youtube"
 	}
 	if aspect := strings.TrimSpace(req.AspectRatio); aspect != "" {
 		payload["aspect_ratio"] = aspect
+	} else if runMode == 0 {
+		payload["aspect_ratio"] = "16:9"
 	}
 	if resolution := strings.TrimSpace(req.Resolution); resolution != "" {
 		payload["resolution"] = resolution
+	} else if runMode == 0 {
+		payload["resolution"] = defaultPodcastResolution()
 	}
 	if req.DesignStyle > 0 {
 		payload["design_style"] = req.DesignStyle
-	}
-	if runMode == 1 {
-		if sourceProjectID := strings.TrimSpace(req.ProjectID); sourceProjectID != "" {
-			payload["source_project_id"] = sourceProjectID
-		}
-		if tasks := compactStringSlice(req.SpecifyTasks); len(tasks) > 0 {
-			payload["specify_tasks"] = tasks
-		}
+	} else if runMode == 0 {
+		payload["design_style"] = 1
 	}
 	if podcastSeed > 0 {
 		payload["seed"] = podcastSeed
 	}
-	if req.TTSType == 1 || req.TTSType == 2 {
-		payload["tts_type"] = req.TTSType
-	}
+	payload["tts_type"] = normalizePodcastTTSType(req.TTSType)
 	if req.IsMultiple != nil {
 		payload["is_multiple"] = *req.IsMultiple
 	}
@@ -562,13 +536,13 @@ func buildPracticalRequestPayload(
 		"project_id":   projectID,
 		"run_mode":     runMode,
 	}
-	if runMode == 1 {
-		if sourceProjectID := strings.TrimSpace(req.ProjectID); sourceProjectID != "" {
-			payload["source_project_id"] = sourceProjectID
-		}
-		if tasks := compactStringSlice(req.SpecifyTasks); len(tasks) > 0 {
-			payload["specify_tasks"] = tasks
-		}
+	if runMode == 0 {
+		payload["start_from"] = string(practicalStageGenerate)
+	} else if startFrom := strings.TrimSpace(req.StartFrom); startFrom != "" {
+		payload["start_from"] = startFrom
+	}
+	if stopAt := strings.TrimSpace(req.StopAt); stopAt != "" {
+		payload["stop_at"] = stopAt
 	}
 	if lang := strings.TrimSpace(req.Lang); lang != "" {
 		payload["lang"] = lang
@@ -602,11 +576,11 @@ func buildPracticalTaskPayload(payload map[string]interface{}) map[string]interf
 		"run_mode":     normalizePracticalRunMode(payloadInt(payload, "run_mode", 0)),
 		"tts_type":     1,
 	}
-	if sourceProjectID := strings.TrimSpace(payloadString(payload, "source_project_id")); sourceProjectID != "" && payloadInt(payload, "run_mode", 0) == 1 {
-		out["source_project_id"] = sourceProjectID
+	if startFrom := strings.TrimSpace(payloadString(payload, "start_from")); startFrom != "" {
+		out["start_from"] = startFrom
 	}
-	if tasks := compactStringSlice(payloadStringSlice(payload, "specify_tasks")); len(tasks) > 0 && payloadInt(payload, "run_mode", 0) == 1 {
-		out["specify_tasks"] = tasks
+	if stopAt := strings.TrimSpace(payloadString(payload, "stop_at")); stopAt != "" {
+		out["stop_at"] = stopAt
 	}
 	if lang := strings.TrimSpace(payloadString(payload, "lang")); lang != "" {
 		out["lang"] = lang
@@ -635,22 +609,16 @@ func buildPodcastTaskPayload(payload map[string]interface{}) map[string]interfac
 		"project_id":   strings.TrimSpace(payloadString(payload, "project_id")),
 		"run_mode":     normalizePodcastRunMode(payloadInt(payload, "run_mode", 0)),
 	}
-	if sourceProjectID := strings.TrimSpace(payloadString(payload, "source_project_id")); sourceProjectID != "" && payloadInt(payload, "run_mode", 0) == 1 {
-		out["source_project_id"] = sourceProjectID
-	}
 	ttsType := normalizePodcastTTSType(payloadInt(payload, "tts_type", 1))
 	out["tts_type"] = ttsType
-	if tasks := compactStringSlice(payloadStringSlice(payload, "specify_tasks")); len(tasks) > 0 && payloadInt(payload, "run_mode", 0) == 1 {
-		out["specify_tasks"] = tasks
+	if startFrom := strings.TrimSpace(payloadString(payload, "start_from")); startFrom != "" {
+		out["start_from"] = startFrom
 	}
-	if title := strings.TrimSpace(payloadString(payload, "title")); title != "" {
-		out["title"] = title
+	if stopAt := strings.TrimSpace(payloadString(payload, "stop_at")); stopAt != "" {
+		out["stop_at"] = stopAt
 	}
 	if lang := strings.TrimSpace(payloadString(payload, "lang")); lang != "" {
 		out["lang"] = lang
-	}
-	if profile := strings.TrimSpace(payloadString(payload, "content_profile")); profile != "" {
-		out["content_profile"] = profile
 	}
 	if scriptFile := strings.TrimSpace(payloadString(payload, "script_filename")); scriptFile != "" {
 		out["script_filename"] = scriptFile
@@ -682,26 +650,6 @@ func buildPodcastTaskPayload(payload map[string]interface{}) map[string]interfac
 		out["bg_img_filenames"] = backgrounds
 	}
 	return out
-}
-
-func buildPodcastReplayProjectID(sourceProjectID string) string {
-	return fmt.Sprintf("%s__rm1__%s", normalizePodcastReplayRootProjectID(sourceProjectID), time.Now().Format("20060102150405"))
-}
-
-func buildPracticalReplayProjectID(sourceProjectID string) string {
-	return fmt.Sprintf("%s__rm1__%s", normalizePodcastReplayRootProjectID(sourceProjectID), time.Now().Format("20060102150405"))
-}
-
-func normalizePodcastReplayRootProjectID(projectID string) string {
-	projectID = strings.TrimSpace(projectID)
-	if projectID == "" {
-		return ""
-	}
-	matches := podcastReplayProjectPattern.FindStringSubmatch(projectID)
-	if len(matches) == 2 && strings.TrimSpace(matches[1]) != "" {
-		return strings.TrimSpace(matches[1])
-	}
-	return projectID
 }
 
 func compactStringSlice(values []string) []string {

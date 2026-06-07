@@ -38,12 +38,11 @@ type PageSource struct {
 }
 
 type requestPayload struct {
-	Lang            string `json:"lang"`
-	ScriptFilename  string `json:"script_filename"`
-	RunMode         int    `json:"run_mode,omitempty"`
-	SourceProjectID string `json:"source_project_id,omitempty"`
-	Resolution      string `json:"resolution,omitempty"`
-	DesignType      int    `json:"design_type,omitempty"`
+	Lang           string `json:"lang"`
+	ScriptFilename string `json:"script_filename"`
+	RunMode        int    `json:"run_mode,omitempty"`
+	Resolution     string `json:"resolution,omitempty"`
+	DesignType     int    `json:"design_type,omitempty"`
 }
 
 type youtubeMetadata struct {

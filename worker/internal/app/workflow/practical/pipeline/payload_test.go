@@ -1,4 +1,4 @@
-package replay
+package pipeline
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 	dto "worker/services/practical/model"
 )
 
-func TestBuildGeneratePayloadFromSavedAndCurrentPrefersCurrentChapterNums(t *testing.T) {
+func TestMergePayloadPrefersCurrentChapterNums(t *testing.T) {
 	saved := dto.PracticalAudioGeneratePayload{
 		ProjectID:      "ja_practical_20260601",
 		Lang:           "ja",
@@ -15,14 +15,15 @@ func TestBuildGeneratePayloadFromSavedAndCurrentPrefersCurrentChapterNums(t *tes
 		ScriptFilename: "demo.json",
 	}
 	current := dto.PracticalAudioGeneratePayload{
-		ProjectID:   "ja_practical_20260601__rm1__20260603120000",
+		ProjectID:   "ja_practical_20260601",
 		RunMode:     1,
+		StartFrom:   "align",
 		ChapterNums: []int{2, 6},
 	}
 
-	got, err := BuildGeneratePayloadFromSavedAndCurrent(saved, current)
+	got, err := MergePayload(saved, current)
 	if err != nil {
-		t.Fatalf("BuildGeneratePayloadFromSavedAndCurrent returned err: %v", err)
+		t.Fatalf("MergePayload returned err: %v", err)
 	}
 	if len(got.BlockNums) != 0 {
 		t.Fatalf("expected current request to clear stale block_nums, got %#v", got.BlockNums)
@@ -32,7 +33,7 @@ func TestBuildGeneratePayloadFromSavedAndCurrentPrefersCurrentChapterNums(t *tes
 	}
 }
 
-func TestBuildGeneratePayloadFromSavedAndCurrentKeepsBothCurrentSelectors(t *testing.T) {
+func TestMergePayloadKeepsBothCurrentSelectors(t *testing.T) {
 	saved := dto.PracticalAudioGeneratePayload{
 		ProjectID:      "ja_practical_20260601",
 		Lang:           "ja",
@@ -40,15 +41,16 @@ func TestBuildGeneratePayloadFromSavedAndCurrentKeepsBothCurrentSelectors(t *tes
 		ScriptFilename: "demo.json",
 	}
 	current := dto.PracticalAudioGeneratePayload{
-		ProjectID:   "ja_practical_20260601__rm1__20260603120000",
+		ProjectID:   "ja_practical_20260601",
 		RunMode:     1,
+		StartFrom:   "generate",
 		BlockNums:   []int{1},
 		ChapterNums: []int{4},
 	}
 
-	got, err := BuildGeneratePayloadFromSavedAndCurrent(saved, current)
+	got, err := MergePayload(saved, current)
 	if err != nil {
-		t.Fatalf("BuildGeneratePayloadFromSavedAndCurrent returned err: %v", err)
+		t.Fatalf("MergePayload returned err: %v", err)
 	}
 	if len(got.BlockNums) != 1 || got.BlockNums[0] != 1 {
 		t.Fatalf("unexpected block_nums: %#v", got.BlockNums)
@@ -58,7 +60,7 @@ func TestBuildGeneratePayloadFromSavedAndCurrentKeepsBothCurrentSelectors(t *tes
 	}
 }
 
-func TestBuildGeneratePayloadFromSavedAndCurrentClearsSavedSelectorsWhenCurrentOmitsThem(t *testing.T) {
+func TestMergePayloadClearsSavedSelectorsWhenCurrentOmitsThem(t *testing.T) {
 	saved := dto.PracticalAudioGeneratePayload{
 		ProjectID:      "ja_practical_20260601",
 		Lang:           "ja",
@@ -68,18 +70,29 @@ func TestBuildGeneratePayloadFromSavedAndCurrentClearsSavedSelectorsWhenCurrentO
 		ScriptFilename: "demo.json",
 	}
 	current := dto.PracticalAudioGeneratePayload{
-		ProjectID: "ja_practical_20260601__rm1__20260603120000",
+		ProjectID: "ja_practical_20260601",
 		RunMode:   1,
+		StartFrom: "render",
 	}
 
-	got, err := BuildGeneratePayloadFromSavedAndCurrent(saved, current)
+	got, err := MergePayload(saved, current)
 	if err != nil {
-		t.Fatalf("BuildGeneratePayloadFromSavedAndCurrent returned err: %v", err)
+		t.Fatalf("MergePayload returned err: %v", err)
 	}
 	if len(got.BlockNums) != 0 {
 		t.Fatalf("expected block_nums to be cleared, got %#v", got.BlockNums)
 	}
 	if len(got.ChapterNums) != 0 {
 		t.Fatalf("expected chapter_nums to be cleared, got %#v", got.ChapterNums)
+	}
+}
+
+func TestNextStageStopsAtConfiguredStage(t *testing.T) {
+	next, ok, err := NextStage(string(StageImages), string(StageImages))
+	if err != nil {
+		t.Fatalf("NextStage returned err: %v", err)
+	}
+	if ok || next != "" {
+		t.Fatalf("expected stop_at to pause at images, got next=%s ok=%v", next, ok)
 	}
 }

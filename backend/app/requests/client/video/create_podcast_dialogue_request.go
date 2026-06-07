@@ -2,14 +2,13 @@ package video
 
 type CreatePodcastDialogueRequest struct {
 	ProjectID      string   `json:"project_id" binding:"omitempty,max=255"`
-	Title          string   `json:"title" binding:"omitempty,max=200"`
 	Lang           string   `json:"lang" binding:"omitempty,oneof=zh ja"`
-	ContentProfile string   `json:"content_profile" binding:"omitempty,oneof=daily social_issue international"`
 	TTSType        int      `json:"tts_type" binding:"omitempty,oneof=1 2"`
 	IsMultiple     *int     `json:"is_multiple" binding:"omitempty,oneof=0 1"`
 	Seed           int      `json:"seed" binding:"omitempty,min=1"`
 	RunMode        int      `json:"run_mode" binding:"omitempty,oneof=0 1"`
-	SpecifyTasks   []string `json:"specify_tasks" binding:"omitempty,dive,oneof=generate align render finalize persist upload"`
+	StartFrom      string   `json:"start_from" binding:"omitempty,oneof=generate align render finalize persist upload"`
+	StopAt         string   `json:"stop_at" binding:"omitempty,oneof=generate align render finalize persist upload"`
 	BlockNums      []int    `json:"block_nums" binding:"omitempty,dive,min=1"`
 	ScriptFilename string   `json:"script_filename" binding:"omitempty,max=255"`
 	BgImgFilenames []string `json:"bg_img_filenames" binding:"omitempty,dive,max=255"`

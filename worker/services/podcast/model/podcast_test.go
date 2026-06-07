@@ -70,7 +70,6 @@ func TestPodcastAudioGeneratePayloadMarshalKeepsZeroRunMode(t *testing.T) {
 	raw, err := json.Marshal(PodcastAudioGeneratePayload{
 		ProjectID:      "proj_001",
 		Lang:           "zh",
-		ContentProfile: "podcast",
 		ScriptFilename: "script.json",
 		RunMode:        0,
 	})

@@ -2,7 +2,6 @@ package client
 
 import (
 	"encoding/json"
-	"strings"
 	"time"
 
 	"api/app/models/content"
@@ -108,26 +107,7 @@ func buildTrackedPodcastPayload(runMode int, requestPayload map[string]interface
 	if runMode == 0 {
 		return patch
 	}
-	sourceProjectID := strings.TrimSpace(anyString(requestPayload["source_project_id"]))
-	if sourceProjectID == "" || database.DB == nil {
-		return patch
-	}
-
-	sourceProject, err := content.FindProjectByProjectID(sourceProjectID)
-	if err != nil {
-		logger.Warn("load source project payload failed", zap.Error(err), zap.String("source_project_id", sourceProjectID))
-		return patch
-	}
-	if len(sourceProject.Payload) == 0 {
-		return patch
-	}
-
-	base := make(map[string]interface{})
-	if err := json.Unmarshal(sourceProject.Payload, &base); err != nil {
-		logger.Warn("decode source project payload failed", zap.Error(err), zap.String("source_project_id", sourceProjectID))
-		return patch
-	}
-	return mergeStringAnyMap(base, patch)
+	return buildTrackedPayloadForExistingProject(patch, "block_nums", "start_from", "stop_at")
 }
 
 func buildTrackedPracticalPayload(runMode int, requestPayload map[string]interface{}) map[string]interface{} {
@@ -135,27 +115,30 @@ func buildTrackedPracticalPayload(runMode int, requestPayload map[string]interfa
 	if runMode == 0 {
 		return patch
 	}
+	return buildTrackedPayloadForExistingProject(patch, "block_nums", "chapter_nums", "start_from", "stop_at")
+}
 
-	sourceProjectID := strings.TrimSpace(anyString(requestPayload["source_project_id"]))
-	if sourceProjectID == "" || database.DB == nil {
+func buildTrackedPayloadForExistingProject(patch map[string]interface{}, transientKeys ...string) map[string]interface{} {
+	projectID := anyString(patch["project_id"])
+	if projectID == "" || database.DB == nil {
 		return patch
 	}
 
-	sourceProject, err := content.FindProjectByProjectID(sourceProjectID)
+	project, err := content.FindProjectByProjectID(projectID)
 	if err != nil {
-		logger.Warn("load source practical project payload failed", zap.Error(err), zap.String("source_project_id", sourceProjectID))
+		logger.Warn("load existing project payload failed", zap.Error(err), zap.String("project_id", projectID))
 		return patch
 	}
-	if len(sourceProject.Payload) == 0 {
+	if len(project.Payload) == 0 {
 		return patch
 	}
 
 	base := make(map[string]interface{})
-	if err := json.Unmarshal(sourceProject.Payload, &base); err != nil {
-		logger.Warn("decode source practical project payload failed", zap.Error(err), zap.String("source_project_id", sourceProjectID))
+	if err := json.Unmarshal(project.Payload, &base); err != nil {
+		logger.Warn("decode existing project payload failed", zap.Error(err), zap.String("project_id", projectID))
 		return patch
 	}
-	return mergeStringAnyMap(base, patch)
+	return mergeTrackedPayload(base, patch, transientKeys...)
 }
 
 func cloneStringAnyMap(src map[string]interface{}) map[string]interface{} {
@@ -171,6 +154,17 @@ func cloneStringAnyMap(src map[string]interface{}) map[string]interface{} {
 
 func mergeStringAnyMap(base, patch map[string]interface{}) map[string]interface{} {
 	out := cloneStringAnyMap(base)
+	for key, value := range patch {
+		out[key] = value
+	}
+	return out
+}
+
+func mergeTrackedPayload(base, patch map[string]interface{}, transientKeys ...string) map[string]interface{} {
+	out := cloneStringAnyMap(base)
+	for _, key := range transientKeys {
+		delete(out, key)
+	}
 	for key, value := range patch {
 		out[key] = value
 	}

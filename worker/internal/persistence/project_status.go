@@ -8,6 +8,7 @@ const (
 	ProjectStatusError
 	ProjectStatusCancelling
 	ProjectStatusCancelled
+	ProjectStatusPaused
 )
 
 func IsCancellationRequestedStatus(status int16) bool {

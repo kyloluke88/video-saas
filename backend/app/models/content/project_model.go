@@ -25,6 +25,8 @@ const (
 	ProjectStatusCancelling
 	// ProjectStatusCancelled = 6：当前项目被人工取消或系统取消，且已完成终止。
 	ProjectStatusCancelled
+	// ProjectStatusPaused = 7：当前项目在指定 stop_at 阶段成功暂停，等待后续继续执行。
+	ProjectStatusPaused
 )
 
 const (
@@ -125,6 +127,8 @@ func ProjectStatusName(status int16) string {
 		return "cancelling"
 	case ProjectStatusCancelled:
 		return "cancelled"
+	case ProjectStatusPaused:
+		return "paused"
 	default:
 		return "unknown"
 	}

@@ -3,12 +3,11 @@ package task
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
-	podcastreplay "worker/internal/app/workflow/podcast/replay"
-	practicalreplay "worker/internal/app/workflow/practical/replay"
+	podcastpipeline "worker/internal/app/workflow/podcast/pipeline"
+	practicalpipeline "worker/internal/app/workflow/practical/pipeline"
 	"worker/internal/persistence"
 	"worker/pkg/x/mapx"
 )
@@ -86,7 +85,11 @@ func (ProjectTaskTracker) OnTaskCancelled(task VideoTaskMessage, retries int) er
 func (ProjectTaskTracker) OnTaskSucceeded(task VideoTaskMessage, retries int) error {
 	finishedAt := time.Now().UTC()
 	if isTerminalProjectTask(task) {
-		return updateTrackedTask(task, retries, persistence.ProjectStatusFinished, nil, &finishedAt)
+		status := terminalSuccessStatus(task)
+		if status == persistence.ProjectStatusPaused {
+			return updateTrackedTask(task, retries, status, nil, nil)
+		}
+		return updateTrackedTask(task, retries, status, nil, &finishedAt)
 	}
 	return updateTrackedTask(task, retries, persistence.ProjectStatusRunning, nil, nil)
 }
@@ -172,18 +175,18 @@ func taskContentType(task VideoTaskMessage) string {
 func taskStage(contentType, taskType string) string {
 	switch strings.ToLower(strings.TrimSpace(contentType)) {
 	case "practical":
-		if stage, ok := practicalreplay.PracticalStageForTaskType(taskType); ok {
+		if stage, ok := practicalpipeline.StageForTaskType(taskType); ok {
 			return string(stage)
 		}
 	case "podcast":
-		if stage, ok := podcastreplay.PodcastStageForTaskType(taskType); ok {
+		if stage, ok := podcastpipeline.StageForTaskType(taskType); ok {
 			return string(stage)
 		}
 	default:
-		if stage, ok := podcastreplay.PodcastStageForTaskType(taskType); ok && strings.HasPrefix(strings.TrimSpace(taskType), "podcast.") {
+		if stage, ok := podcastpipeline.StageForTaskType(taskType); ok && strings.HasPrefix(strings.TrimSpace(taskType), "podcast.") {
 			return string(stage)
 		}
-		if stage, ok := practicalreplay.PracticalStageForTaskType(taskType); ok && strings.HasPrefix(strings.TrimSpace(taskType), "practical.") {
+		if stage, ok := practicalpipeline.StageForTaskType(taskType); ok && strings.HasPrefix(strings.TrimSpace(taskType), "practical.") {
 			return string(stage)
 		}
 	}
@@ -216,7 +219,7 @@ func isTerminalProjectTask(task VideoTaskMessage) bool {
 		if stage == "" || stage == "unknown" {
 			return false
 		}
-		nextStage, ok, err := podcastreplay.NextPodcastStage(taskTTSType(task), stage, taskSpecifyTasks(task))
+		nextStage, ok, err := podcastpipeline.NextStage(taskTTSType(task), stage, taskStopAt(task))
 		if err != nil {
 			return false
 		}
@@ -229,7 +232,7 @@ func isTerminalProjectTask(task VideoTaskMessage) bool {
 		if stage == "" || stage == "unknown" {
 			return false
 		}
-		nextStage, ok, err := practicalreplay.NextPracticalStage(stage, taskSpecifyTasks(task))
+		nextStage, ok, err := practicalpipeline.NextStage(stage, taskStopAt(task))
 		if err != nil {
 			return false
 		}
@@ -334,38 +337,35 @@ func taskTTSType(task VideoTaskMessage) int {
 		return 1
 	}
 	ttsType := mapx.GetInt(task.Payload, "tts_type", 1)
-	if ttsType == 2 {
-		return 2
-	}
-	return 1
+	return podcastpipeline.NormalizeTTSType(ttsType)
 }
 
-func taskSpecifyTasks(task VideoTaskMessage) []string {
+func taskStopAt(task VideoTaskMessage) string {
 	if task.Payload == nil {
-		return nil
+		return ""
 	}
-	value := task.Payload["specify_tasks"]
-	switch typed := value.(type) {
-	case []string:
-		out := make([]string, 0, len(typed))
-		for _, item := range typed {
-			if trimmed := strings.TrimSpace(item); trimmed != "" {
-				out = append(out, trimmed)
-			}
+	return strings.TrimSpace(mapx.GetString(task.Payload, "stop_at"))
+}
+
+func terminalSuccessStatus(task VideoTaskMessage) int16 {
+	contentType := taskContentType(task)
+	stage := taskStage(contentType, task.TaskType)
+	if stage == "" || stage == "unknown" {
+		return persistence.ProjectStatusFinished
+	}
+
+	switch contentType {
+	case "podcast":
+		if podcastpipeline.IsFinalStage(taskTTSType(task), stage) {
+			return persistence.ProjectStatusFinished
 		}
-		return out
-	case []interface{}:
-		out := make([]string, 0, len(typed))
-		for _, item := range typed {
-			if trimmed := strings.TrimSpace(fmt.Sprint(item)); trimmed != "" {
-				out = append(out, trimmed)
-			}
+		return persistence.ProjectStatusPaused
+	case "practical":
+		if practicalpipeline.IsFinalStage(stage) {
+			return persistence.ProjectStatusFinished
 		}
-		return out
+		return persistence.ProjectStatusPaused
 	default:
-		if text := strings.TrimSpace(mapx.GetString(task.Payload, "specify_tasks")); text != "" {
-			return []string{text}
-		}
-		return nil
+		return persistence.ProjectStatusFinished
 	}
 }

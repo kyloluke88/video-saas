@@ -16,6 +16,11 @@ const (
 	podcastStageUpload   podcastStage = "upload"
 )
 
+type podcastStagePlan struct {
+	Start podcastStage
+	Stop  podcastStage
+}
+
 var podcastGoogleStageOrder = []podcastStage{
 	podcastStageGenerate,
 	podcastStageAlign,
@@ -63,6 +68,11 @@ func podcastStageOrder(ttsType int) []podcastStage {
 	return podcastGoogleStageOrder
 }
 
+func podcastTerminalStage(ttsType int) podcastStage {
+	order := podcastStageOrder(ttsType)
+	return order[len(order)-1]
+}
+
 func parsePodcastStage(value string) (podcastStage, bool) {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case string(podcastStageGenerate):
@@ -82,70 +92,56 @@ func parsePodcastStage(value string) (podcastStage, bool) {
 	}
 }
 
-func normalizePodcastSpecifyTasks(ttsType int, values []string) ([]string, error) {
-	ordered := podcastStageOrder(ttsType)
-	if len(values) == 0 {
-		return nil, nil
+func resolvePodcastStagePlan(ttsType int, runMode int, startFrom string, stopAt string) (podcastStagePlan, error) {
+	normalizedRunMode := normalizePodcastRunMode(runMode)
+	normalizedTTSType := normalizePodcastTTSType(ttsType)
+
+	start := strings.TrimSpace(startFrom)
+	if normalizedRunMode == 0 {
+		if start == "" {
+			start = string(podcastStageGenerate)
+		}
+		if start != string(podcastStageGenerate) {
+			return podcastStagePlan{}, fmt.Errorf("start_from must be generate when run_mode is 0")
+		}
+	} else if start == "" {
+		return podcastStagePlan{}, fmt.Errorf("start_from is required when run_mode is 1")
 	}
 
-	allowed := make(map[podcastStage]struct{}, len(ordered))
-	for _, stage := range ordered {
-		allowed[stage] = struct{}{}
-	}
-
-	seen := make(map[podcastStage]struct{}, len(values))
-	for _, raw := range values {
-		if strings.TrimSpace(raw) == "" {
-			continue
-		}
-		stage, ok := parsePodcastStage(raw)
-		if !ok {
-			return nil, fmt.Errorf("unsupported specify_tasks value: %s", strings.TrimSpace(raw))
-		}
-		if _, ok := allowed[stage]; !ok {
-			return nil, fmt.Errorf("specify_tasks stage %q is not supported for tts_type=%d", stage, normalizePodcastTTSType(ttsType))
-		}
-		if _, exists := seen[stage]; exists {
-			return nil, fmt.Errorf("specify_tasks contains duplicate stage %q", stage)
-		}
-		seen[stage] = struct{}{}
-	}
-
-	out := make([]string, 0, len(seen))
-	for _, stage := range ordered {
-		if _, ok := seen[stage]; ok {
-			out = append(out, string(stage))
-		}
-	}
-	return out, nil
-}
-
-func podcastInitialStage(ttsType int, runMode int, specifyTasks []string) (podcastStage, error) {
-	if normalizePodcastRunMode(runMode) == 0 {
-		return podcastStageGenerate, nil
-	}
-
-	normalized, err := normalizePodcastSpecifyTasks(ttsType, specifyTasks)
-	if err != nil {
-		return "", err
-	}
-	if len(normalized) == 0 {
-		return "", fmt.Errorf("specify_tasks is required when run_mode is 1")
-	}
-	stage, ok := parsePodcastStage(normalized[0])
+	startStage, ok := parsePodcastStage(start)
 	if !ok {
-		return "", fmt.Errorf("unsupported specify_tasks value: %s", normalized[0])
+		return podcastStagePlan{}, fmt.Errorf("unsupported start_from value: %s", start)
 	}
-	return stage, nil
+
+	order := podcastStageOrder(normalizedTTSType)
+	startIndex := podcastStageIndex(order, startStage)
+	if startIndex < 0 {
+		return podcastStagePlan{}, fmt.Errorf("start_from stage %q is not supported for tts_type=%d", startStage, normalizedTTSType)
+	}
+
+	plan := podcastStagePlan{Start: startStage}
+	if strings.TrimSpace(stopAt) == "" {
+		return plan, nil
+	}
+
+	stopStage, ok := parsePodcastStage(stopAt)
+	if !ok {
+		return podcastStagePlan{}, fmt.Errorf("unsupported stop_at value: %s", strings.TrimSpace(stopAt))
+	}
+	stopIndex := podcastStageIndex(order, stopStage)
+	if stopIndex < 0 {
+		return podcastStagePlan{}, fmt.Errorf("stop_at stage %q is not supported for tts_type=%d", stopStage, normalizedTTSType)
+	}
+	if stopIndex < startIndex {
+		return podcastStagePlan{}, fmt.Errorf("stop_at %q cannot be earlier than start_from %q", stopStage, startStage)
+	}
+	plan.Stop = stopStage
+	return plan, nil
 }
 
 func podcastTaskTypeForStage(ttsType int, stage podcastStage) (string, error) {
 	stage = podcastStage(strings.ToLower(strings.TrimSpace(string(stage))))
-	allowed := make(map[podcastStage]struct{}, len(podcastStageOrder(ttsType)))
-	for _, item := range podcastStageOrder(ttsType) {
-		allowed[item] = struct{}{}
-	}
-	if _, ok := allowed[stage]; !ok {
+	if podcastStageIndex(podcastStageOrder(ttsType), stage) < 0 {
 		return "", fmt.Errorf("stage %q is not supported for tts_type=%d", stage, normalizePodcastTTSType(ttsType))
 	}
 	taskType, ok := podcastStageTaskTypes[stage]
@@ -174,23 +170,15 @@ func podcastStageForTaskType(taskType string) string {
 	}
 }
 
-func podcastTaskTypeForInitialStage(ttsType int, runMode int, specifyTasks []string) (string, error) {
-	stage, err := podcastInitialStage(ttsType, runMode, specifyTasks)
-	if err != nil {
-		return "", err
-	}
-	return podcastTaskTypeForStage(ttsType, stage)
+func podcastTaskTypeForPlan(ttsType int, plan podcastStagePlan) (string, error) {
+	return podcastTaskTypeForStage(ttsType, plan.Start)
 }
 
-func podcastSpecifiesStage(values []string, target podcastStage) bool {
-	for _, raw := range values {
-		stage, ok := parsePodcastStage(raw)
-		if !ok {
-			continue
-		}
-		if stage == target {
-			return true
+func podcastStageIndex(order []podcastStage, stage podcastStage) int {
+	for idx, item := range order {
+		if item == stage {
+			return idx
 		}
 	}
-	return false
+	return -1
 }

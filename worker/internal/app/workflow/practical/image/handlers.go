@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"worker/internal/app/task"
-	practicalreplay "worker/internal/app/workflow/practical/replay"
+	practicalpipeline "worker/internal/app/workflow/practical/pipeline"
 	services "worker/services"
 	practicalimageservice "worker/services/practical/image"
 	dto "worker/services/practical/model"
@@ -19,6 +19,11 @@ func HandleGenerate(ctx context.Context, ch *amqp.Channel, msg task.VideoTaskMes
 	if err != nil {
 		return err
 	}
+	if shouldInvalidate(string(practicalpipeline.StageImages), payload.StartFrom) {
+		if err := practicalpipeline.InvalidateOutputs(payload.ProjectID, payload.StartFrom); err != nil {
+			return err
+		}
+	}
 
 	_, err = practicalimageservice.Generate(ctx, practicalimageservice.GenerateInput{
 		ProjectID:   payload.ProjectID,
@@ -30,31 +35,20 @@ func HandleGenerate(ctx context.Context, ch *amqp.Channel, msg task.VideoTaskMes
 	if err != nil {
 		return err
 	}
-	return publishNextPracticalTaskFromImagePayload(ch, payload, string(practicalreplay.PracticalStageImages))
+	return publishNextPracticalTaskFromImagePayload(ch, payload, string(practicalpipeline.StageImages))
 }
 
 func resolveImagePayload(raw map[string]interface{}) (dto.PracticalAudioGeneratePayload, error) {
-	payload, err := practicalreplay.DecodeGeneratePayload(raw)
+	payload, err := practicalpipeline.DecodePayload(raw)
 	if err != nil {
 		return dto.PracticalAudioGeneratePayload{}, err
 	}
 	if payload.RunMode != 0 && payload.RunMode != 1 {
 		return dto.PracticalAudioGeneratePayload{}, services.NonRetryableError{Err: fmt.Errorf("practical.image.generate.v1 only supports run_mode 0 or 1")}
 	}
-	if payload.RunMode == 1 || strings.TrimSpace(payload.SourceProjectID) != "" {
-		if payload.RunMode != 1 {
-			return dto.PracticalAudioGeneratePayload{}, services.NonRetryableError{Err: fmt.Errorf("image replay entry requires run_mode=1")}
-		}
-		replayPayload, err := practicalreplay.PrepareGeneratePayload(payload, raw)
-		if err != nil {
-			return dto.PracticalAudioGeneratePayload{}, err
-		}
-		normalizedTasks, err := practicalreplay.ValidateSpecifyTasks(replayPayload.RunMode, replayPayload.SpecifyTasks)
-		if err != nil {
-			return dto.PracticalAudioGeneratePayload{}, err
-		}
-		replayPayload.SpecifyTasks = normalizedTasks
-		payload = replayPayload
+	payload, err = practicalpipeline.ResolvePayload(payload)
+	if err != nil {
+		return dto.PracticalAudioGeneratePayload{}, err
 	}
 	if strings.TrimSpace(payload.ProjectID) == "" {
 		return dto.PracticalAudioGeneratePayload{}, fmt.Errorf("project_id is required")
@@ -66,14 +60,14 @@ func resolveImagePayload(raw map[string]interface{}) (dto.PracticalAudioGenerate
 }
 
 func publishNextPracticalTaskFromImagePayload(ch *amqp.Channel, payload dto.PracticalAudioGeneratePayload, currentStage string) error {
-	nextStage, ok, err := practicalreplay.NextPracticalStage(currentStage, payload.SpecifyTasks)
+	nextStage, ok, err := practicalpipeline.NextStage(currentStage, payload.StopAt)
 	if err != nil {
 		return err
 	}
 	if !ok {
 		return nil
 	}
-	taskType, err := practicalreplay.PracticalTaskTypeForStage(practicalreplay.PracticalStage(nextStage))
+	taskType, err := practicalpipeline.TaskTypeForStage(practicalpipeline.Stage(nextStage))
 	if err != nil {
 		return err
 	}
@@ -88,12 +82,10 @@ func buildPracticalImageTaskPayload(payload dto.PracticalAudioGeneratePayload) m
 		"tts_type":        normalizePracticalTTSType(payload.TTSType),
 		"lang":            strings.TrimSpace(payload.Lang),
 		"script_filename": strings.TrimSpace(payload.ScriptFilename),
+		"start_from":      strings.TrimSpace(payload.StartFrom),
 	}
-	if sourceProjectID := strings.TrimSpace(payload.SourceProjectID); sourceProjectID != "" {
-		out["source_project_id"] = sourceProjectID
-	}
-	if tasks := compactNonEmptyStrings(payload.SpecifyTasks); len(tasks) > 0 && payload.RunMode == 1 {
-		out["specify_tasks"] = tasks
+	if stopAt := strings.TrimSpace(payload.StopAt); stopAt != "" {
+		out["stop_at"] = stopAt
 	}
 	if blocks := compactPositiveInts(payload.BlockNums); len(blocks) > 0 {
 		out["block_nums"] = blocks
@@ -129,16 +121,6 @@ func compactPositiveInts(values []int) []int {
 	return out
 }
 
-func compactNonEmptyStrings(values []string) []string {
-	out := make([]string, 0, len(values))
-	for _, value := range values {
-		if trimmed := strings.TrimSpace(value); trimmed != "" {
-			out = append(out, trimmed)
-		}
-	}
-	return out
-}
-
 func normalizePracticalDesignType(value int) int {
 	if value == 2 {
 		return 2
@@ -151,4 +133,8 @@ func normalizePracticalTTSType(value int) int {
 		return 1
 	}
 	return 1
+}
+
+func shouldInvalidate(currentStage string, startFrom string) bool {
+	return strings.TrimSpace(currentStage) == strings.TrimSpace(startFrom)
 }

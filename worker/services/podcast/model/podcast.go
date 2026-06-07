@@ -9,37 +9,40 @@ import (
 
 type PodcastAudioGeneratePayload struct {
 	ProjectID       string   `json:"project_id"`
-	SourceProjectID string   `json:"source_project_id,omitempty"`
 	Lang            string   `json:"lang"`
-	ContentProfile  string   `json:"content_profile"`
 	TTSType         int      `json:"tts_type,omitempty"`
 	IsMultiple      *int     `json:"is_multiple,omitempty"`
 	Seed            int      `json:"seed,omitempty"`
 	RunMode         int      `json:"run_mode"`
-	SpecifyTasks    []string `json:"specify_tasks,omitempty"`
+	StartFrom       string   `json:"start_from,omitempty"`
+	StopAt          string   `json:"stop_at,omitempty"`
 	BlockNums       []int    `json:"block_nums,omitempty"`
-	Title           string   `json:"title,omitempty"`
 	ScriptFilename  string   `json:"script_filename"`
 	BgImgFilenames  []string `json:"bg_img_filenames,omitempty"`
 	TargetPlatform  string   `json:"target_platform,omitempty"`
 	AspectRatio     string   `json:"aspect_ratio,omitempty"`
 	Resolution      string   `json:"resolution,omitempty"`
 	DesignStyle     int      `json:"design_style,omitempty"`
+	VideoURL        string   `json:"video_url,omitempty"`
+	YouTubeVideoID  string   `json:"youtube_video_id,omitempty"`
+	YouTubeVideoURL string   `json:"youtube_video_url,omitempty"`
 }
 
 type PodcastComposePayload struct {
 	ProjectID       string   `json:"project_id"`
-	SourceProjectID string   `json:"source_project_id,omitempty"`
 	Lang            string   `json:"lang"`
 	TTSType         int      `json:"tts_type,omitempty"`
 	RunMode         int      `json:"run_mode"`
-	SpecifyTasks    []string `json:"specify_tasks,omitempty"`
-	Title           string   `json:"title,omitempty"`
+	StartFrom       string   `json:"start_from,omitempty"`
+	StopAt          string   `json:"stop_at,omitempty"`
 	BgImgFilenames  []string `json:"bg_img_filenames,omitempty"`
 	TargetPlatform  string   `json:"target_platform,omitempty"`
 	AspectRatio     string   `json:"aspect_ratio,omitempty"`
 	Resolution      string   `json:"resolution,omitempty"`
 	DesignStyle     int      `json:"design_style,omitempty"`
+	VideoURL        string   `json:"video_url,omitempty"`
+	YouTubeVideoID  string   `json:"youtube_video_id,omitempty"`
+	YouTubeVideoURL string   `json:"youtube_video_url,omitempty"`
 }
 
 type PodcastScript struct {

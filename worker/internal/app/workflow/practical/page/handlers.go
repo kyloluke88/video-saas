@@ -2,12 +2,11 @@ package practical_page
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"worker/internal/app/task"
-	practicalreplay "worker/internal/app/workflow/practical/replay"
+	practicalpipeline "worker/internal/app/workflow/practical/pipeline"
 	services "worker/services"
 	dto "worker/services/practical/model"
 	practicalpageservice "worker/services/practical/page"
@@ -20,9 +19,10 @@ func HandlePersist(_ context.Context, ch *amqp.Channel, msg task.VideoTaskMessag
 	if err != nil {
 		return err
 	}
-
-	if strings.TrimSpace(payload.ProjectID) == "" {
-		return fmt.Errorf("project_id is required")
+	if shouldInvalidate(string(practicalpipeline.StagePersist), payload.StartFrom) {
+		if err := practicalpipeline.InvalidateOutputs(payload.ProjectID, payload.StartFrom); err != nil {
+			return err
+		}
 	}
 
 	if _, err := practicalpageservice.Persist(practicalpageservice.PersistInput{
@@ -42,33 +42,22 @@ func resolvePersistPayload(raw map[string]interface{}) (dto.PracticalAudioGenera
 	if payload.RunMode != 0 && payload.RunMode != 1 {
 		return dto.PracticalAudioGeneratePayload{}, services.NonRetryableError{Err: fmt.Errorf("practical.page.persist.v1 only supports run_mode 0 or 1")}
 	}
-	if payload.RunMode == 1 || strings.TrimSpace(payload.SourceProjectID) != "" {
-		if payload.RunMode != 1 {
-			return dto.PracticalAudioGeneratePayload{}, services.NonRetryableError{Err: fmt.Errorf("persist replay entry requires run_mode=1")}
-		}
-		replayPayload, err := practicalreplay.PrepareGeneratePayload(payload, raw)
-		if err != nil {
-			return dto.PracticalAudioGeneratePayload{}, err
-		}
-		normalizedTasks, err := practicalreplay.ValidateSpecifyTasks(replayPayload.RunMode, replayPayload.SpecifyTasks)
-		if err != nil {
-			return dto.PracticalAudioGeneratePayload{}, err
-		}
-		replayPayload.SpecifyTasks = normalizedTasks
-		return replayPayload, nil
+	payload, err = practicalpipeline.ResolvePayload(payload)
+	if err != nil {
+		return dto.PracticalAudioGeneratePayload{}, err
 	}
 	return payload, nil
 }
 
 func publishNextPracticalTaskFromPersistPayload(ch *amqp.Channel, payload dto.PracticalAudioGeneratePayload) error {
-	nextStage, ok, err := practicalreplay.NextPracticalStage(string(practicalreplay.PracticalStagePersist), payload.SpecifyTasks)
+	nextStage, ok, err := practicalpipeline.NextStage(string(practicalpipeline.StagePersist), payload.StopAt)
 	if err != nil {
 		return err
 	}
 	if !ok {
 		return nil
 	}
-	taskType, err := practicalreplay.PracticalTaskTypeForStage(practicalreplay.PracticalStage(nextStage))
+	taskType, err := practicalpipeline.TaskTypeForStage(practicalpipeline.Stage(nextStage))
 	if err != nil {
 		return err
 	}
@@ -81,29 +70,28 @@ func buildPracticalPersistTaskPayload(payload dto.PracticalAudioGeneratePayload)
 		"project_id":   strings.TrimSpace(payload.ProjectID),
 		"run_mode":     payload.RunMode,
 		"tts_type":     normalizePracticalTTSType(payload.TTSType),
+		"start_from":   strings.TrimSpace(payload.StartFrom),
 	}
-	if sourceProjectID := strings.TrimSpace(payload.SourceProjectID); sourceProjectID != "" {
-		out["source_project_id"] = sourceProjectID
-	}
-	if tasks := compactNonEmptyStrings(payload.SpecifyTasks); len(tasks) > 0 && payload.RunMode == 1 {
-		out["specify_tasks"] = tasks
+	if stopAt := strings.TrimSpace(payload.StopAt); stopAt != "" {
+		out["stop_at"] = stopAt
 	}
 	if chapterNums := compactPositiveInts(payload.ChapterNums); len(chapterNums) > 0 {
 		out["chapter_nums"] = chapterNums
+	}
+	if blockNums := compactPositiveInts(payload.BlockNums); len(blockNums) > 0 {
+		out["block_nums"] = blockNums
+	}
+	if lang := strings.TrimSpace(payload.Lang); lang != "" {
+		out["lang"] = lang
+	}
+	if scriptFile := strings.TrimSpace(payload.ScriptFilename); scriptFile != "" {
+		out["script_filename"] = scriptFile
 	}
 	return out
 }
 
 func decodePayload(raw map[string]interface{}) (dto.PracticalAudioGeneratePayload, error) {
-	data, err := json.Marshal(raw)
-	if err != nil {
-		return dto.PracticalAudioGeneratePayload{}, err
-	}
-	var payload dto.PracticalAudioGeneratePayload
-	if err := json.Unmarshal(data, &payload); err != nil {
-		return dto.PracticalAudioGeneratePayload{}, err
-	}
-	return payload, nil
+	return practicalpipeline.DecodePayload(raw)
 }
 
 func normalizePracticalTTSType(value int) int {
@@ -111,16 +99,6 @@ func normalizePracticalTTSType(value int) int {
 		return 1
 	}
 	return 1
-}
-
-func compactNonEmptyStrings(values []string) []string {
-	out := make([]string, 0, len(values))
-	for _, value := range values {
-		if trimmed := strings.TrimSpace(value); trimmed != "" {
-			out = append(out, trimmed)
-		}
-	}
-	return out
 }
 
 func compactPositiveInts(values []int) []int {
@@ -137,4 +115,8 @@ func compactPositiveInts(values []int) []int {
 		out = append(out, value)
 	}
 	return out
+}
+
+func shouldInvalidate(currentStage string, startFrom string) bool {
+	return strings.TrimSpace(currentStage) == strings.TrimSpace(startFrom)
 }

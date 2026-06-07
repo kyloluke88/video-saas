@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"worker/internal/app/task"
-	podcastreplay "worker/internal/app/workflow/podcast/replay"
+	podcastpipeline "worker/internal/app/workflow/podcast/pipeline"
 	"worker/internal/persistence"
 	conf "worker/pkg/config"
 	storageS3 "worker/pkg/storage/s3"
@@ -20,13 +20,20 @@ import (
 )
 
 type payload struct {
-	ProjectID       string   `json:"project_id"`
-	SourceProjectID string   `json:"source_project_id,omitempty"`
-	RunMode         int      `json:"run_mode,omitempty"`
-	TTSType         int      `json:"tts_type,omitempty"`
-	SpecifyTasks    []string `json:"specify_tasks,omitempty"`
-	FilePath        string   `json:"file_path,omitempty"`
-	ContentType     string   `json:"content_type"`
+	ProjectID       string `json:"project_id"`
+	RunMode         int    `json:"run_mode,omitempty"`
+	TTSType         int    `json:"tts_type,omitempty"`
+	StartFrom       string `json:"start_from,omitempty"`
+	StopAt          string `json:"stop_at,omitempty"`
+	FilePath        string `json:"file_path,omitempty"`
+	ContentType     string `json:"content_type"`
+	Lang            string `json:"lang,omitempty"`
+	Resolution      string `json:"resolution,omitempty"`
+	DesignStyle     int    `json:"design_style,omitempty"`
+	Title           string `json:"title,omitempty"`
+	VideoURL        string `json:"video_url,omitempty"`
+	YouTubeVideoID  string `json:"youtube_video_id,omitempty"`
+	YouTubeVideoURL string `json:"youtube_video_url,omitempty"`
 }
 
 type downloadAsset struct {
@@ -80,18 +87,8 @@ func handlePodcastUpload(ctx context.Context, payload payload) error {
 	if payload.RunMode != 0 && payload.RunMode != 1 {
 		return fmt.Errorf("podcast upload only supports run_mode 0 or 1")
 	}
-	if payload.RunMode == 1 || strings.TrimSpace(payload.SourceProjectID) != "" {
-		if payload.RunMode != 1 {
-			return fmt.Errorf("upload replay entry requires run_mode=1")
-		}
-		normalizedTasks, err := podcastreplay.ValidateSpecifyTasks(payload.TTSType, payload.RunMode, payload.SpecifyTasks)
-		if err != nil {
-			return err
-		}
-		payload.SpecifyTasks = normalizedTasks
-		if err := podcastreplay.EnsureReplayProjectDirForProject(payload.ProjectID, payload.SourceProjectID); err != nil {
-			return err
-		}
+	if _, _, err := podcastpipeline.ValidateRange(payload.TTSType, payload.RunMode, payload.StartFrom, payload.StopAt); err != nil {
+		return err
 	}
 
 	projectDir := filepath.Join(conf.Get[string]("worker.ffmpeg_work_dir"), "projects", projectID)
