@@ -20,25 +20,13 @@ func generateGoogleSingleAudioOnly(
 	artifacts audioArtifacts,
 	script dto.PodcastScript,
 	requestedBlocks map[int]struct{},
-	currentTTSMode *int,
 ) ([]blockSynthesisResult, error) {
 	results := make([]blockSynthesisResult, len(script.Blocks))
 
 	for blockIndex, block := range script.Blocks {
 		forceRerun := isRequestedBlock(requestedBlocks, blockIndex)
 		if !forceRerun {
-			reused, ok, err := tryReuseCompletedBlockWithoutMFA(
-				podcastTTSTypeGoogle,
-				"google",
-				projectID,
-				language,
-				artifacts,
-				blockIndex,
-				block,
-				currentTTSMode,
-				false,
-				false,
-			)
+			reused, ok, err := tryReuseGeneratedGoogleBlock(projectID, artifacts, blockIndex, block, "single")
 			if err != nil {
 				return nil, err
 			}
@@ -53,15 +41,18 @@ func generateGoogleSingleAudioOnly(
 			return nil, err
 		}
 		blockExt := "mp3"
-		blockAudioPath := unitAudioPath(artifacts.blocksDir, blockIndex, block.BlockID, blockExt)
+		if err := removeRawBlockArtifacts(artifacts, blockIndex, block.BlockID); err != nil {
+			return nil, err
+		}
+		if err := removeAlignedBlockArtifacts(artifacts, blockIndex, block.BlockID); err != nil {
+			return nil, err
+		}
+		blockAudioPath := unitAudioPath(artifacts.rawBlocksDir, blockIndex, block.BlockID, blockExt)
 		if err := concatAudioFiles(ctx, artifacts.projectDir, segmentPaths, blockAudioPath); err != nil {
 			return nil, err
 		}
 		blockDurationMS, err := audioDurationMS(blockAudioPath)
 		if err != nil {
-			return nil, err
-		}
-		if err := artifacts.persistBlockCheckpoint(blockIndex, block, blockDurationMS, currentTTSMode); err != nil {
 			return nil, err
 		}
 		results[blockIndex] = blockSynthesisResult{
@@ -113,7 +104,7 @@ func synthesizeGoogleSingleBlockSegments(
 			Text:    text,
 			VoiceID: voiceID,
 		}
-		if err := persistGoogleTTSSegmentDebugArtifacts(artifacts.blockStatesDir, blockID, seg.SegmentID, request); err != nil {
+		if err := persistGoogleTTSSegmentDebugArtifacts(artifacts.ttsDebugDir, blockID, seg.SegmentID, request); err != nil {
 			return nil, 0, err
 		}
 		log.Printf("🎛️ podcast tts segment start provider=google mode=single block=%03d segment=%03d project_id=%s",

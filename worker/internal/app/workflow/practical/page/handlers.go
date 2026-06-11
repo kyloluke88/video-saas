@@ -20,7 +20,7 @@ func HandlePersist(_ context.Context, ch *amqp.Channel, msg task.VideoTaskMessag
 		return err
 	}
 	if shouldInvalidate(string(practicalpipeline.StagePersist), payload.StartFrom) {
-		if err := practicalpipeline.InvalidateOutputs(payload.ProjectID, payload.StartFrom); err != nil {
+		if err := practicalpipeline.InvalidateOutputs(payload.ProjectID, payload.TTSType, payload.StartFrom); err != nil {
 			return err
 		}
 	}
@@ -50,14 +50,14 @@ func resolvePersistPayload(raw map[string]interface{}) (dto.PracticalAudioGenera
 }
 
 func publishNextPracticalTaskFromPersistPayload(ch *amqp.Channel, payload dto.PracticalAudioGeneratePayload) error {
-	nextStage, ok, err := practicalpipeline.NextStage(string(practicalpipeline.StagePersist), payload.StopAt)
+	nextStage, ok, err := practicalpipeline.NextStage(normalizePracticalTTSType(payload.TTSType), string(practicalpipeline.StagePersist), payload.StopAt)
 	if err != nil {
 		return err
 	}
 	if !ok {
 		return nil
 	}
-	taskType, err := practicalpipeline.TaskTypeForStage(practicalpipeline.Stage(nextStage))
+	taskType, err := practicalpipeline.TaskTypeForStage(normalizePracticalTTSType(payload.TTSType), practicalpipeline.Stage(nextStage))
 	if err != nil {
 		return err
 	}
@@ -95,10 +95,7 @@ func decodePayload(raw map[string]interface{}) (dto.PracticalAudioGeneratePayloa
 }
 
 func normalizePracticalTTSType(value int) int {
-	if value == 1 {
-		return 1
-	}
-	return 1
+	return practicalpipeline.NormalizeTTSType(value)
 }
 
 func compactPositiveInts(values []int) []int {

@@ -32,11 +32,6 @@ func GenerateGoogleAudio(ctx context.Context, input GenerateInput) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := artifacts.flushCheckpointStores(); err != nil {
-			log.Printf("⚠️ podcast block checkpoint index flush warning project_id=%s err=%v", input.ProjectID, err)
-		}
-	}()
 	if err := invalidateAlignedOutputs(artifacts); err != nil {
 		return err
 	}
@@ -54,7 +49,7 @@ func GenerateGoogleAudio(ctx context.Context, input GenerateInput) error {
 	if err != nil {
 		return err
 	}
-	results, err := generateGoogleAudioOnly(ctx, client, input.ProjectID, language, artifacts, script, requestedBlocks, intPtr(input.IsMultiple))
+	results, err := generateGoogleAudioOnly(ctx, client, input.ProjectID, language, artifacts, script, requestedBlocks, input.IsMultiple == 0)
 	if err != nil {
 		return err
 	}
@@ -85,11 +80,6 @@ func AlignGoogle(ctx context.Context, input AlignInput) (GenerateResult, error) 
 	if err != nil {
 		return GenerateResult{}, err
 	}
-	defer func() {
-		if err := artifacts.flushCheckpointStores(); err != nil {
-			log.Printf("⚠️ podcast block checkpoint index flush warning project_id=%s err=%v", input.ProjectID, err)
-		}
-	}()
 
 	script, err := loadCachedScriptForAlignment(projectDir, language)
 	if err != nil {
@@ -108,7 +98,7 @@ func AlignGoogle(ctx context.Context, input AlignInput) (GenerateResult, error) 
 	}
 
 	aligner := newBlockAligner(newMFAClient(), chunkWorkingDir(projectDir))
-	results, err := alignGoogleAudioOnly(ctx, aligner, input.ProjectID, language, artifacts, script, requestedBlocks, intPtr(input.IsMultiple))
+	results, err := alignGoogleAudioOnly(ctx, aligner, input.ProjectID, language, artifacts, script, requestedBlocks)
 	if err != nil {
 		return GenerateResult{}, err
 	}
@@ -144,28 +134,17 @@ func generateGoogleAudioOnly(
 	artifacts audioArtifacts,
 	script dto.PodcastScript,
 	requestedBlocks map[int]struct{},
-	currentTTSMode *int,
+	singleSpeaker bool,
 ) ([]blockSynthesisResult, error) {
 	results := make([]blockSynthesisResult, len(script.Blocks))
-	if currentTTSMode != nil && *currentTTSMode == 0 {
-		return generateGoogleSingleAudioOnly(ctx, client, projectID, language, artifacts, script, requestedBlocks, currentTTSMode)
+	if singleSpeaker {
+		return generateGoogleSingleAudioOnly(ctx, client, projectID, language, artifacts, script, requestedBlocks)
 	}
 
 	for blockIndex, block := range script.Blocks {
 		forceRerun := isRequestedBlock(requestedBlocks, blockIndex)
 		if !forceRerun {
-			reused, ok, err := tryReuseCompletedBlockWithoutMFA(
-				podcastTTSTypeGoogle,
-				"google",
-				projectID,
-				language,
-				artifacts,
-				blockIndex,
-				block,
-				currentTTSMode,
-				false,
-				false,
-			)
+			reused, ok, err := tryReuseGeneratedGoogleBlock(projectID, artifacts, blockIndex, block, "multi")
 			if err != nil {
 				return nil, err
 			}
@@ -176,7 +155,7 @@ func generateGoogleAudioOnly(
 		}
 
 		request := buildConversationRequest(language, block)
-		if err := persistGoogleTTSDebugArtifacts(artifacts.blockStatesDir, block.BlockID, request); err != nil {
+		if err := persistGoogleTTSDebugArtifacts(artifacts.ttsDebugDir, block.BlockID, request); err != nil {
 			return nil, err
 		}
 		estimatedBytes := estimateConversationBytes(request)
@@ -193,24 +172,18 @@ func generateGoogleAudioOnly(
 		if blockExt == "" {
 			blockExt = "mp3"
 		}
-		rawBlockAudioPath := unitAudioPath(artifacts.blockStatesDir, blockIndex, fmt.Sprintf("%s.pre_tempo", block.BlockID), blockExt)
-		if err := os.WriteFile(rawBlockAudioPath, ttsResult.Audio, 0o644); err != nil {
+		if err := removeRawBlockArtifacts(artifacts, blockIndex, block.BlockID); err != nil {
 			return nil, err
 		}
-		blockAudioPath := unitAudioPath(artifacts.blocksDir, blockIndex, block.BlockID, blockExt)
+		if err := removeAlignedBlockArtifacts(artifacts, blockIndex, block.BlockID); err != nil {
+			return nil, err
+		}
+		blockAudioPath := unitAudioPath(artifacts.rawBlocksDir, blockIndex, block.BlockID, blockExt)
 		if err := os.WriteFile(blockAudioPath, ttsResult.Audio, 0o644); err != nil {
 			return nil, err
 		}
-		if speakingRate := ttsSpeakingRate(language); speakingRate > 0 && speakingRate != 1.0 {
-			if err := applyAudioTempoToFile(ctx, blockAudioPath, speakingRate); err != nil {
-				return nil, err
-			}
-		}
 		blockDurationMS, err := audioDurationMS(blockAudioPath)
 		if err != nil {
-			return nil, err
-		}
-		if err := artifacts.persistBlockCheckpoint(blockIndex, block, blockDurationMS, currentTTSMode); err != nil {
 			return nil, err
 		}
 		results[blockIndex] = blockSynthesisResult{
@@ -232,25 +205,14 @@ func alignGoogleAudioOnly(
 	artifacts audioArtifacts,
 	script dto.PodcastScript,
 	requestedBlocks map[int]struct{},
-	currentTTSMode *int,
 ) ([]blockSynthesisResult, error) {
 	results := make([]blockSynthesisResult, len(script.Blocks))
+	tempo := podcastTempo(language)
 
 	for blockIndex, block := range script.Blocks {
 		forceRerun := isRequestedBlock(requestedBlocks, blockIndex)
 		if !forceRerun {
-			reused, ok, err := tryReuseCompletedBlockWithoutMFA(
-				podcastTTSTypeGoogle,
-				"google",
-				projectID,
-				language,
-				artifacts,
-				blockIndex,
-				block,
-				currentTTSMode,
-				true,
-				true,
-			)
+			reused, ok, err := tryReuseAlignedBlock("google", projectID, language, artifacts, blockIndex, block, tempo, true)
 			if err != nil {
 				return nil, err
 			}
@@ -260,12 +222,12 @@ func alignGoogleAudioOnly(
 			}
 		}
 
-		aligned, ok, err := tryReuseCachedBlock(ctx, aligner, projectID, language, artifacts, blockIndex, block, currentTTSMode, true)
+		aligned, ok, err := alignGoogleBlockFromRaw(ctx, aligner, projectID, language, artifacts, blockIndex, block, tempo, true)
 		if err != nil {
 			return nil, err
 		}
 		if !ok {
-			return nil, fmt.Errorf("google alignment requires existing block audio: block=%s block_index=%d", strings.TrimSpace(block.BlockID), blockIndex+1)
+			return nil, fmt.Errorf("google alignment requires existing raw block audio: block=%s block_index=%d", strings.TrimSpace(block.BlockID), blockIndex+1)
 		}
 		results[blockIndex] = aligned
 		log.Printf("✅ podcast align block done provider=google block=%03d/%03d block_id=%s duration_ms=%d project_id=%s",

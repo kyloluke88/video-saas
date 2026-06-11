@@ -313,8 +313,8 @@ func generateYouTubePublishText(projectDir string, script dto.PracticalScript) (
 	content := buildYouTubePublishText(script)
 	path := filepath.Join(projectDir, youtubePublishFilename)
 	if strings.TrimSpace(content) == "" {
-		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-			return "", err
+		if info, err := os.Stat(path); err == nil && !info.IsDir() {
+			return path, nil
 		}
 		return "", nil
 	}
@@ -444,19 +444,9 @@ func practicalYouTubeChapterStartMS(
 }
 
 func generateYouTubeTranscripts(projectDir string, script dto.PracticalScript) ([]string, error) {
-	existing, err := filepath.Glob(filepath.Join(projectDir, "youtube_transcript_*.srt"))
-	if err != nil {
-		return nil, err
-	}
-	for _, path := range existing {
-		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-			return nil, err
-		}
-	}
-
 	locales := youtubeTranscriptLocales(script)
 	if len(locales) == 0 {
-		return nil, nil
+		return existingYouTubeTranscriptPaths(projectDir)
 	}
 
 	turns := flattenTurns(script)
@@ -489,6 +479,15 @@ func generateYouTubeTranscripts(projectDir string, script dto.PracticalScript) (
 	return paths, nil
 }
 
+func existingYouTubeTranscriptPaths(projectDir string) ([]string, error) {
+	paths, err := filepath.Glob(filepath.Join(projectDir, "youtube_transcript_*.srt"))
+	if err != nil {
+		return nil, err
+	}
+	sort.Strings(paths)
+	return paths, nil
+}
+
 func youtubeTranscriptLocales(script dto.PracticalScript) []string {
 	out := make([]string, 0, 1+len(script.TranslationLocales))
 	seen := make(map[string]struct{}, 1+len(script.TranslationLocales))
@@ -517,7 +516,7 @@ func practicalTranscriptTextForLocale(turn dto.PracticalTurn, locale, sourceLang
 		return ""
 	}
 	if strings.EqualFold(locale, strings.TrimSpace(sourceLanguage)) {
-		return coalesce(turn.SpeechText, turn.Text)
+		return strings.TrimSpace(turn.Text)
 	}
 	return turn.TranslationFor(locale)
 }

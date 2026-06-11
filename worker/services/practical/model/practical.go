@@ -44,8 +44,12 @@ type PracticalScript struct {
 }
 
 type PracticalSpeaker struct {
-	// SpeakerID is the runtime voice channel. Supported values are male/female.
+	// SpeakerID is the legacy runtime voice channel hint. Existing scripts use male/female here.
 	SpeakerID string `json:"speaker_id,omitempty"`
+	// GoogleVoiceID is an optional provider-specific voice override for tts_type=1.
+	GoogleVoiceID string `json:"google_voice_id,omitempty"`
+	// ElevenLabsVoiceID is preserved for legacy payload compatibility and ignored by the practical TTS pipeline.
+	ElevenLabsVoiceID string `json:"elevenlabs_voice_id,omitempty"`
 	// SpeakerRole is the business role identifier used by turns.
 	// Example: customer, clerk, doctor.
 	SpeakerRole   string `json:"speaker_role,omitempty"`
@@ -79,10 +83,11 @@ type PracticalChapter struct {
 }
 
 type PracticalTurn struct {
-	TurnID       string            `json:"turn_id,omitempty"`
-	SpeakerRole  string            `json:"speaker_role,omitempty"`
-	SpeakerID    string            `json:"speaker_id,omitempty"`
-	Text         string            `json:"text,omitempty"`
+	TurnID      string `json:"turn_id,omitempty"`
+	SpeakerRole string `json:"speaker_role,omitempty"`
+	SpeakerID   string `json:"speaker_id,omitempty"`
+	Text        string `json:"text,omitempty"`
+	// SpeechText is preserved in script data but practical TTS/alignment use Text.
 	SpeechText   string            `json:"speech_text,omitempty"`
 	Translations map[string]string `json:"translations,omitempty"`
 	Tokens       json.RawMessage   `json:"tokens,omitempty"`
@@ -130,7 +135,7 @@ func (s *PracticalScript) Validate() error {
 		if strings.TrimSpace(block.Topic) == "" {
 			return fmt.Errorf("practical block %s topic is required", block.BlockID)
 		}
-		speakerVoicesByRole, err := block.SpeakerVoicesByRole()
+		speakersByRole, err := block.SpeakersByRole()
 		if err != nil {
 			return fmt.Errorf("practical block %s: %w", block.BlockID, err)
 		}
@@ -144,6 +149,7 @@ func (s *PracticalScript) Validate() error {
 			if len(chapter.Turns) == 0 {
 				return fmt.Errorf("practical chapter %s has no turns", chapter.ChapterID)
 			}
+			chapterSpeakers := make(map[string]struct{}, 2)
 			for _, turn := range chapter.Turns {
 				if strings.TrimSpace(turn.TurnID) == "" {
 					return fmt.Errorf("practical turn_id is required")
@@ -152,22 +158,22 @@ func (s *PracticalScript) Validate() error {
 				if key == "" {
 					return fmt.Errorf("turn %s speaker_role is required", turn.TurnID)
 				}
-				turnVoice := normalizePracticalSpeakerVoice(turn.SpeakerID)
 				if strings.TrimSpace(turn.SpeakerRole) != "" {
-					mappedVoice, ok := speakerVoicesByRole[strings.TrimSpace(turn.SpeakerRole)]
+					_, ok := speakersByRole[strings.TrimSpace(turn.SpeakerRole)]
 					if !ok {
 						return fmt.Errorf("turn %s speaker_role %s is not declared in speakers", turn.TurnID, strings.TrimSpace(turn.SpeakerRole))
 					}
-					if turnVoice != "" && turnVoice != mappedVoice {
-						return fmt.Errorf("turn %s speaker_id %s conflicts with role %s voice %s", turn.TurnID, strings.TrimSpace(turn.SpeakerID), strings.TrimSpace(turn.SpeakerRole), mappedVoice)
-					}
-				} else if turnVoice == "" {
-					if _, ok := speakerVoicesByRole[strings.TrimSpace(turn.SpeakerID)]; !ok {
+				} else if strings.TrimSpace(turn.SpeakerID) != "" {
+					if _, ok := speakersByRole[strings.TrimSpace(turn.SpeakerID)]; !ok {
 						return fmt.Errorf("turn %s speaker reference %s is not declared in speakers", turn.TurnID, strings.TrimSpace(turn.SpeakerID))
 					}
 				}
 				if strings.TrimSpace(turn.Text) == "" {
 					return fmt.Errorf("turn %s text is required", turn.TurnID)
+				}
+				chapterSpeakers[key] = struct{}{}
+				if len(chapterSpeakers) > 2 {
+					return fmt.Errorf("practical chapter %s supports at most 2 active speakers", chapter.ChapterID)
 				}
 			}
 		}
@@ -175,35 +181,39 @@ func (s *PracticalScript) Validate() error {
 	return nil
 }
 
-func (b *PracticalBlock) SpeakerVoicesByRole() (map[string]string, error) {
+func (b *PracticalBlock) SpeakersByRole() (map[string]PracticalSpeaker, error) {
 	if len(b.Speakers) < 2 {
 		return nil, fmt.Errorf("practical block requires at least 2 speakers")
 	}
-	out := make(map[string]string, len(b.Speakers))
-	hasMale := false
-	hasFemale := false
+	out := make(map[string]PracticalSpeaker, len(b.Speakers))
 	for _, speaker := range b.Speakers {
 		role := strings.TrimSpace(speaker.SpeakerRole)
 		if role == "" {
 			return nil, fmt.Errorf("speaker_role is required")
 		}
+		if normalizePracticalSpeakerVoice(speaker.SpeakerID) == "" {
+			return nil, fmt.Errorf("speaker %s requires speaker_id male/female", role)
+		}
 		if _, exists := out[role]; exists {
 			return nil, fmt.Errorf("duplicate speaker_role %s", role)
 		}
+		out[role] = speaker
+	}
+	return out, nil
+}
+
+func (b *PracticalBlock) SpeakerVoicesByRole() (map[string]string, error) {
+	speakersByRole, err := b.SpeakersByRole()
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]string, len(speakersByRole))
+	for role, speaker := range speakersByRole {
 		voice := normalizePracticalSpeakerVoice(speaker.SpeakerID)
 		if voice == "" {
 			return nil, fmt.Errorf("speaker %s requires speaker_id male/female", role)
 		}
-		if voice == "male" {
-			hasMale = true
-		}
-		if voice == "female" {
-			hasFemale = true
-		}
 		out[role] = voice
-	}
-	if !hasMale || !hasFemale {
-		return nil, fmt.Errorf("practical block requires at least one male and one female speaker for google tts")
 	}
 	return out, nil
 }
@@ -330,9 +340,11 @@ func (s PracticalScript) DetectTranslationLocales() []string {
 
 func normalizePracticalSpeakers(values []PracticalSpeaker) []PracticalSpeaker {
 	out := make([]PracticalSpeaker, 0, len(values))
-	for idx, speaker := range values {
+	for _, speaker := range values {
 		rawID := strings.TrimSpace(speaker.SpeakerID)
 		speaker.SpeakerID = normalizePracticalSpeakerVoice(rawID)
+		speaker.GoogleVoiceID = strings.TrimSpace(speaker.GoogleVoiceID)
+		speaker.ElevenLabsVoiceID = strings.TrimSpace(speaker.ElevenLabsVoiceID)
 		speaker.SpeakerRole = strings.TrimSpace(speaker.SpeakerRole)
 		speaker.SpeakerPrompt = strings.TrimSpace(speaker.SpeakerPrompt)
 		speaker.Name = strings.TrimSpace(speaker.Name)
@@ -345,14 +357,6 @@ func normalizePracticalSpeakers(values []PracticalSpeaker) []PracticalSpeaker {
 		}
 		if speaker.SpeakerRole == "" {
 			continue
-		}
-		if speaker.SpeakerID == "" {
-			// Keep backward compatibility for scripts where speakers only declared role IDs.
-			if idx%2 == 0 {
-				speaker.SpeakerID = "female"
-			} else {
-				speaker.SpeakerID = "male"
-			}
 		}
 		out = append(out, speaker)
 	}

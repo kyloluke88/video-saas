@@ -232,7 +232,7 @@ func isTerminalProjectTask(task VideoTaskMessage) bool {
 		if stage == "" || stage == "unknown" {
 			return false
 		}
-		nextStage, ok, err := practicalpipeline.NextStage(stage, taskStopAt(task))
+		nextStage, ok, err := practicalpipeline.NextStage(taskTTSType(task), stage, taskStopAt(task))
 		if err != nil {
 			return false
 		}
@@ -361,7 +361,7 @@ func terminalSuccessStatus(task VideoTaskMessage) int16 {
 		}
 		return persistence.ProjectStatusPaused
 	case "practical":
-		if practicalpipeline.IsFinalStage(stage) {
+		if practicalpipeline.IsFinalStage(taskTTSType(task), stage) {
 			return persistence.ProjectStatusFinished
 		}
 		return persistence.ProjectStatusPaused

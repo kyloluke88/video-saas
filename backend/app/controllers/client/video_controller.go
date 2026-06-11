@@ -358,13 +358,15 @@ func (ctrl *VideoController) CreatePracticalDialogue(c *gin.Context) {
 	requestPayload := buildPracticalRequestPayload(req, projectID, runMode, blockNums, chapterNums)
 	trackedPayload := buildTrackedPracticalPayload(runMode, requestPayload)
 
-	plan, err := resolvePracticalStagePlan(runMode, req.StartFrom, req.StopAt)
+	ttsType := normalizePracticalTTSType(req.TTSType)
+	plan, err := resolvePracticalStagePlan(ttsType, runMode, req.StartFrom, req.StopAt)
 	if err != nil {
 		response.BadRequest(c, err, err.Error())
 		return
 	}
 	trackedPayload["run_mode"] = runMode
 	trackedPayload["project_id"] = projectID
+	trackedPayload["tts_type"] = ttsType
 	trackedPayload["start_from"] = string(plan.Start)
 	if plan.Stop != "" {
 		trackedPayload["stop_at"] = string(plan.Stop)
@@ -372,7 +374,7 @@ func (ctrl *VideoController) CreatePracticalDialogue(c *gin.Context) {
 		delete(trackedPayload, "stop_at")
 	}
 
-	taskType, err := practicalTaskTypeForPlan(plan)
+	taskType, err := practicalTaskTypeForPlan(ttsType, plan)
 	if err != nil {
 		response.BadRequest(c, err, err.Error())
 		return
@@ -556,6 +558,7 @@ func buildPracticalRequestPayload(
 	if len(chapterNums) > 0 {
 		payload["chapter_nums"] = chapterNums
 	}
+	payload["tts_type"] = normalizePracticalTTSType(req.TTSType)
 	if resolution := strings.TrimSpace(req.Resolution); resolution != "" {
 		payload["resolution"] = resolution
 	} else if runMode == 0 {
@@ -574,8 +577,8 @@ func buildPracticalTaskPayload(payload map[string]interface{}) map[string]interf
 		"content_type": "practical",
 		"project_id":   strings.TrimSpace(payloadString(payload, "project_id")),
 		"run_mode":     normalizePracticalRunMode(payloadInt(payload, "run_mode", 0)),
-		"tts_type":     1,
 	}
+	out["tts_type"] = normalizePracticalTTSType(payloadInt(payload, "tts_type", 1))
 	if startFrom := strings.TrimSpace(payloadString(payload, "start_from")); startFrom != "" {
 		out["start_from"] = startFrom
 	}

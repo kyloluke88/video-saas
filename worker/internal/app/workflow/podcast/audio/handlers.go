@@ -175,12 +175,10 @@ func generateAndContinue(ctx context.Context, ch *amqp.Channel, payload dto.Podc
 }
 
 func alignAndContinue(ctx context.Context, ch *amqp.Channel, payload dto.PodcastAudioGeneratePayload) error {
-	isMultiple := normalizePodcastIsMultiple(payload.IsMultiple)
 	_, err := podcastaudioservice.AlignGoogle(ctx, podcastaudioservice.AlignInput{
-		ProjectID:  payload.ProjectID,
-		Language:   payload.Lang,
-		IsMultiple: isMultiple,
-		BlockNums:  compactPositiveInts(payload.BlockNums),
+		ProjectID: payload.ProjectID,
+		Language:  payload.Lang,
+		BlockNums: compactPositiveInts(payload.BlockNums),
 	})
 	if err != nil {
 		return err

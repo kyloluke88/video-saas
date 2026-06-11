@@ -3,7 +3,6 @@ package practical_audio_service
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,6 +14,7 @@ import (
 
 type GenerateInput struct {
 	ProjectID      string
+	TTSType        int
 	Language       string
 	ScriptFilename string
 	BlockNums      []int
@@ -64,72 +64,7 @@ func Generate(ctx context.Context, input GenerateInput) (GenerateResult, error) 
 		return GenerateResult{}, err
 	}
 	generateAll := len(requestedBlocks) == 0 && len(requestedChapterNums) == 0
-
-	client, err := newGoogleSpeechClient()
-	if err != nil {
-		return GenerateResult{}, services.NonRetryableError{Err: fmt.Errorf("google tts client init failed: %w", err)}
-	}
-	maleVoice, femaleVoice := practicalTTSVoiceIDs(language)
-	if strings.TrimSpace(maleVoice) == "" || strings.TrimSpace(femaleVoice) == "" {
-		return GenerateResult{}, services.NonRetryableError{Err: fmt.Errorf("google voice ids are required for lang=%s", language)}
-	}
-	narratorVoice := practicalNarratorVoiceID()
-	if narratorVoice == "" {
-		return GenerateResult{}, services.NonRetryableError{Err: fmt.Errorf("google narrator voice id is required")}
-	}
-
-	chapterAudioPaths := make([]string, 0, len(script.Blocks)*2)
-	generatedAssetCount := 0
-	chapterCursor := 0
-	for blockIndex, block := range script.Blocks {
-		shouldGenerateBlockTopic := generateAll
-		if !shouldGenerateBlockTopic {
-			_, shouldGenerateBlockTopic = requestedBlocks[blockIndex+1]
-		}
-
-		chapterIndexes := practicalSelectedChapterIndexes(block, requestedChapterNums, generateAll, chapterCursor)
-		if !shouldGenerateBlockTopic && len(chapterIndexes) == 0 {
-			chapterCursor += len(block.Chapters)
-			continue
-		}
-
-		if shouldGenerateBlockTopic {
-			topicRawAudioPath := blockIntroRawAudioPath(projectDir, block.BlockID, blockIndex+1)
-			if err := synthesizeBlockTopicAudio(ctx, client, language, block, narratorVoice, topicRawAudioPath); err != nil {
-				return GenerateResult{}, err
-			}
-			generatedAssetCount++
-		}
-
-		if len(chapterIndexes) > 0 {
-			speakerVoicesByRole, err := block.SpeakerVoicesByRole()
-			if err != nil {
-				return GenerateResult{}, fmt.Errorf("block %s: %w", block.BlockID, err)
-			}
-			speakerNames := practicalSpeakerNamesForTTS(block)
-			for _, chapterIndex := range chapterIndexes {
-				chapter := block.Chapters[chapterIndex]
-				audioPath := chapterRawAudioPath(projectDir, block.BlockID, chapter.ChapterID, blockIndex+1, chapterIndex+1)
-				if err := synthesizeChapterAudio(ctx, client, language, block, chapter, speakerVoicesByRole, speakerNames, maleVoice, femaleVoice, audioPath); err != nil {
-					return GenerateResult{}, err
-				}
-				chapterAudioPaths = append(chapterAudioPaths, audioPath)
-				generatedAssetCount++
-			}
-		}
-		chapterCursor += len(block.Chapters)
-	}
-
-	if generatedAssetCount == 0 {
-		return GenerateResult{}, services.NonRetryableError{Err: fmt.Errorf("no practical audio targets selected for generation")}
-	}
-
-	log.Printf("📝 practical script cached project_id=%s source=%s path=%s", input.ProjectID, scriptPathFor(input.ScriptFilename), projectScriptInputPath(projectDir))
-	return GenerateResult{
-		ScriptPath:        projectScriptInputPath(projectDir),
-		ChapterAudioPaths: chapterAudioPaths,
-		Script:            script,
-	}, nil
+	return generateWithGoogle(ctx, projectDir, input, script, requestedBlocks, requestedChapterNums, generateAll)
 }
 
 func loadScriptForGeneration(projectDir, language, scriptFilename string) (dto.PracticalScript, error) {
@@ -183,9 +118,7 @@ func synthesizeChapterAudio(
 	language string,
 	block dto.PracticalBlock,
 	chapter dto.PracticalChapter,
-	speakerVoicesByRole map[string]string,
-	speakerNames map[string]string,
-	maleVoiceID, femaleVoiceID string,
+	voiceAssignments map[string]string,
 	outputPath string,
 ) error {
 	if client == nil {
@@ -195,26 +128,22 @@ func synthesizeChapterAudio(
 		return err
 	}
 
+	speakerVoiceConfigs, speakerNames, err := practicalGoogleSpeakerConfigs(block, chapter, voiceAssignments)
+	if err != nil {
+		return err
+	}
 	turns := make([]googlecloud.ConversationTurn, 0, len(chapter.Turns))
 	for _, turn := range chapter.Turns {
 		speech := practicalSpeechText(turn)
 		if speech == "" {
 			continue
 		}
-		speakerRole := strings.TrimSpace(turn.SpeakerRole)
+		speakerRole := practicalTurnRole(turn)
 		if speakerRole == "" {
-			speakerRole = strings.TrimSpace(turn.SpeakerID)
-		}
-		voice, ok := speakerVoicesByRole[speakerRole]
-		if !ok {
-			resolvedVoice, resolveErr := block.ResolveTurnVoice(turn)
-			if resolveErr != nil {
-				return services.NonRetryableError{Err: resolveErr}
-			}
-			voice = resolvedVoice
+			return services.NonRetryableError{Err: fmt.Errorf("turn %s speaker_role is required", strings.TrimSpace(turn.TurnID))}
 		}
 		turns = append(turns, googlecloud.ConversationTurn{
-			Speaker: voice,
+			Speaker: speakerRole,
 			Text:    speech,
 		})
 	}
@@ -223,14 +152,16 @@ func synthesizeChapterAudio(
 	}
 
 	prompt := buildPracticalChapterTTSPrompt(language, block, chapter)
+	if speakerMapping := practicalSpeakerVoiceMappingPrompt(block, chapter, voiceAssignments); speakerMapping != "" {
+		prompt = strings.TrimSpace(prompt + " " + speakerMapping)
+	}
 	result, err := client.SynthesizeConversation(ctx, googlecloud.SynthesizeConversationRequest{
-		LanguageCode:  language,
-		Prompt:        prompt,
-		Turns:         turns,
-		SpeakerNames:  speakerNames,
-		MaleVoiceID:   maleVoiceID,
-		FemaleVoiceID: femaleVoiceID,
-		SpeakingRate:  practicalSpeakingRate(language),
+		LanguageCode:        language,
+		Prompt:              prompt,
+		Turns:               turns,
+		SpeakerNames:        speakerNames,
+		SpeakerVoiceConfigs: speakerVoiceConfigs,
+		SpeakingRate:        practicalSpeakingRate(language),
 	})
 	if err != nil {
 		return err
@@ -239,6 +170,88 @@ func synthesizeChapterAudio(
 		return err
 	}
 	return nil
+}
+
+func practicalGoogleSpeakerConfigs(
+	block dto.PracticalBlock,
+	chapter dto.PracticalChapter,
+	voiceAssignments map[string]string,
+) ([]googlecloud.SpeakerVoiceConfig, map[string]string, error) {
+	activeRoles := practicalChapterSpeakerRoles(chapter)
+	if len(activeRoles) == 0 {
+		return nil, nil, services.NonRetryableError{Err: fmt.Errorf("chapter %s has no speakable turns", strings.TrimSpace(chapter.ChapterID))}
+	}
+
+	configs := make([]googlecloud.SpeakerVoiceConfig, 0, 2)
+	names := make(map[string]string, 2)
+	seenRoles := make(map[string]struct{}, 2)
+	appendRole := func(role string) error {
+		role = strings.TrimSpace(role)
+		if role == "" {
+			return nil
+		}
+		if _, exists := seenRoles[role]; exists {
+			return nil
+		}
+		speaker, ok, err := practicalSpeakerByRole(block, role)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return services.NonRetryableError{Err: fmt.Errorf("speaker_role %s is not declared in speakers", role)}
+		}
+		voiceID := strings.TrimSpace(voiceAssignments[role])
+		if voiceID == "" {
+			return services.NonRetryableError{Err: fmt.Errorf("speaker_role %s has no voice assignment", role)}
+		}
+		configs = append(configs, googlecloud.SpeakerVoiceConfig{
+			Speaker: role,
+			VoiceID: voiceID,
+		})
+		names[role] = firstNonEmpty(strings.TrimSpace(speaker.Name), role)
+		seenRoles[role] = struct{}{}
+		return nil
+	}
+
+	for _, role := range activeRoles {
+		if err := appendRole(role); err != nil {
+			return nil, nil, err
+		}
+	}
+	if len(configs) < 2 {
+		for _, speaker := range block.Speakers {
+			if err := appendRole(strings.TrimSpace(speaker.SpeakerRole)); err != nil {
+				return nil, nil, err
+			}
+			if len(configs) == 2 {
+				break
+			}
+		}
+	}
+	if len(configs) != 2 {
+		return nil, nil, services.NonRetryableError{Err: fmt.Errorf("chapter %s requires exactly 2 google speaker configs", strings.TrimSpace(chapter.ChapterID))}
+	}
+	return configs, names, nil
+}
+
+func practicalChapterSpeakerRoles(chapter dto.PracticalChapter) []string {
+	roles := make([]string, 0, 2)
+	seen := make(map[string]struct{}, 2)
+	for _, turn := range chapter.Turns {
+		if practicalSpeechText(turn) == "" {
+			continue
+		}
+		role := practicalTurnRole(turn)
+		if role == "" {
+			continue
+		}
+		if _, exists := seen[role]; exists {
+			continue
+		}
+		roles = append(roles, role)
+		seen[role] = struct{}{}
+	}
+	return roles
 }
 
 func synthesizeBlockTopicAudio(
@@ -282,13 +295,18 @@ func synthesizeBlockTopicAudio(
 func buildPracticalChapterTTSPrompt(language string, block dto.PracticalBlock, chapter dto.PracticalChapter) string {
 	lines := []string{
 		"Read this chapter as a natural everyday conversation in the described scene.",
+		"This content is for beginners.",
+		"Keep the overall speaking pace very slow and easy to follow.",
 		"Keep the acting subtle but alive.",
 		"Use light emotional variation such as greeting, hesitation, curiosity, confirmation, apology, gratitude, or emphasis when the line requires it.",
 		"Do not sound flat, over-careful, or like isolated textbook example sentences.",
-		"Keep each speaker's voice consistent and do not swap the female and male voices.",
+		"Keep each speaker's voice consistent and do not swap speaker identities.",
 		"Keep every turn in the original order.",
 		"Do not add extra words.",
-		"Do not insert exaggerated long pauses between turns. Timing pauses are handled by the audio pipeline.",
+		"Use clearly noticeable, wide pauses between turns so beginners can easily hear the speaker change.",
+		"Leave a large, consistent, audible gap after each turn before the next speaker begins.",
+		"At every speaker change, insert [extended pause, about 800ms] between the two turns.",
+		"Do not rush turn changes.",
 	}
 	if topic := strings.TrimSpace(block.Topic); topic != "" {
 		lines = append(lines, "Topic: "+topic)
@@ -299,8 +317,8 @@ func buildPracticalChapterTTSPrompt(language string, block dto.PracticalBlock, c
 	if scenePrompt := strings.TrimSpace(chapter.ScenePrompt); scenePrompt != "" {
 		lines = append(lines, "Visual scene: "+scenePrompt)
 	}
-	if casting := practicalVoiceCastingNote(block); casting != "" {
-		lines = append(lines, casting)
+	if speakerRoles := practicalSpeakerRolesNote(block); speakerRoles != "" {
+		lines = append(lines, speakerRoles)
 	}
 	if placeholders := practicalBlockPromptPlaceholders(block); len(placeholders) > 0 {
 		lines = append(lines, "Characters: "+strings.Join(placeholders, ", "))
@@ -375,56 +393,72 @@ func practicalBlockPromptPlaceholders(block dto.PracticalBlock) []string {
 	return out
 }
 
-func practicalSpeakerNamesForTTS(block dto.PracticalBlock) map[string]string {
-	out := map[string]string{
-		"female": "female speaker",
-		"male":   "male speaker",
-	}
-	assigned := map[string]bool{}
-	for _, speaker := range block.Speakers {
-		voice := normalizePracticalVoice(speaker.SpeakerID)
-		if voice == "" || assigned[voice] {
-			continue
-		}
-		role := strings.TrimSpace(speaker.SpeakerRole)
-		name := strings.TrimSpace(speaker.Name)
-		label := firstNonEmpty(name, role, voice)
-		if label == "" {
-			continue
-		}
-		if role != "" && !strings.EqualFold(label, role) {
-			label = role
-		}
-		out[voice] = fmt.Sprintf("%s %s", voice, label)
-		assigned[voice] = true
-	}
-	return out
-}
-
-func practicalVoiceCastingNote(block dto.PracticalBlock) string {
+func practicalSpeakerRolesNote(block dto.PracticalBlock) string {
 	if len(block.Speakers) == 0 {
 		return ""
 	}
-	rolesByVoice := map[string][]string{
-		"female": {},
-		"male":   {},
-	}
+	roles := make([]string, 0, len(block.Speakers))
 	for _, speaker := range block.Speakers {
-		voice := normalizePracticalVoice(speaker.SpeakerID)
-		role := strings.TrimSpace(speaker.SpeakerRole)
-		if voice == "" || role == "" {
+		if role := strings.TrimSpace(speaker.SpeakerRole); role != "" {
+			roles = append(roles, role)
+		}
+	}
+	if len(roles) == 0 {
+		return ""
+	}
+	return "Speaker roles in this chapter: " + strings.Join(roles, ", ") + "."
+}
+
+func practicalSpeakerVoiceMappingPrompt(
+	block dto.PracticalBlock,
+	chapter dto.PracticalChapter,
+	voiceAssignments map[string]string,
+) string {
+	activeRoles := practicalChapterSpeakerRoles(chapter)
+	if len(activeRoles) == 0 {
+		return ""
+	}
+
+	lines := make([]string, 0, len(activeRoles)*2+4)
+	lines = append(lines, "Speaker mapping for this chapter:")
+	for _, role := range activeRoles {
+		speaker, ok, err := practicalSpeakerByRole(block, role)
+		if err != nil || !ok {
 			continue
 		}
-		rolesByVoice[voice] = append(rolesByVoice[voice], role)
+		gender := normalizePracticalVoice(speaker.SpeakerID)
+		if gender == "" {
+			gender = "assigned"
+		}
+		voiceID := strings.TrimSpace(voiceAssignments[role])
+		if voiceID == "" {
+			continue
+		}
+		lines = append(lines, fmt.Sprintf("- %s: %s voice %s.", role, gender, voiceID))
 	}
-	parts := make([]string, 0, 2)
-	if len(rolesByVoice["female"]) > 0 {
-		parts = append(parts, "Female voice speaks "+strings.Join(rolesByVoice["female"], ", ")+" turns.")
+
+	for _, role := range activeRoles {
+		speaker, ok, err := practicalSpeakerByRole(block, role)
+		if err != nil || !ok {
+			continue
+		}
+		gender := normalizePracticalVoice(speaker.SpeakerID)
+		if gender == "" {
+			gender = "assigned"
+		}
+		voiceID := strings.TrimSpace(voiceAssignments[role])
+		if voiceID == "" {
+			continue
+		}
+		lines = append(lines, fmt.Sprintf("Every line labeled \"%s:\" must be spoken only with the %s voice %s.", role, gender, voiceID))
 	}
-	if len(rolesByVoice["male"]) > 0 {
-		parts = append(parts, "Male voice speaks "+strings.Join(rolesByVoice["male"], ", ")+" turns.")
-	}
-	return strings.Join(parts, " ")
+
+	lines = append(lines,
+		"Never merge two speakers into one voice.",
+		"Never let one speaker read another speaker's line.",
+		"Keep the same assigned voice for the entire chapter, even when turns are short.",
+	)
+	return strings.Join(lines, " ")
 }
 
 func normalizePracticalVoice(value string) string {
@@ -497,9 +531,5 @@ func practicalSelectedChapterIndexes(block dto.PracticalBlock, requested map[int
 }
 
 func practicalSpeechText(turn dto.PracticalTurn) string {
-	text := strings.TrimSpace(turn.SpeechText)
-	if text != "" {
-		return text
-	}
 	return strings.TrimSpace(turn.Text)
 }

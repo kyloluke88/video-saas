@@ -133,7 +133,7 @@ func TestJapaneseSubtitleLayout_Style1UsesConfiguredTopBandsAndColors(t *testing
 	if !strings.Contains(rendered, ","+assColorRGB(0, 0, 0)+",&H64000000,1,0,0,0,100,100,") {
 		t.Fatalf("expected JaActive to use black outline and bold highlight state")
 	}
-	if !strings.Contains(rendered, ",0,1,2,0,5,10,10,10,1\n") {
+	if !strings.Contains(rendered, ",0,1,3,0,5,10,10,10,1\n") {
 		t.Fatalf("expected JaActive to add outline during highlight")
 	}
 }

@@ -31,6 +31,14 @@ var stageTaskTypes = map[Stage]string{
 	StagePersist:  "practical.page.persist.v1",
 }
 
+func NormalizeTTSType(value int) int {
+	return 1
+}
+
+func StageOrder(ttsType int) []Stage {
+	return stageOrder
+}
+
 func ParseStage(value string) (Stage, bool) {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case string(StageGenerate):
@@ -65,8 +73,11 @@ func StageForTaskType(taskType string) (Stage, bool) {
 	}
 }
 
-func TaskTypeForStage(stage Stage) (string, error) {
+func TaskTypeForStage(ttsType int, stage Stage) (string, error) {
 	stage = Stage(strings.ToLower(strings.TrimSpace(string(stage))))
+	if StageIndex(StageOrder(ttsType), stage) < 0 {
+		return "", fmt.Errorf("stage %q is not supported for tts_type=%d", stage, NormalizeTTSType(ttsType))
+	}
 	taskType, ok := stageTaskTypes[stage]
 	if !ok {
 		return "", fmt.Errorf("unsupported practical stage %q", stage)
@@ -74,11 +85,12 @@ func TaskTypeForStage(stage Stage) (string, error) {
 	return taskType, nil
 }
 
-func TerminalStage() Stage {
-	return stageOrder[len(stageOrder)-1]
+func TerminalStage(ttsType int) Stage {
+	order := StageOrder(ttsType)
+	return order[len(order)-1]
 }
 
-func ValidateRange(runMode int, startFrom string, stopAt string) (Stage, Stage, error) {
+func ValidateRange(ttsType int, runMode int, startFrom string, stopAt string) (Stage, Stage, error) {
 	normalizedRunMode := runMode
 	if normalizedRunMode != 1 {
 		normalizedRunMode = 0
@@ -100,9 +112,10 @@ func ValidateRange(runMode int, startFrom string, stopAt string) (Stage, Stage, 
 	if !ok {
 		return "", "", fmt.Errorf("unsupported start_from value: %s", start)
 	}
-	startIndex := StageIndex(stageOrder, startStage)
+	order := StageOrder(ttsType)
+	startIndex := StageIndex(order, startStage)
 	if startIndex < 0 {
-		return "", "", fmt.Errorf("unsupported practical stage %q", startStage)
+		return "", "", fmt.Errorf("start_from stage %q is not supported for tts_type=%d", startStage, NormalizeTTSType(ttsType))
 	}
 
 	if strings.TrimSpace(stopAt) == "" {
@@ -113,9 +126,9 @@ func ValidateRange(runMode int, startFrom string, stopAt string) (Stage, Stage, 
 	if !ok {
 		return "", "", fmt.Errorf("unsupported stop_at value: %s", strings.TrimSpace(stopAt))
 	}
-	stopIndex := StageIndex(stageOrder, stopStage)
+	stopIndex := StageIndex(order, stopStage)
 	if stopIndex < 0 {
-		return "", "", fmt.Errorf("unsupported practical stage %q", stopStage)
+		return "", "", fmt.Errorf("stop_at stage %q is not supported for tts_type=%d", stopStage, NormalizeTTSType(ttsType))
 	}
 	if stopIndex < startIndex {
 		return "", "", fmt.Errorf("stop_at %q cannot be earlier than start_from %q", stopStage, startStage)
@@ -123,12 +136,13 @@ func ValidateRange(runMode int, startFrom string, stopAt string) (Stage, Stage, 
 	return startStage, stopStage, nil
 }
 
-func NextStage(current string, stopAt string) (string, bool, error) {
+func NextStage(ttsType int, current string, stopAt string) (string, bool, error) {
 	currentStage, ok := ParseStage(current)
 	if !ok {
 		return "", false, fmt.Errorf("unsupported practical stage: %s", strings.TrimSpace(current))
 	}
-	currentIndex := StageIndex(stageOrder, currentStage)
+	order := StageOrder(ttsType)
+	currentIndex := StageIndex(order, currentStage)
 	if currentIndex < 0 {
 		return "", false, fmt.Errorf("unsupported practical stage: %s", currentStage)
 	}
@@ -138,27 +152,27 @@ func NextStage(current string, stopAt string) (string, bool, error) {
 		if !ok {
 			return "", false, fmt.Errorf("unsupported stop_at value: %s", strings.TrimSpace(stopAt))
 		}
-		stopIndex := StageIndex(stageOrder, stopStage)
+		stopIndex := StageIndex(order, stopStage)
 		if stopIndex < 0 {
-			return "", false, fmt.Errorf("unsupported practical stage %q", stopStage)
+			return "", false, fmt.Errorf("stop_at stage %q is not supported for tts_type=%d", stopStage, NormalizeTTSType(ttsType))
 		}
 		if currentIndex >= stopIndex {
 			return "", false, nil
 		}
 	}
 
-	if currentIndex+1 >= len(stageOrder) {
+	if currentIndex+1 >= len(order) {
 		return "", false, nil
 	}
-	return string(stageOrder[currentIndex+1]), true, nil
+	return string(order[currentIndex+1]), true, nil
 }
 
-func IsFinalStage(current string) bool {
+func IsFinalStage(ttsType int, current string) bool {
 	stage, ok := ParseStage(current)
 	if !ok {
 		return false
 	}
-	return stage == TerminalStage()
+	return stage == TerminalStage(ttsType)
 }
 
 func StageIndex(order []Stage, stage Stage) int {

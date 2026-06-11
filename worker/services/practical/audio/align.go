@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -18,6 +20,7 @@ import (
 
 type AlignInput struct {
 	ProjectID   string
+	TTSType     int
 	Language    string
 	BlockNums   []int
 	ChapterNums []int
@@ -50,11 +53,32 @@ type practicalTurnWindow struct {
 	HasMatch bool
 }
 
-type practicalTurnAudioSlice struct {
-	TurnIndex int
-	StartMS   int
-	EndMS     int
+type practicalSilenceInterval struct {
+	StartMS int
+	EndMS   int
 }
+
+type practicalPreparedChapterAlignment struct {
+	AlignedChapter  dto.PracticalChapter
+	SourceAudioPath string
+	DurationMS      int
+}
+
+type practicalAlignmentStrategy struct {
+	MaterializeBlockTopic func(ctx context.Context, rawTopicAudioPath, finalTopicAudioPath string) error
+	PrepareChapter        func(ctx context.Context, projectDir, language string, block dto.PracticalBlock, blockIndex int, chapter dto.PracticalChapter, chapterIndex int) (practicalPreparedChapterAlignment, error)
+}
+
+const (
+	practicalTurnBoundarySilenceMinMS   = 80
+	practicalTurnBoundaryLookAheadMS    = 450
+	practicalTurnBoundarySilenceNoiseDB = "-35dB"
+)
+
+var (
+	practicalSilenceStartPattern = regexp.MustCompile(`silence_start:\s*([0-9.]+)`)
+	practicalSilenceEndPattern   = regexp.MustCompile(`silence_end:\s*([0-9.]+)`)
+)
 
 func Align(ctx context.Context, input AlignInput) (AlignResult, error) {
 	if strings.TrimSpace(input.ProjectID) == "" {
@@ -85,9 +109,20 @@ func Align(ctx context.Context, input AlignInput) (AlignResult, error) {
 
 	reusableLocalScript := dto.PracticalScript{}
 	if !fullAlign {
-		reusableLocalScript, err = loadReusableLocalAlignedScript(projectDir, language)
+		var reusableFound bool
+		reusableLocalScript, reusableFound, err = loadReusableLocalAlignedScript(projectDir, language)
 		if err != nil {
 			return AlignResult{}, err
+		}
+		if !reusableFound {
+			if practicalCanRecoverFullAlignFromLocalAudio(projectDir, script) {
+				fullAlign = true
+				log.Printf("⚠️ practical partial align missing aligned cache, falling back to full align recovery project_id=%s", input.ProjectID)
+			} else {
+				return AlignResult{}, services.NonRetryableError{
+					Err: fmt.Errorf("partial practical align requires existing aligned script: %s", projectScriptAlignedPath(projectDir)),
+				}
+			}
 		}
 	}
 
@@ -129,18 +164,30 @@ func loadScriptForAlignment(projectDir, language string) (dto.PracticalScript, e
 	return dto.PracticalScript{}, services.NonRetryableError{Err: fmt.Errorf("practical script input not found in project dir %s", projectDir)}
 }
 
-func loadReusableLocalAlignedScript(projectDir, language string) (dto.PracticalScript, error) {
+func loadReusableLocalAlignedScript(projectDir, language string) (dto.PracticalScript, bool, error) {
 	alignedScriptPath := projectScriptAlignedPath(projectDir)
 	if !fileExists(alignedScriptPath) {
-		return dto.PracticalScript{}, services.NonRetryableError{
-			Err: fmt.Errorf("partial practical align requires existing aligned script: %s", alignedScriptPath),
-		}
+		return dto.PracticalScript{}, false, nil
 	}
 	script, err := loadScriptFromPath(language, alignedScriptPath)
 	if err != nil {
-		return dto.PracticalScript{}, err
+		return dto.PracticalScript{}, false, err
 	}
-	return localizePracticalScriptTimings(script), nil
+	return localizePracticalScriptTimings(script), true, nil
+}
+
+func practicalCanRecoverFullAlignFromLocalAudio(projectDir string, script dto.PracticalScript) bool {
+	for blockIndex, block := range script.Blocks {
+		if !fileExists(blockIntroRawAudioPath(projectDir, block.BlockID, blockIndex+1)) {
+			return false
+		}
+		for chapterIndex, chapter := range block.Chapters {
+			if !fileExists(chapterRawAudioPath(projectDir, block.BlockID, chapter.ChapterID, blockIndex+1, chapterIndex+1)) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func alignScriptTimings(
@@ -160,14 +207,7 @@ func alignScriptTimings(
 			return dto.PracticalScript{}, err
 		}
 	}
-	client := newMFAClient()
-	tempo := practicalTempo()
-	turnGapMS := practicalTurnGapMS()
-	if turnGapMS > 0 && (fullAlign || len(requestedChapterNums) > 0) {
-		if err := createSilenceAudio(ctx, projectTurnGapPath(projectDir), turnGapMS); err != nil {
-			return dto.PracticalScript{}, err
-		}
-	}
+	strategy := newPracticalAlignmentStrategy()
 
 	chapterCursor := 0
 	for blockIndex := range aligned.Blocks {
@@ -180,7 +220,7 @@ func alignScriptTimings(
 					Err: fmt.Errorf("block topic raw audio missing for block %s: %s", strings.TrimSpace(block.BlockID), rawTopicAudioPath),
 				}
 			}
-			if err := renderTempoAdjustedAudio(ctx, rawTopicAudioPath, finalTopicAudioPath, tempo); err != nil {
+			if err := strategy.MaterializeBlockTopic(ctx, rawTopicAudioPath, finalTopicAudioPath); err != nil {
 				return dto.PracticalScript{}, err
 			}
 		} else if !fileExists(finalTopicAudioPath) {
@@ -213,22 +253,12 @@ func alignScriptTimings(
 					Err: fmt.Errorf("chapter audio missing for block %s chapter %s: %s", strings.TrimSpace(block.BlockID), strings.TrimSpace(chapter.ChapterID), rawAudioPath),
 				}
 			}
-			tempoAudioPath := chapterTempoAudioPath(projectDir, block.BlockID, chapter.ChapterID, blockIndex+1, chapterIndex+1)
-			if err := renderTempoAdjustedAudio(ctx, rawAudioPath, tempoAudioPath, tempo); err != nil {
-				return dto.PracticalScript{}, err
-			}
-
-			durationMS, err := audioDurationMS(ctx, tempoAudioPath)
+			preparedChapter, err := strategy.PrepareChapter(ctx, projectDir, aligned.Language, *block, blockIndex+1, chapter, chapterIndex+1)
 			if err != nil {
 				return dto.PracticalScript{}, err
 			}
 
-			alignedChapter, err := alignChapterTimings(ctx, client, aligned.Language, projectDir, chapter, tempoAudioPath, durationMS)
-			if err != nil {
-				return dto.PracticalScript{}, err
-			}
-
-			finalChapter, err := materializeChapterAudioWithTurnGaps(ctx, projectDir, tempoAudioPath, finalAudioPath, alignedChapter, durationMS)
+			finalChapter, err := materializeAlignedChapterAudio(ctx, preparedChapter.SourceAudioPath, finalAudioPath, preparedChapter.AlignedChapter, preparedChapter.DurationMS)
 			if err != nil {
 				return dto.PracticalScript{}, err
 			}
@@ -239,6 +269,43 @@ func alignScriptTimings(
 
 	setPracticalLocalHierarchyTimings(&aligned)
 	return aligned, nil
+}
+
+func newPracticalAlignmentStrategy() practicalAlignmentStrategy {
+	client := newMFAClient()
+	tempo := practicalTempo()
+	return practicalAlignmentStrategy{
+		MaterializeBlockTopic: func(ctx context.Context, rawTopicAudioPath, finalTopicAudioPath string) error {
+			return renderTempoAdjustedAudio(ctx, rawTopicAudioPath, finalTopicAudioPath, tempo)
+		},
+		PrepareChapter: func(ctx context.Context, projectDir, language string, block dto.PracticalBlock, blockIndex int, chapter dto.PracticalChapter, chapterIndex int) (practicalPreparedChapterAlignment, error) {
+			rawAudioPath := chapterRawAudioPath(projectDir, block.BlockID, chapter.ChapterID, blockIndex, chapterIndex)
+			tempoAudioPath := chapterTempoAudioPath(projectDir, block.BlockID, chapter.ChapterID, blockIndex, chapterIndex)
+			if err := renderTempoAdjustedAudio(ctx, rawAudioPath, tempoAudioPath, tempo); err != nil {
+				return practicalPreparedChapterAlignment{}, err
+			}
+
+			durationMS, err := audioDurationMS(ctx, tempoAudioPath)
+			if err != nil {
+				return practicalPreparedChapterAlignment{}, err
+			}
+
+			alignedChapter, err := alignChapterTimings(ctx, client, language, projectDir, chapter, tempoAudioPath, durationMS)
+			if err != nil {
+				return practicalPreparedChapterAlignment{}, err
+			}
+			silenceIntervals, err := detectPracticalSilenceIntervals(ctx, tempoAudioPath, durationMS)
+			if err != nil {
+				return practicalPreparedChapterAlignment{}, err
+			}
+			alignedChapter = stabilizePracticalChapterTimings(alignedChapter, silenceIntervals, durationMS)
+			return practicalPreparedChapterAlignment{
+				AlignedChapter:  alignedChapter,
+				SourceAudioPath: tempoAudioPath,
+				DurationMS:      durationMS,
+			}, nil
+		},
+	}
 }
 
 func alignChapterTimings(
@@ -642,116 +709,134 @@ func practicalChapterHasLocalTiming(chapter dto.PracticalChapter) bool {
 	return hasRange
 }
 
-func materializeChapterAudioWithTurnGaps(
-	ctx context.Context,
-	projectDir, rawAudioPath, outputPath string,
+func materializeAlignedChapterAudio(
+	_ context.Context,
+	sourceAudioPath, outputPath string,
 	chapter dto.PracticalChapter,
-	rawDurationMS int,
+	audioDurationMS int,
 ) (dto.PracticalChapter, error) {
 	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
 		return dto.PracticalChapter{}, err
 	}
-
-	turnGapMS := practicalTurnGapMS()
-	if turnGapMS <= 0 {
-		if err := fsx.CopyFile(rawAudioPath, outputPath); err != nil {
-			return dto.PracticalChapter{}, err
-		}
-		chapter.StartMS = 0
-		chapter.EndMS = maxInt(0, rawDurationMS)
-		return chapter, nil
-	}
-
-	shiftedChapter, slices := applyPracticalTurnGapToChapterTimings(chapter, turnGapMS, rawDurationMS)
-	if len(slices) == 0 {
-		if err := fsx.CopyFile(rawAudioPath, outputPath); err != nil {
-			return dto.PracticalChapter{}, err
-		}
-		return shiftedChapter, nil
-	}
-
-	turnGapPath := projectTurnGapPath(projectDir)
-	if !fileExists(turnGapPath) {
-		return dto.PracticalChapter{}, services.NonRetryableError{Err: fmt.Errorf("turn gap audio missing: %s", turnGapPath)}
-	}
-
-	files := make([]string, 0, len(slices)*2)
-	chunkPaths := make([]string, 0, len(slices))
-	defer func() {
-		for _, path := range chunkPaths {
-			_ = os.Remove(path)
-		}
-	}()
-
-	for sliceIndex, slice := range slices {
-		if sliceIndex > 0 {
-			files = append(files, turnGapPath)
-		}
-		chunkFile, err := os.CreateTemp(projectDir, fmt.Sprintf("turn_%02d_*.wav", slice.TurnIndex+1))
-		if err != nil {
-			return dto.PracticalChapter{}, err
-		}
-		chunkPath := chunkFile.Name()
-		if err := chunkFile.Close(); err != nil {
-			_ = os.Remove(chunkPath)
-			return dto.PracticalChapter{}, err
-		}
-		if err := extractAudioChunk(ctx, rawAudioPath, chunkPath, slice.StartMS, slice.EndMS); err != nil {
-			_ = os.Remove(chunkPath)
-			return dto.PracticalChapter{}, err
-		}
-		chunkPaths = append(chunkPaths, chunkPath)
-		files = append(files, chunkPath)
-	}
-
-	if err := concatAudioFiles(ctx, projectDir, files, outputPath); err != nil {
+	if err := fsx.CopyFile(sourceAudioPath, outputPath); err != nil {
 		return dto.PracticalChapter{}, err
 	}
-	return shiftedChapter, nil
+	finalChapter := chapter
+	finalChapter.StartMS = 0
+	finalChapter.EndMS = maxInt(0, audioDurationMS)
+	return finalChapter, nil
 }
 
-func applyPracticalTurnGapToChapterTimings(chapter dto.PracticalChapter, turnGapMS, rawDurationMS int) (dto.PracticalChapter, []practicalTurnAudioSlice) {
-	shifted := chapter
-	shifted.Turns = append([]dto.PracticalTurn(nil), chapter.Turns...)
-	slices := make([]practicalTurnAudioSlice, 0, len(chapter.Turns))
-	validTurnIndexes := make([]int, 0, len(chapter.Turns))
-	for turnIndex, turn := range chapter.Turns {
-		shifted.Turns[turnIndex].StartMS = 0
-		shifted.Turns[turnIndex].EndMS = 0
-		if turn.EndMS > turn.StartMS {
-			validTurnIndexes = append(validTurnIndexes, turnIndex)
+func stabilizePracticalChapterTimings(chapter dto.PracticalChapter, intervals []practicalSilenceInterval, audioDurationMS int) dto.PracticalChapter {
+	stabilized := chapter
+	if audioDurationMS < 0 {
+		audioDurationMS = 0
+	}
+	stabilized.StartMS = 0
+	stabilized.EndMS = audioDurationMS
+	if len(stabilized.Turns) == 0 {
+		return stabilized
+	}
+	for turnIndex := range stabilized.Turns {
+		turn := &stabilized.Turns[turnIndex]
+		if turn.EndMS <= turn.StartMS {
+			continue
+		}
+		nextTurnStartMS := audioDurationMS
+		for nextIndex := turnIndex + 1; nextIndex < len(stabilized.Turns); nextIndex++ {
+			nextTurn := stabilized.Turns[nextIndex]
+			if nextTurn.EndMS <= nextTurn.StartMS {
+				continue
+			}
+			nextTurnStartMS = nextTurn.StartMS
+			break
+		}
+		turn.EndMS = practicalTurnEndAtNextSilence(turn.EndMS, nextTurnStartMS, intervals)
+		if turn.EndMS > audioDurationMS {
+			turn.EndMS = audioDurationMS
 		}
 	}
-	if len(validTurnIndexes) == 0 {
-		shifted.StartMS = 0
-		shifted.EndMS = maxInt(0, rawDurationMS)
-		return shifted, nil
-	}
+	return stabilized
+}
 
-	cumulativeGap := 0
-	segmentStartMS := 0
-	for position, turnIndex := range validTurnIndexes {
-		turn := chapter.Turns[turnIndex]
-		shifted.Turns[turnIndex].StartMS = turn.StartMS + cumulativeGap
-		shifted.Turns[turnIndex].EndMS = turn.EndMS + cumulativeGap
-		segmentEndMS := turn.EndMS
-		if position == len(validTurnIndexes)-1 {
-			segmentEndMS = maxInt(segmentEndMS, rawDurationMS)
+func practicalTurnEndAtNextSilence(boundaryMS, nextTurnStartMS int, intervals []practicalSilenceInterval) int {
+	if len(intervals) == 0 {
+		return boundaryMS
+	}
+	lookAheadLimit := boundaryMS + practicalTurnBoundaryLookAheadMS
+	if nextTurnStartMS > boundaryMS {
+		lookAheadLimit = minInt(lookAheadLimit, nextTurnStartMS)
+	}
+	for _, interval := range intervals {
+		if interval.EndMS <= boundaryMS {
+			continue
 		}
-		slices = append(slices, practicalTurnAudioSlice{
-			TurnIndex: turnIndex,
-			StartMS:   segmentStartMS,
-			EndMS:     segmentEndMS,
-		})
-		segmentStartMS = turn.EndMS
-		if position < len(validTurnIndexes)-1 {
-			cumulativeGap += maxInt(0, turnGapMS)
+		if interval.StartMS > lookAheadLimit {
+			break
+		}
+		if interval.StartMS <= boundaryMS {
+			return boundaryMS
+		}
+		return interval.StartMS
+	}
+	return boundaryMS
+}
+
+func detectPracticalSilenceIntervals(ctx context.Context, sourcePath string, rawDurationMS int) ([]practicalSilenceInterval, error) {
+	if strings.TrimSpace(sourcePath) == "" {
+		return nil, nil
+	}
+	output, err := ffmpegcommon.RunFFmpegOutputContext(
+		ctx,
+		"-hide_banner",
+		"-i", sourcePath,
+		"-af", fmt.Sprintf("silencedetect=noise=%s:d=%.3f", practicalTurnBoundarySilenceNoiseDB, float64(practicalTurnBoundarySilenceMinMS)/1000.0),
+		"-f", "null",
+		"-",
+	)
+	if err != nil {
+		return nil, err
+	}
+	return parsePracticalSilenceIntervals(output, rawDurationMS), nil
+}
+
+func parsePracticalSilenceIntervals(output string, rawDurationMS int) []practicalSilenceInterval {
+	intervals := make([]practicalSilenceInterval, 0, 16)
+	pendingStartMS := -1
+	for _, line := range strings.Split(output, "\n") {
+		if match := practicalSilenceStartPattern.FindStringSubmatch(line); len(match) == 2 {
+			if startMS, ok := parsePracticalSilenceMS(match[1]); ok {
+				pendingStartMS = startMS
+			}
+			continue
+		}
+		if match := practicalSilenceEndPattern.FindStringSubmatch(line); len(match) == 2 {
+			endMS, ok := parsePracticalSilenceMS(match[1])
+			if !ok {
+				continue
+			}
+			startMS := 0
+			if pendingStartMS >= 0 {
+				startMS = pendingStartMS
+			}
+			pendingStartMS = -1
+			if endMS > startMS {
+				intervals = append(intervals, practicalSilenceInterval{StartMS: startMS, EndMS: endMS})
+			}
 		}
 	}
+	if pendingStartMS >= 0 && rawDurationMS > pendingStartMS {
+		intervals = append(intervals, practicalSilenceInterval{StartMS: pendingStartMS, EndMS: rawDurationMS})
+	}
+	return intervals
+}
 
-	shifted.StartMS = 0
-	shifted.EndMS = maxInt(maxInt(0, rawDurationMS), segmentStartMS) + maxInt(0, turnGapMS)*(len(validTurnIndexes)-1)
-	return shifted, slices
+func parsePracticalSilenceMS(value string) (int, bool) {
+	seconds, err := strconv.ParseFloat(strings.TrimSpace(value), 64)
+	if err != nil {
+		return 0, false
+	}
+	return int(seconds * 1000.0), true
 }
 
 func buildDialogueAudio(ctx context.Context, projectDir string, script dto.PracticalScript) (string, []int, error) {
@@ -759,23 +844,24 @@ func buildDialogueAudio(ctx context.Context, projectDir string, script dto.Pract
 	blockGapMS := practicalBlockGapMS()
 	chapterTransitionLeadMS := practicalChapterTransitionLeadMS()
 	blockTransitionLeadMS := practicalBlockTransitionLeadMS()
+	referenceAudioPath := practicalDialogueReferenceAudioPath(projectDir, script)
 	if chapterGapMS > 0 {
-		if err := createSilenceAudio(ctx, projectChapterGapPath(projectDir), chapterGapMS); err != nil {
+		if err := createPracticalDialogueGapAudio(ctx, projectChapterGapPath(projectDir), chapterGapMS, referenceAudioPath); err != nil {
 			return "", nil, err
 		}
 	}
 	if blockGapMS > 0 {
-		if err := createSilenceAudio(ctx, projectBlockGapPath(projectDir), blockGapMS); err != nil {
+		if err := createPracticalDialogueGapAudio(ctx, projectBlockGapPath(projectDir), blockGapMS, referenceAudioPath); err != nil {
 			return "", nil, err
 		}
 	}
 	if chapterTransitionLeadMS > 0 {
-		if err := createSilenceAudio(ctx, projectChapterTransitionLeadPath(projectDir), chapterTransitionLeadMS); err != nil {
+		if err := createPracticalDialogueGapAudio(ctx, projectChapterTransitionLeadPath(projectDir), chapterTransitionLeadMS, referenceAudioPath); err != nil {
 			return "", nil, err
 		}
 	}
 	if blockTransitionLeadMS > 0 {
-		if err := createSilenceAudio(ctx, projectBlockTransitionLeadPath(projectDir), blockTransitionLeadMS); err != nil {
+		if err := createPracticalDialogueGapAudio(ctx, projectBlockTransitionLeadPath(projectDir), blockTransitionLeadMS, referenceAudioPath); err != nil {
 			return "", nil, err
 		}
 	}
@@ -845,6 +931,29 @@ func buildDialogueAudio(ctx context.Context, projectDir string, script dto.Pract
 		return "", nil, err
 	}
 	return outputPath, topicDurations, nil
+}
+
+func createPracticalDialogueGapAudio(ctx context.Context, outputPath string, durationMS int, referenceAudioPath string) error {
+	if strings.TrimSpace(referenceAudioPath) == "" {
+		return createSilenceAudio(ctx, outputPath, durationMS)
+	}
+	return createSilenceAudioLike(ctx, outputPath, durationMS, referenceAudioPath)
+}
+
+func practicalDialogueReferenceAudioPath(projectDir string, script dto.PracticalScript) string {
+	for blockIndex, block := range script.Blocks {
+		introPath := blockIntroAudioPath(projectDir, block.BlockID, blockIndex+1)
+		if fileExists(introPath) {
+			return introPath
+		}
+		for chapterIndex, chapter := range block.Chapters {
+			chapterPath := chapterAudioPath(projectDir, block.BlockID, chapter.ChapterID, blockIndex+1, chapterIndex+1)
+			if fileExists(chapterPath) {
+				return chapterPath
+			}
+		}
+	}
+	return ""
 }
 
 func applyPracticalTimelineGaps(script dto.PracticalScript, topicDurations []int, chapterGapMS, blockGapMS, chapterTransitionLeadMS, blockTransitionLeadMS int) dto.PracticalScript {

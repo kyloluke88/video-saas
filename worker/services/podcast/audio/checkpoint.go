@@ -12,82 +12,42 @@ import (
 )
 
 type audioArtifacts struct {
-	projectDir       string
-	dialoguePath     string
-	alignedPath      string
-	blocksDir        string
-	segmentsDir      string
-	blockStatesDir   string
-	blockGapPath     string
-	reuseBlocksDir   string
-	reuseStatesDir   string
-	checkpointStores map[string]*blockCheckpointStore
+	projectDir     string
+	dialoguePath   string
+	alignedPath    string
+	rawBlocksDir   string
+	blocksDir      string
+	segmentsDir    string
+	blockStatesDir string
+	ttsDebugDir    string
+	blockGapPath   string
 }
 
 func prepareAudioArtifacts(projectDir string) (audioArtifacts, error) {
 	artifacts := audioArtifacts{
-		projectDir:       projectDir,
-		dialoguePath:     filepath.Join(projectDir, "dialogue.mp3"),
-		alignedPath:      projectScriptAlignedPath(projectDir),
-		blocksDir:        filepath.Join(projectDir, "blocks"),
-		segmentsDir:      filepath.Join(projectDir, "segments"),
-		blockStatesDir:   filepath.Join(projectDir, "block_states"),
-		blockGapPath:     filepath.Join(projectDir, "block_gap.wav"),
-		checkpointStores: make(map[string]*blockCheckpointStore),
+		projectDir:     projectDir,
+		dialoguePath:   filepath.Join(projectDir, "dialogue.mp3"),
+		alignedPath:    projectScriptAlignedPath(projectDir),
+		rawBlocksDir:   filepath.Join(projectDir, "raw_blocks"),
+		blocksDir:      filepath.Join(projectDir, "blocks"),
+		segmentsDir:    filepath.Join(projectDir, "segments"),
+		blockStatesDir: filepath.Join(projectDir, "block_states"),
+		ttsDebugDir:    filepath.Join(projectDir, "tts_debug"),
+		blockGapPath:   filepath.Join(projectDir, "block_gap.wav"),
 	}
-	if err := os.MkdirAll(artifacts.blocksDir, 0o755); err != nil {
-		return audioArtifacts{}, err
-	}
-	if err := os.MkdirAll(artifacts.segmentsDir, 0o755); err != nil {
-		return audioArtifacts{}, err
-	}
-	if err := os.MkdirAll(artifacts.blockStatesDir, 0o755); err != nil {
-		return audioArtifacts{}, err
-	}
-	if err := os.MkdirAll(chunkWorkingDir(projectDir), 0o755); err != nil {
-		return audioArtifacts{}, err
-	}
-	artifacts.checkpointStores[artifacts.blockStatesDir] = newBlockCheckpointStore(artifacts.blockStatesDir)
-	return artifacts, nil
-}
-
-func (a audioArtifacts) checkpointStore(dir string) *blockCheckpointStore {
-	dir = strings.TrimSpace(dir)
-	if dir == "" {
-		return nil
-	}
-	if store, ok := a.checkpointStores[dir]; ok && store != nil {
-		return store
-	}
-	store := newBlockCheckpointStore(dir)
-	a.checkpointStores[dir] = store
-	return store
-}
-
-func (a audioArtifacts) loadBlockCheckpoint(dir string, index int, blockID string) (blockCheckpoint, bool, error) {
-	store := a.checkpointStore(dir)
-	if store == nil {
-		return blockCheckpoint{}, false, nil
-	}
-	return store.loadBlockCheckpoint(index, blockID)
-}
-
-func (a audioArtifacts) persistBlockCheckpoint(index int, block dto.PodcastBlock, durationMS int, isMultiple *int) error {
-	store := a.checkpointStore(a.blockStatesDir)
-	if store == nil {
-		return nil
-	}
-	return store.persistBlockCheckpoint(index, block, durationMS, isMultiple)
-}
-
-func (a audioArtifacts) flushCheckpointStores() error {
-	var errs []error
-	for _, store := range a.checkpointStores {
-		if err := store.flush(); err != nil {
-			errs = append(errs, err)
+	for _, dir := range []string{
+		artifacts.rawBlocksDir,
+		artifacts.blocksDir,
+		artifacts.segmentsDir,
+		artifacts.blockStatesDir,
+		artifacts.ttsDebugDir,
+		chunkWorkingDir(projectDir),
+	} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return audioArtifacts{}, err
 		}
 	}
-	return errors.Join(errs...)
+	return artifacts, nil
 }
 
 func finalizeAlignedScript(projectID, alignedPath, dialoguePath string, script dto.PodcastScript) (dto.PodcastScript, error) {
@@ -152,10 +112,10 @@ func cleanupGoogleTTSDebugArtifacts(projectDir string) error {
 		return nil
 	}
 
-	blockStatesDir := filepath.Join(projectDir, "block_states")
 	patterns := []string{
-		filepath.Join(blockStatesDir, "*.google_request.json"),
-		filepath.Join(blockStatesDir, "*.pre_tempo.*"),
+		filepath.Join(projectDir, "tts_debug", "*.google_request.json"),
+		filepath.Join(projectDir, "block_states", "*.google_request.json"),
+		filepath.Join(projectDir, "block_states", "*.pre_tempo.*"),
 	}
 
 	var errs []error

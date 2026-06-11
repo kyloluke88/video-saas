@@ -1,6 +1,8 @@
 package practical_audio_service
 
 import (
+	"context"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -97,8 +99,8 @@ func TestMapWordsToChapterTimingsUsesMatchedWindows(t *testing.T) {
 	chapter := dto.PracticalChapter{
 		ChapterID: "ch_01",
 		Turns: []dto.PracticalTurn{
-			{TurnID: "t_01", SpeechText: "hello", Text: "hello"},
-			{TurnID: "t_02", SpeechText: "world", Text: "world"},
+			{TurnID: "t_01", SpeechText: "[happy] ignored", Text: "hello"},
+			{TurnID: "t_02", SpeechText: "[calm] ignored", Text: "world"},
 		},
 	}
 
@@ -149,8 +151,8 @@ func TestBuildChapterTimingSpecsUsesRawJapaneseTranscriptForMFA(t *testing.T) {
 	chapter := dto.PracticalChapter{
 		ChapterID: "ch_01",
 		Turns: []dto.PracticalTurn{
-			{TurnID: "t_01", SpeechText: "すみません。お米はどこにありますか。"},
-			{TurnID: "t_02", SpeechText: "じゃあ、これを一つ買います。"},
+			{TurnID: "t_01", Text: "すみません。お米はどこにありますか。", SpeechText: "[happy] すみません。お米はどこにありますか。"},
+			{TurnID: "t_02", Text: "じゃあ、これを一つ買います。", SpeechText: "[calm] じゃあ、これを一つ買います。"},
 		},
 	}
 
@@ -162,41 +164,139 @@ func TestBuildChapterTimingSpecsUsesRawJapaneseTranscriptForMFA(t *testing.T) {
 	}
 }
 
-func TestApplyPracticalTurnGapToChapterTimingsPreservesRawTimelineAndAddsGap(t *testing.T) {
+func TestStabilizePracticalChapterTimingsAnchorsChapterDurationAndExtendsTurnEndToSilence(t *testing.T) {
 	chapter := dto.PracticalChapter{
 		ChapterID: "ch_01",
 		Turns: []dto.PracticalTurn{
 			{TurnID: "t_01", StartMS: 120, EndMS: 820},
-			{TurnID: "t_02", StartMS: 990, EndMS: 1720},
-			{TurnID: "t_03", StartMS: 2100, EndMS: 2600},
+			{TurnID: "t_02", StartMS: 1200, EndMS: 1720},
 		},
 	}
 
-	shifted, slices := applyPracticalTurnGapToChapterTimings(chapter, 280, 3000)
+	got := stabilizePracticalChapterTimings(chapter, []practicalSilenceInterval{
+		{StartMS: 930, EndMS: 1080},
+		{StartMS: 1760, EndMS: 1880},
+	}, 2200)
 
-	if len(slices) != 3 {
-		t.Fatalf("unexpected slice count: %d", len(slices))
+	if got.StartMS != 0 || got.EndMS != 2200 {
+		t.Fatalf("unexpected chapter audio range: start=%d end=%d", got.StartMS, got.EndMS)
 	}
-	if shifted.Turns[0].StartMS != 120 || shifted.Turns[0].EndMS != 820 {
-		t.Fatalf("unexpected turn1 timing: %#v", shifted.Turns[0])
+	if got.Turns[0].StartMS != 120 || got.Turns[0].EndMS != 930 {
+		t.Fatalf("unexpected turn1 timing: %#v", got.Turns[0])
 	}
-	if shifted.Turns[1].StartMS != 1270 || shifted.Turns[1].EndMS != 2000 {
-		t.Fatalf("unexpected turn2 timing: %#v", shifted.Turns[1])
+	if got.Turns[1].StartMS != 1200 || got.Turns[1].EndMS != 1760 {
+		t.Fatalf("unexpected turn2 timing: %#v", got.Turns[1])
 	}
-	if shifted.Turns[2].StartMS != 2660 || shifted.Turns[2].EndMS != 3160 {
-		t.Fatalf("unexpected turn3 timing: %#v", shifted.Turns[2])
+}
+
+func TestStabilizePracticalChapterTimingsDoesNotCrossNextTurnStart(t *testing.T) {
+	chapter := dto.PracticalChapter{
+		ChapterID: "ch_01",
+		Turns: []dto.PracticalTurn{
+			{TurnID: "t_01", StartMS: 0, EndMS: 1000},
+			{TurnID: "t_02", StartMS: 1080, EndMS: 1800},
+		},
 	}
-	if shifted.StartMS != 0 || shifted.EndMS != 3560 {
-		t.Fatalf("unexpected chapter audio range: start=%d end=%d", shifted.StartMS, shifted.EndMS)
+
+	got := stabilizePracticalChapterTimings(chapter, []practicalSilenceInterval{
+		{StartMS: 1140, EndMS: 1240},
+	}, 2200)
+
+	if got.Turns[0].EndMS != 1000 {
+		t.Fatalf("unexpected first turn end: %#v", got.Turns[0])
 	}
-	if slices[0].StartMS != 0 || slices[0].EndMS != 820 {
-		t.Fatalf("unexpected source slice for turn1: %#v", slices[0])
+}
+
+func TestParsePracticalSilenceIntervalsClosesTrailingSilenceAtEOF(t *testing.T) {
+	output := strings.Join([]string{
+		"[silencedetect @ 0x1] silence_start: 1.230",
+		"[silencedetect @ 0x1] silence_end: 1.480 | silence_duration: 0.250",
+		"[silencedetect @ 0x1] silence_start: 2.500",
+	}, "\n")
+
+	got := parsePracticalSilenceIntervals(output, 3200)
+	if len(got) != 2 {
+		t.Fatalf("unexpected interval count: %#v", got)
 	}
-	if slices[1].StartMS != 820 || slices[1].EndMS != 1720 {
-		t.Fatalf("unexpected source slice for turn2: %#v", slices[1])
+	if got[0].StartMS != 1230 || got[0].EndMS != 1480 {
+		t.Fatalf("unexpected first interval: %#v", got[0])
 	}
-	if slices[2].StartMS != 1720 || slices[2].EndMS != 3000 {
-		t.Fatalf("unexpected source slice for turn3: %#v", slices[2])
+	if got[1].StartMS != 2500 || got[1].EndMS != 3200 {
+		t.Fatalf("unexpected trailing interval: %#v", got[1])
+	}
+}
+
+func TestMaterializeAlignedChapterAudioCopiesTempoAudioAndKeepsRealDuration(t *testing.T) {
+	ctx := context.Background()
+	projectDir := t.TempDir()
+	sourcePath := filepath.Join(projectDir, "source.wav")
+	outputPath := filepath.Join(projectDir, "out.wav")
+	sourceContent := []byte("tempo-audio")
+	if err := os.WriteFile(sourcePath, sourceContent, 0o644); err != nil {
+		t.Fatalf("os.WriteFile returned err: %v", err)
+	}
+
+	got, err := materializeAlignedChapterAudio(ctx, sourcePath, outputPath, dto.PracticalChapter{
+		ChapterID: "ch_01",
+		Turns: []dto.PracticalTurn{
+			{TurnID: "t_01", StartMS: 120, EndMS: 820},
+		},
+	}, 2200)
+	if err != nil {
+		t.Fatalf("materializeAlignedChapterAudio returned err: %v", err)
+	}
+
+	raw, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("os.ReadFile returned err: %v", err)
+	}
+	if string(raw) != string(sourceContent) {
+		t.Fatalf("unexpected copied audio content: %q", string(raw))
+	}
+	if got.StartMS != 0 || got.EndMS != 2200 {
+		t.Fatalf("unexpected chapter timing: start=%d end=%d", got.StartMS, got.EndMS)
+	}
+	if got.Turns[0].StartMS != 120 || got.Turns[0].EndMS != 820 {
+		t.Fatalf("unexpected turn timing: %#v", got.Turns[0])
+	}
+}
+
+func TestCreateSilenceAudioLikeUsesReferenceSampleRate(t *testing.T) {
+	ctx := context.Background()
+	projectDir := t.TempDir()
+	referencePath := filepath.Join(projectDir, "reference.wav")
+	if err := createSilenceAudioWithStreamInfo(ctx, referencePath, 120, practicalAudioStreamInfo{
+		SampleRate: 44100,
+		Channels:   1,
+	}); err != nil {
+		t.Skipf("ffmpeg unavailable for audio format test: %v", err)
+	}
+
+	gapPath := filepath.Join(projectDir, "gap.wav")
+	if err := createSilenceAudioLike(ctx, gapPath, 600, referencePath); err != nil {
+		t.Fatalf("createSilenceAudioLike returned err: %v", err)
+	}
+
+	referenceInfo, err := audioStreamInfo(ctx, referencePath)
+	if err != nil {
+		t.Fatalf("audioStreamInfo(reference) returned err: %v", err)
+	}
+	gapInfo, err := audioStreamInfo(ctx, gapPath)
+	if err != nil {
+		t.Fatalf("audioStreamInfo(gap) returned err: %v", err)
+	}
+	if gapInfo.SampleRate != referenceInfo.SampleRate {
+		t.Fatalf("unexpected gap sample rate: got=%d want=%d", gapInfo.SampleRate, referenceInfo.SampleRate)
+	}
+	if gapInfo.Channels != referenceInfo.Channels {
+		t.Fatalf("unexpected gap channels: got=%d want=%d", gapInfo.Channels, referenceInfo.Channels)
+	}
+	durationMS, err := audioDurationMS(ctx, gapPath)
+	if err != nil {
+		t.Fatalf("audioDurationMS returned err: %v", err)
+	}
+	if durationMS < 590 || durationMS > 610 {
+		t.Fatalf("unexpected gap duration: %dms", durationMS)
 	}
 }
 
@@ -289,5 +389,56 @@ func TestMergeReusableLocalChapterTimingsPreservesScriptContentAndCopiesTimings(
 	}
 	if chapter.Turns[0].StartMS != 120 || chapter.Turns[0].EndMS != 1320 {
 		t.Fatalf("unexpected merged turn timing: %#v", chapter.Turns[0])
+	}
+}
+
+func TestLoadReusableLocalAlignedScriptReturnsNotFoundWithoutError(t *testing.T) {
+	projectDir := t.TempDir()
+
+	got, ok, err := loadReusableLocalAlignedScript(projectDir, "ja")
+	if err != nil {
+		t.Fatalf("loadReusableLocalAlignedScript returned err: %v", err)
+	}
+	if ok {
+		t.Fatalf("expected aligned script to be reported missing, got ok=%v script=%#v", ok, got)
+	}
+}
+
+func TestPracticalCanRecoverFullAlignFromLocalAudioRequiresAllRawAssets(t *testing.T) {
+	projectDir := t.TempDir()
+	script := dto.PracticalScript{
+		Blocks: []dto.PracticalBlock{
+			{
+				BlockID: "block_01",
+				Chapters: []dto.PracticalChapter{
+					{ChapterID: "ch_01"},
+					{ChapterID: "ch_02"},
+				},
+			},
+		},
+	}
+
+	if err := os.MkdirAll(filepath.Dir(blockIntroRawAudioPath(projectDir, "block_01", 1)), 0o755); err != nil {
+		t.Fatalf("mkdir topic dir failed: %v", err)
+	}
+	if err := os.WriteFile(blockIntroRawAudioPath(projectDir, "block_01", 1), []byte("topic"), 0o644); err != nil {
+		t.Fatalf("write topic raw failed: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(chapterRawAudioPath(projectDir, "block_01", "ch_01", 1, 1)), 0o755); err != nil {
+		t.Fatalf("mkdir chapter dir failed: %v", err)
+	}
+	if err := os.WriteFile(chapterRawAudioPath(projectDir, "block_01", "ch_01", 1, 1), []byte("ch1"), 0o644); err != nil {
+		t.Fatalf("write ch1 raw failed: %v", err)
+	}
+
+	if practicalCanRecoverFullAlignFromLocalAudio(projectDir, script) {
+		t.Fatal("expected recovery to fail when any chapter raw audio is missing")
+	}
+
+	if err := os.WriteFile(chapterRawAudioPath(projectDir, "block_01", "ch_02", 1, 2), []byte("ch2"), 0o644); err != nil {
+		t.Fatalf("write ch2 raw failed: %v", err)
+	}
+	if !practicalCanRecoverFullAlignFromLocalAudio(projectDir, script) {
+		t.Fatal("expected recovery to succeed when all raw assets exist")
 	}
 }

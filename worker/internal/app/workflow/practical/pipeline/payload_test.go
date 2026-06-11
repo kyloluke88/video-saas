@@ -88,11 +88,21 @@ func TestMergePayloadClearsSavedSelectorsWhenCurrentOmitsThem(t *testing.T) {
 }
 
 func TestNextStageStopsAtConfiguredStage(t *testing.T) {
-	next, ok, err := NextStage(string(StageImages), string(StageImages))
+	next, ok, err := NextStage(1, string(StageImages), string(StageImages))
 	if err != nil {
 		t.Fatalf("NextStage returned err: %v", err)
 	}
 	if ok || next != "" {
 		t.Fatalf("expected stop_at to pause at images, got next=%s ok=%v", next, ok)
+	}
+}
+
+func TestNextStageIncludesAlignForType2(t *testing.T) {
+	next, ok, err := NextStage(2, string(StageGenerate), "")
+	if err != nil {
+		t.Fatalf("NextStage returned err: %v", err)
+	}
+	if !ok || next != string(StageAlign) {
+		t.Fatalf("expected type2 generate to continue to align, got next=%s ok=%v", next, ok)
 	}
 }

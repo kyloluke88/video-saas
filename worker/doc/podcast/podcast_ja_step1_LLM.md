@@ -70,6 +70,7 @@ en_title 规则】
 
 【segment.text】
 - text 需要ます、です形
+- text 是聊天正文，正文一定要使用实际生活中常用的表达。禁止出现生僻的表达！
 
 【chapter 与 block 的关系】
 - 一个 chapter 由 1 个或多个 block 组成
@@ -129,10 +130,9 @@ Audio events / special（播客场景一般不建议使用）:
 【总结规则】
 - 最后一个 block.block_id 必须为 summary_cta
 - summary_cta block 回收总结本集 topic，并自然鼓励听众点赞和订阅频道
-- summary_cta block 的结尾还必须自然告诉听众：本次聊天内容的脚本可以从置顶评论获取
-- 这段“置顶评论获取脚本”的提示必须属于实际会说出来的正文，表达要自然、口语化，不要生硬广告腔
+- summary_cta block 的结尾还必须自然告诉听众：本次聊天内容的脚本可以从顶部评论获取
+- 这段“从顶部评论获取脚本”的提示必须属于实际会说出来的正文，表达要自然、口语化，不要生硬广告腔，不能太啰嗦！
 - 最后的 segment.summary=true，所有其他 segment 的 summary 必须为 false
-- 总结不能太啰嗦。
 
 【第一阶段特别规则】
 - 本阶段不要生成任何 segment.tokens
@@ -206,7 +206,8 @@ Audio events / special（播客场景一般不建议使用）:
 }
 
 现在根据以下输入生成内容：
-topic：喧嘩の仲直り術、男女でアプローチが正反対だった
+topic：自分の声を録音で聞いた時のショック、克服法はあるのか
+需要轻松的氛围。最好有玩笑话的表达，所有的表达和用语都尽量使用日常经常能听到的。不要使用生僻的表达！
 difficulty_level：N3
 target_duration_minutes：20
 tts_type: google

@@ -33,10 +33,9 @@ type GenerateInput struct {
 }
 
 type AlignInput struct {
-	ProjectID  string
-	Language   string
-	IsMultiple int
-	BlockNums  []int
+	ProjectID string
+	Language  string
+	BlockNums []int
 }
 
 type GenerateResult struct {
@@ -82,21 +81,15 @@ func Generate(ctx context.Context, input GenerateInput) (GenerateResult, error) 
 			return GenerateResult{}, err
 		}
 		return AlignGoogle(ctx, AlignInput{
-			ProjectID:  input.ProjectID,
-			Language:   language,
-			IsMultiple: input.IsMultiple,
-			BlockNums:  input.BlockNums,
+			ProjectID: input.ProjectID,
+			Language:  language,
+			BlockNums: input.BlockNums,
 		})
 	case podcastTTSTypeElevenLabs:
 		artifacts, err := prepareAudioArtifacts(projectDir)
 		if err != nil {
 			return GenerateResult{}, err
 		}
-		defer func() {
-			if err := artifacts.flushCheckpointStores(); err != nil {
-				log.Printf("⚠️ podcast block checkpoint index flush warning project_id=%s err=%v", input.ProjectID, err)
-			}
-		}()
 		script, err := loadScriptForGeneration(projectDir, language, input.ScriptFilename)
 		if err != nil {
 			return GenerateResult{}, err
@@ -267,7 +260,83 @@ func estimateConversationBytes(request googlecloud.SynthesizeConversationRequest
 	return total
 }
 
-func tryReuseCachedBlock(
+func tryReuseGeneratedGoogleBlock(
+	projectID string,
+	artifacts audioArtifacts,
+	index int,
+	block dto.PodcastBlock,
+	mode string,
+) (blockSynthesisResult, bool, error) {
+	audioPath, ok := existingBlockAudioPath(artifacts.rawBlocksDir, index, block.BlockID)
+	if !ok {
+		return blockSynthesisResult{}, false, nil
+	}
+	durationMS, err := audioDurationMS(audioPath)
+	if err != nil {
+		return blockSynthesisResult{}, false, err
+	}
+	log.Printf("♻️ podcast raw_block reuse cached tts provider=google mode=%s block=%s duration_ms=%d project_id=%s",
+		strings.TrimSpace(mode),
+		strings.TrimSpace(block.BlockID),
+		durationMS,
+		projectID,
+	)
+	return blockSynthesisResult{
+		AudioPath:    audioPath,
+		DurationMS:   durationMS,
+		AlignedBlock: block,
+	}, true, nil
+}
+
+func tryReuseAlignedBlock(
+	providerLabel string,
+	projectID string,
+	language string,
+	artifacts audioArtifacts,
+	index int,
+	block dto.PodcastBlock,
+	tempo float64,
+	suppressLog bool,
+) (blockSynthesisResult, bool, error) {
+	blockID := strings.TrimSpace(block.BlockID)
+	audioPath, ok := existingBlockAudioPath(artifacts.blocksDir, index, blockID)
+	if !ok {
+		return blockSynthesisResult{}, false, nil
+	}
+	state, ok, err := loadBlockCheckpoint(artifacts.blockStatesDir, index, blockID)
+	if err != nil {
+		return blockSynthesisResult{}, false, err
+	}
+	if !ok {
+		return blockSynthesisResult{}, false, nil
+	}
+	allowLegacyTempo := tempo > 0 && !rawBlockExists(artifacts, index, blockID) && math.Abs(state.Tempo) <= 0.001
+	if !blockCheckpointComplete(language, state, audioPath, tempo, allowLegacyTempo) {
+		return blockSynthesisResult{}, false, nil
+	}
+	durationMS := state.DurationMS
+	if durationMS <= 0 {
+		durationMS, err = audioDurationMS(audioPath)
+		if err != nil {
+			return blockSynthesisResult{}, false, err
+		}
+	}
+	if !suppressLog {
+		log.Printf("♻️ podcast aligned_block reuse cached tts provider=%s block=%s duration_ms=%d project_id=%s",
+			providerLabel,
+			blockID,
+			durationMS,
+			projectID,
+		)
+	}
+	return blockSynthesisResult{
+		AudioPath:    audioPath,
+		DurationMS:   durationMS,
+		AlignedBlock: state.Block,
+	}, true, nil
+}
+
+func alignGoogleBlockFromRaw(
 	ctx context.Context,
 	aligner *blockAligner,
 	projectID string,
@@ -275,121 +344,40 @@ func tryReuseCachedBlock(
 	artifacts audioArtifacts,
 	index int,
 	block dto.PodcastBlock,
-	currentTTSMode *int,
+	tempo float64,
 	suppressLog bool,
 ) (blockSynthesisResult, bool, error) {
 	blockID := strings.TrimSpace(block.BlockID)
-	for _, candidate := range reusableBlockAudioCandidates(artifacts, index, blockID) {
-		state, stateOK, err := artifacts.loadBlockCheckpoint(candidate.stateDir, index, blockID)
-		if err != nil {
-			return blockSynthesisResult{}, false, err
-		}
-		if !stateOK || canReuseCachedBlockAudio(podcastTTSTypeGoogle, language, block, state.Block) {
-			audioPath := candidate.audioPath
-			if candidate.copyToProject {
-				audioPath, err = ensureProjectBlockAudio(artifacts, index, blockID, candidate.audioPath)
-				if err != nil {
-					return blockSynthesisResult{}, false, err
-				}
-			}
-			durationMS := state.DurationMS
-			if durationMS <= 0 {
-				durationMS, err = audioDurationMS(candidate.audioPath)
-				if err != nil {
-					return blockSynthesisResult{}, false, err
-				}
-			}
-			alignedBlock, err := aligner.AlignBlock(ctx, language, block, audioPath, durationMS)
-			if err != nil {
-				return blockSynthesisResult{}, false, err
-			}
-			if err := artifacts.persistBlockCheckpoint(index, alignedBlock, durationMS, currentTTSMode); err != nil {
-				return blockSynthesisResult{}, false, err
-			}
-			if !suppressLog {
-				log.Printf("♻️ podcast block reuse cached tts block=%s duration_ms=%d project_id=%s", blockID, durationMS, projectID)
-			}
-			return blockSynthesisResult{
-				AudioPath:    audioPath,
-				DurationMS:   durationMS,
-				AlignedBlock: alignedBlock,
-			}, true, nil
-		}
-		log.Printf("🔁 cached tts audio ignored block=%s reason=script_changed source=%s project_id=%s", blockID, candidate.audioPath, projectID)
+	rawAudioPath, ok := existingBlockAudioPath(artifacts.rawBlocksDir, index, blockID)
+	if !ok {
+		return blockSynthesisResult{}, false, nil
 	}
-	return blockSynthesisResult{}, false, nil
-}
-
-func tryReuseCompletedBlockWithoutMFA(
-	ttsType int,
-	providerLabel string,
-	projectID string,
-	language string,
-	artifacts audioArtifacts,
-	index int,
-	block dto.PodcastBlock,
-	currentTTSMode *int,
-	requireAligned bool,
-	suppressLog bool,
-) (blockSynthesisResult, bool, error) {
-	blockID := strings.TrimSpace(block.BlockID)
-	for _, candidate := range reusableBlockAudioCandidates(artifacts, index, blockID) {
-		state, stateOK, err := artifacts.loadBlockCheckpoint(candidate.stateDir, index, blockID)
-		if err != nil {
-			return blockSynthesisResult{}, false, err
-		}
-		if !stateOK {
-			continue
-		}
-		if requireAligned {
-			if !blockCheckpointComplete(language, state, candidate.audioPath) {
-				continue
-			}
-		} else if !blockCheckpointHasAudio(state, candidate.audioPath) {
-			continue
-		}
-		if !canReuseCachedBlockAudio(ttsType, language, block, state.Block) {
-			log.Printf("🔁 cached tts audio ignored block=%s reason=script_changed source=%s project_id=%s", blockID, candidate.audioPath, projectID)
-			continue
-		}
-
-		audioPath := candidate.audioPath
-		if candidate.copyToProject {
-			audioPath, err = ensureProjectBlockAudio(artifacts, index, blockID, candidate.audioPath)
-			if err != nil {
-				return blockSynthesisResult{}, false, err
-			}
-		}
-		durationMS := state.DurationMS
-		if durationMS <= 0 {
-			durationMS, err = audioDurationMS(audioPath)
-			if err != nil {
-				return blockSynthesisResult{}, false, err
-			}
-		}
-		if err := artifacts.persistBlockCheckpoint(index, state.Block, durationMS, state.IsMultiple); err != nil {
-			return blockSynthesisResult{}, false, err
-		}
-		if !suppressLog {
-			if requireAligned {
-				log.Printf("♻️ podcast aligned_block reuse cached tts block=%s project_id=%s", blockID, projectID)
-			} else {
-				log.Printf("♻️ podcast block reuse cached tts provider=%s block=%s duration_ms=%d project_id=%s",
-					providerLabel, blockID, durationMS, projectID)
-			}
-		}
-		return blockSynthesisResult{
-			AudioPath:    audioPath,
-			DurationMS:   durationMS,
-			AlignedBlock: state.Block,
-		}, true, nil
+	if err := removeAlignedBlockArtifacts(artifacts, index, blockID); err != nil {
+		return blockSynthesisResult{}, false, err
 	}
-	return blockSynthesisResult{}, false, nil
-}
-
-func intPtr(value int) *int {
-	v := value
-	return &v
+	finalAudioPath := unitAudioPath(artifacts.blocksDir, index, blockID, filepath.Ext(rawAudioPath))
+	if err := materializeBlockAudioWithTempo(ctx, rawAudioPath, finalAudioPath, tempo); err != nil {
+		return blockSynthesisResult{}, false, err
+	}
+	durationMS, err := audioDurationMS(finalAudioPath)
+	if err != nil {
+		return blockSynthesisResult{}, false, err
+	}
+	alignedBlock, err := aligner.AlignBlock(ctx, language, block, finalAudioPath, durationMS)
+	if err != nil {
+		return blockSynthesisResult{}, false, err
+	}
+	if err := persistBlockCheckpoint(artifacts.blockStatesDir, index, alignedBlock, durationMS, tempo); err != nil {
+		return blockSynthesisResult{}, false, err
+	}
+	if !suppressLog {
+		log.Printf("♻️ podcast block align from raw block=%s duration_ms=%d project_id=%s", blockID, durationMS, projectID)
+	}
+	return blockSynthesisResult{
+		AudioPath:    finalAudioPath,
+		DurationMS:   durationMS,
+		AlignedBlock: alignedBlock,
+	}, true, nil
 }
 
 func buildRequestedBlockSet(blockNums []int, totalBlocks int) (map[int]struct{}, error) {
@@ -421,29 +409,6 @@ func isRequestedBlock(requested map[int]struct{}, index int) bool {
 	}
 	_, ok := requested[index]
 	return ok
-}
-
-func canReuseCachedBlockAudio(ttsType int, language string, current, cached dto.PodcastBlock) bool {
-	if strings.TrimSpace(current.BlockID) == "" || strings.TrimSpace(cached.BlockID) == "" {
-		return false
-	}
-	if stableBlockID(strings.TrimSpace(current.BlockID)) != stableBlockID(strings.TrimSpace(cached.BlockID)) {
-		return false
-	}
-	if len(current.Segments) != len(cached.Segments) {
-		return false
-	}
-	for i := range current.Segments {
-		currentSeg := current.Segments[i]
-		cachedSeg := cached.Segments[i]
-		if defaultSpeaker(currentSeg.Speaker) != defaultSpeaker(cachedSeg.Speaker) {
-			return false
-		}
-		if strings.TrimSpace(synthesisTextForProvider(ttsType, language, currentSeg)) != strings.TrimSpace(synthesisTextForProvider(ttsType, language, cachedSeg)) {
-			return false
-		}
-	}
-	return true
 }
 
 // assembleDialogue is the single place where relative block timings become absolute
@@ -528,13 +493,14 @@ func restoreStableBlockIDsFromArtifacts(projectDir string, script dto.PodcastScr
 		return script
 	}
 
+	rawBlocksDir := filepath.Join(projectDir, "raw_blocks")
 	blocksDir := filepath.Join(projectDir, "blocks")
 	statesDir := filepath.Join(projectDir, "block_states")
 	replaced := make(map[string]string)
 
 	for i := range script.Blocks {
 		currentID := strings.TrimSpace(script.Blocks[i].BlockID)
-		stableID := stableProjectBlockID(blocksDir, statesDir, i, currentID)
+		stableID := stableProjectBlockID(rawBlocksDir, blocksDir, statesDir, i, currentID)
 		if stableID == "" || stableID == currentID {
 			continue
 		}
@@ -557,7 +523,7 @@ func restoreStableBlockIDsFromArtifacts(projectDir string, script dto.PodcastScr
 	return script
 }
 
-func stableProjectBlockID(blocksDir, statesDir string, index int, currentID string) string {
+func stableProjectBlockID(rawBlocksDir, blocksDir, statesDir string, index int, currentID string) string {
 	currentID = strings.TrimSpace(currentID)
 	if currentID == "" {
 		return currentID
@@ -565,6 +531,9 @@ func stableProjectBlockID(blocksDir, statesDir string, index int, currentID stri
 	stableID := stableBlockID(currentID)
 	if stableID == currentID {
 		return currentID
+	}
+	if _, ok := existingBlockAudioPath(rawBlocksDir, index, stableID); ok {
+		return stableID
 	}
 	if _, ok := existingBlockAudioPath(blocksDir, index, stableID); ok {
 		return stableID
@@ -664,7 +633,6 @@ func buildConversationRequest(language string, block dto.PodcastBlock) googleclo
 		},
 		MaleVoiceID:   maleVoiceID,
 		FemaleVoiceID: femaleVoiceID,
-		SpeakingRate:  ttsSpeakingRate(language),
 	}
 }
 
@@ -801,21 +769,22 @@ func normalizeConversationSpeaker(value string) string {
 	}
 }
 
-func ttsSpeakingRate(language string) float64 {
-	base := conf.Get[float64]("worker.google_tts_speaking_rate")
-	if isJapaneseLanguage(language) {
-		if value := conf.Get[float64]("worker.google_tts_ja_speaking_rate"); value > 0 {
-			return value
-		}
-	}
-	return base
+func podcastTempo(language string) float64 {
+	return resolvePodcastTempo(
+		language,
+		conf.Get[float64]("worker.podcast_tts_tempo"),
+		conf.Get[float64]("worker.podcast_tts_ja_tempo"),
+	)
 }
 
-func synthesisTextForProvider(ttsType int, language string, seg dto.PodcastSegment) string {
-	if normalizePodcastTTSType(ttsType) == podcastTTSTypeElevenLabs {
-		return spokenTextForElevenSynthesis(language, seg)
+func resolvePodcastTempo(language string, base, jaOverride float64) float64 {
+	if isJapaneseLanguage(language) && jaOverride > 0 {
+		return jaOverride
 	}
-	return spokenTextForGoogleSynthesis(language, seg)
+	if base > 0 {
+		return base
+	}
+	return 1.0
 }
 
 func spokenTextForGoogleSynthesis(language string, seg dto.PodcastSegment) string {
@@ -916,48 +885,63 @@ func existingBlockAudioPath(dir string, index int, blockID string) (string, bool
 	return matches[0], true
 }
 
-type reusableBlockAudio struct {
-	audioPath     string
-	stateDir      string
-	copyToProject bool
+func rawBlockExists(artifacts audioArtifacts, index int, blockID string) bool {
+	_, ok := existingBlockAudioPath(artifacts.rawBlocksDir, index, blockID)
+	return ok
 }
 
-func reusableBlockAudioCandidates(artifacts audioArtifacts, index int, blockID string) []reusableBlockAudio {
-	candidates := make([]reusableBlockAudio, 0, 2)
-	if audioPath, ok := existingBlockAudioPath(artifacts.blocksDir, index, blockID); ok {
-		candidates = append(candidates, reusableBlockAudio{
-			audioPath: audioPath,
-			stateDir:  artifacts.blockStatesDir,
-		})
+func removeBlockAudioVariants(dir string, index int, blockID string) error {
+	pattern := filepath.Join(dir, fmt.Sprintf("%03d_%s.*", index+1, sanitizeSegmentID(blockID)))
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		return err
 	}
-	if artifacts.reuseBlocksDir != "" && filepath.Clean(artifacts.reuseBlocksDir) != filepath.Clean(artifacts.blocksDir) {
-		if audioPath, ok := existingBlockAudioPath(artifacts.reuseBlocksDir, index, blockID); ok {
-			stateDir := artifacts.reuseStatesDir
-			if strings.TrimSpace(stateDir) == "" {
-				stateDir = artifacts.blockStatesDir
-			}
-			candidates = append(candidates, reusableBlockAudio{
-				audioPath:     audioPath,
-				stateDir:      stateDir,
-				copyToProject: true,
-			})
+	for _, path := range matches {
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			return err
 		}
 	}
-	return candidates
+	return nil
 }
 
-func ensureProjectBlockAudio(artifacts audioArtifacts, index int, blockID, sourceAudioPath string) (string, error) {
-	targetAudioPath := unitAudioPath(artifacts.blocksDir, index, blockID, filepath.Ext(sourceAudioPath))
-	if filepath.Clean(sourceAudioPath) == filepath.Clean(targetAudioPath) {
-		return targetAudioPath, nil
+func removeAlignedBlockArtifacts(artifacts audioArtifacts, index int, blockID string) error {
+	if err := removeBlockAudioVariants(artifacts.blocksDir, index, blockID); err != nil {
+		return err
 	}
-	if fileExists(targetAudioPath) {
-		return targetAudioPath, nil
+	if err := os.Remove(blockStatePath(artifacts.blockStatesDir, index, blockID)); err != nil && !os.IsNotExist(err) {
+		return err
 	}
-	if err := copyFile(sourceAudioPath, targetAudioPath); err != nil {
-		return "", fmt.Errorf("copy cached block audio failed: %w", err)
+	return nil
+}
+
+func removeRawBlockArtifacts(artifacts audioArtifacts, index int, blockID string) error {
+	return removeBlockAudioVariants(artifacts.rawBlocksDir, index, blockID)
+}
+
+func materializeBlockAudioWithTempo(ctx context.Context, sourceAudioPath, targetAudioPath string, tempo float64) error {
+	if strings.TrimSpace(sourceAudioPath) == "" || strings.TrimSpace(targetAudioPath) == "" {
+		return fmt.Errorf("block audio paths are required")
 	}
-	return targetAudioPath, nil
+	if !fileExists(sourceAudioPath) {
+		return fmt.Errorf("block audio missing: %s", sourceAudioPath)
+	}
+	if err := os.MkdirAll(filepath.Dir(targetAudioPath), 0o755); err != nil {
+		return err
+	}
+	if tempo <= 0 || math.Abs(tempo-1.0) <= 0.001 {
+		return copyFile(sourceAudioPath, targetAudioPath)
+	}
+	if err := ffmpegcommon.RunFFmpegContext(
+		ctx,
+		"-y",
+		"-i", sourceAudioPath,
+		"-filter:a", buildAtempoFilter(tempo),
+		"-c:a", "pcm_s16le",
+		targetAudioPath,
+	); err != nil {
+		return err
+	}
+	return nil
 }
 
 func requirePodcastLanguage(value string) (string, error) {
@@ -995,48 +979,6 @@ func createSilenceAudio(ctx context.Context, path string, durationMs int) error 
 		"-c:a", "pcm_s16le",
 		path,
 	)
-}
-
-func applyAudioTempoToFile(ctx context.Context, path string, tempo float64) error {
-	if tempo <= 0 || math.Abs(tempo-1.0) <= 0.001 {
-		return nil
-	}
-	filter := buildAtempoFilter(tempo)
-	if strings.TrimSpace(filter) == "" {
-		return nil
-	}
-
-	dir := filepath.Dir(path)
-	ext := filepath.Ext(path)
-	if strings.TrimSpace(ext) == "" {
-		ext = ".wav"
-	}
-	tmpFile, err := os.CreateTemp(dir, "tempo_*.tmp"+ext)
-	if err != nil {
-		return err
-	}
-	tmpPath := tmpFile.Name()
-	if err := tmpFile.Close(); err != nil {
-		_ = os.Remove(tmpPath)
-		return err
-	}
-
-	if err := ffmpegcommon.RunFFmpegContext(
-		ctx,
-		"-y",
-		"-i", path,
-		"-filter:a", filter,
-		"-c:a", "pcm_s16le",
-		tmpPath,
-	); err != nil {
-		_ = os.Remove(tmpPath)
-		return err
-	}
-	if err := os.Rename(tmpPath, path); err != nil {
-		_ = os.Remove(tmpPath)
-		return err
-	}
-	return nil
 }
 
 func buildAtempoFilter(speed float64) string {

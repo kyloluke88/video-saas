@@ -7,6 +7,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -17,6 +18,11 @@ import (
 	"worker/pkg/x/fsx"
 	ffmpegcommon "worker/services/media/ffmpeg/common"
 )
+
+type practicalAudioStreamInfo struct {
+	SampleRate int
+	Channels   int
+}
 
 func scriptPathFor(filename string) string {
 	base := filepath.Base(strings.TrimSpace(filename))
@@ -51,8 +57,8 @@ func projectDialoguePath(projectDir string) string {
 	return filepath.Join(projectDir, "dialogue.wav")
 }
 
-func projectTurnGapPath(projectDir string) string {
-	return filepath.Join(projectDir, "turn_gap.wav")
+func projectSpeakerVoiceMapPath(projectDir string) string {
+	return filepath.Join(projectDir, "speaker_voice_map.json")
 }
 
 func projectChapterGapPath(projectDir string) string {
@@ -213,21 +219,77 @@ func fileExists(path string) bool {
 }
 
 func createSilenceAudio(ctx context.Context, path string, durationMs int) error {
+	return createSilenceAudioWithStreamInfo(ctx, path, durationMs, practicalAudioStreamInfo{
+		SampleRate: 24000,
+		Channels:   1,
+	})
+}
+
+func createSilenceAudioWithStreamInfo(ctx context.Context, path string, durationMs int, streamInfo practicalAudioStreamInfo) error {
 	if durationMs <= 0 {
 		return nil
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
+	if streamInfo.SampleRate <= 0 {
+		streamInfo.SampleRate = 24000
+	}
+	if streamInfo.Channels <= 0 {
+		streamInfo.Channels = 1
+	}
 	return ffmpegcommon.RunFFmpegContext(
 		ctx,
 		"-y",
 		"-f", "lavfi",
-		"-i", "anullsrc=r=24000:cl=mono",
+		"-i", fmt.Sprintf("anullsrc=r=%d:cl=mono", streamInfo.SampleRate),
 		"-t", fmt.Sprintf("%.3f", float64(durationMs)/1000.0),
 		"-c:a", "pcm_s16le",
+		"-ar", strconv.Itoa(streamInfo.SampleRate),
+		"-ac", strconv.Itoa(streamInfo.Channels),
 		path,
 	)
+}
+
+func createSilenceAudioLike(ctx context.Context, outputPath string, durationMs int, referenceAudioPath string) error {
+	streamInfo, err := audioStreamInfo(ctx, referenceAudioPath)
+	if err != nil {
+		return err
+	}
+	return createSilenceAudioWithStreamInfo(ctx, outputPath, durationMs, streamInfo)
+}
+
+func audioStreamInfo(ctx context.Context, path string) (practicalAudioStreamInfo, error) {
+	if strings.TrimSpace(path) == "" {
+		return practicalAudioStreamInfo{}, fmt.Errorf("audio path is required")
+	}
+	out, err := ffmpegcommon.RunFFprobeContext(
+		ctx,
+		"-v", "error",
+		"-select_streams", "a:0",
+		"-show_entries", "stream=sample_rate,channels",
+		"-of", "default=noprint_wrappers=1:nokey=1",
+		path,
+	)
+	if err != nil {
+		return practicalAudioStreamInfo{}, err
+	}
+	lines := strings.Fields(strings.TrimSpace(out))
+	if len(lines) < 2 {
+		return practicalAudioStreamInfo{}, fmt.Errorf("unexpected ffprobe audio stream info for %s: %q", path, strings.TrimSpace(out))
+	}
+	sampleRate, err := strconv.Atoi(lines[0])
+	if err != nil {
+		return practicalAudioStreamInfo{}, fmt.Errorf("parse sample rate failed for %s: %w", path, err)
+	}
+	channels, err := strconv.Atoi(lines[1])
+	if err != nil {
+		return practicalAudioStreamInfo{}, fmt.Errorf("parse channels failed for %s: %w", path, err)
+	}
+	return practicalAudioStreamInfo{
+		SampleRate: sampleRate,
+		Channels:   channels,
+	}, nil
 }
 
 func renderTempoAdjustedAudio(ctx context.Context, inputPath, outputPath string, tempo float64) error {
@@ -358,6 +420,44 @@ func newGoogleSpeechClient() (*googlecloud.Client, error) {
 	})
 }
 
+func materializeAudioBytesAsWAV(ctx context.Context, audio []byte, ext, outputPath string) error {
+	if len(audio) == 0 {
+		return fmt.Errorf("audio bytes are required")
+	}
+	if strings.TrimSpace(outputPath) == "" {
+		return fmt.Errorf("output path is required")
+	}
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
+		return err
+	}
+
+	suffix := strings.TrimPrefix(strings.TrimSpace(ext), ".")
+	if suffix == "" {
+		suffix = "audio"
+	}
+	tempFile, err := os.CreateTemp(filepath.Dir(outputPath), "practical_tts_*."+suffix)
+	if err != nil {
+		return err
+	}
+	tempPath := tempFile.Name()
+	if err := tempFile.Close(); err != nil {
+		_ = os.Remove(tempPath)
+		return err
+	}
+	defer os.Remove(tempPath)
+
+	if err := os.WriteFile(tempPath, audio, 0o644); err != nil {
+		return err
+	}
+	return ffmpegcommon.RunFFmpegContext(
+		ctx,
+		"-y",
+		"-i", tempPath,
+		"-c:a", "pcm_s16le",
+		outputPath,
+	)
+}
+
 func newMFAClient() *mfa.Client {
 	return mfa.New(mfa.Config{
 		Enabled:               conf.Get[bool]("worker.mfa_enabled"),
@@ -394,12 +494,8 @@ func practicalSpeakingRate(language string) float64 {
 }
 
 func practicalTTSVoiceIDs(language string) (string, string) {
-	if strings.EqualFold(strings.TrimSpace(language), "ja") {
-		return strings.TrimSpace(conf.Get[string]("worker.google_tts_practical_male_voice_id")),
-			strings.TrimSpace(conf.Get[string]("worker.google_tts_practical_female_voice_id"))
-	}
-	return strings.TrimSpace(conf.Get[string]("worker.google_tts_zh_male_voice_id")),
-		strings.TrimSpace(conf.Get[string]("worker.google_tts_zh_female_voice_id"))
+	return strings.TrimSpace(conf.Get[string]("worker.google_tts_practical_male_voice_id")),
+		strings.TrimSpace(conf.Get[string]("worker.google_tts_practical_female_voice_id"))
 }
 
 func practicalNarratorVoiceID() string {
@@ -409,7 +505,7 @@ func practicalNarratorVoiceID() string {
 func practicalTempo() float64 {
 	value := conf.Get[float64]("worker.practical_tts_tempo")
 	if value <= 0 {
-		return 0.75
+		return 0.8
 	}
 	return value
 }
@@ -426,17 +522,6 @@ func practicalChapterGapMS() int {
 	value := conf.Get[int]("worker.practical_chapter_gap_ms")
 	if value < 0 {
 		return 0
-	}
-	return value
-}
-
-func practicalTurnGapMS() int {
-	value := conf.Get[int]("worker.practical_turn_gap_ms")
-	if value < 0 {
-		return 0
-	}
-	if value == 0 {
-		return 600
 	}
 	return value
 }

@@ -2,6 +2,7 @@ package s3
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -17,6 +18,7 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/smithy-go"
 )
 
 type Config struct {
@@ -30,7 +32,14 @@ type Config struct {
 
 type Client struct {
 	cfg Config
-	api *awss3.Client
+	api s3API
+}
+
+type s3API interface {
+	PutObject(ctx context.Context, params *awss3.PutObjectInput, optFns ...func(*awss3.Options)) (*awss3.PutObjectOutput, error)
+	GetObject(ctx context.Context, params *awss3.GetObjectInput, optFns ...func(*awss3.Options)) (*awss3.GetObjectOutput, error)
+	HeadObject(ctx context.Context, params *awss3.HeadObjectInput, optFns ...func(*awss3.Options)) (*awss3.HeadObjectOutput, error)
+	DeleteObject(ctx context.Context, params *awss3.DeleteObjectInput, optFns ...func(*awss3.Options)) (*awss3.DeleteObjectOutput, error)
 }
 
 type UploadInput struct {
@@ -128,6 +137,10 @@ func (c *Client) UploadFile(ctx context.Context, input UploadInput) (UploadResul
 	defer f.Close()
 
 	contentType := firstNonEmpty(strings.TrimSpace(input.ContentType), contentTypeForPath(localPath), "application/octet-stream")
+	objectExists, err := c.objectExists(ctx, objectKey)
+	if err != nil {
+		objectExists = false
+	}
 	req := &awss3.PutObjectInput{
 		Bucket:      aws.String(c.cfg.Bucket),
 		Key:         aws.String(objectKey),
@@ -138,7 +151,18 @@ func (c *Client) UploadFile(ctx context.Context, input UploadInput) (UploadResul
 		req.CacheControl = aws.String(cacheControl)
 	}
 	if _, err := c.api.PutObject(ctx, req); err != nil {
-		return UploadResult{}, err
+		if !objectExists {
+			return UploadResult{}, err
+		}
+		if deleteErr := c.deleteObject(ctx, objectKey); deleteErr != nil {
+			return UploadResult{}, fmt.Errorf("replace existing object %s failed: put_err=%v delete_err=%w", objectKey, err, deleteErr)
+		}
+		if _, seekErr := f.Seek(0, io.SeekStart); seekErr != nil {
+			return UploadResult{}, seekErr
+		}
+		if _, err := c.api.PutObject(ctx, req); err != nil {
+			return UploadResult{}, err
+		}
 	}
 
 	return UploadResult{
@@ -146,6 +170,49 @@ func (c *Client) UploadFile(ctx context.Context, input UploadInput) (UploadResul
 		URL:         c.ObjectURL(objectKey),
 		ContentType: contentType,
 	}, nil
+}
+
+func (c *Client) objectExists(ctx context.Context, objectKey string) (bool, error) {
+	_, err := c.api.HeadObject(ctx, &awss3.HeadObjectInput{
+		Bucket: aws.String(c.cfg.Bucket),
+		Key:    aws.String(objectKey),
+	})
+	if err == nil {
+		return true, nil
+	}
+	if isObjectNotFound(err) {
+		return false, nil
+	}
+	return false, err
+}
+
+func (c *Client) deleteObject(ctx context.Context, objectKey string) error {
+	_, err := c.api.DeleteObject(ctx, &awss3.DeleteObjectInput{
+		Bucket: aws.String(c.cfg.Bucket),
+		Key:    aws.String(objectKey),
+	})
+	if isObjectNotFound(err) {
+		return nil
+	}
+	return err
+}
+
+func isObjectNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	var apiErr smithy.APIError
+	if errors.As(err, &apiErr) {
+		switch strings.TrimSpace(apiErr.ErrorCode()) {
+		case "NotFound", "NoSuchKey", "NoSuchObject":
+			return true
+		}
+	}
+	var statusErr interface{ HTTPStatusCode() int }
+	if errors.As(err, &statusErr) && statusErr.HTTPStatusCode() == http.StatusNotFound {
+		return true
+	}
+	return false
 }
 
 func (c *Client) DownloadFile(ctx context.Context, objectKey, targetPath string) error {

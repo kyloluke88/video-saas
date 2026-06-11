@@ -91,13 +91,19 @@ type serviceAccountCredentials struct {
 }
 
 type SynthesizeConversationRequest struct {
-	LanguageCode  string
-	Prompt        string
-	Turns         []ConversationTurn
-	SpeakerNames   map[string]string
-	MaleVoiceID   string
-	FemaleVoiceID string
-	SpeakingRate  float64
+	LanguageCode        string
+	Prompt              string
+	Turns               []ConversationTurn
+	SpeakerNames        map[string]string
+	SpeakerVoiceConfigs []SpeakerVoiceConfig
+	MaleVoiceID         string
+	FemaleVoiceID       string
+	SpeakingRate        float64
+}
+
+type SpeakerVoiceConfig struct {
+	Speaker string
+	VoiceID string
 }
 
 type ConversationTurn struct {
@@ -151,16 +157,29 @@ func (c *Client) SynthesizeConversation(ctx context.Context, req SynthesizeConve
 	if len(req.Turns) == 0 {
 		return AudioResult{}, errors.New("gemini multi-speaker turns are required")
 	}
-	maleVoice := strings.TrimSpace(req.MaleVoiceID)
-	if maleVoice == "" {
-		maleVoice = strings.TrimSpace(c.cfg.MaleVoiceID)
-	}
-	femaleVoice := strings.TrimSpace(req.FemaleVoiceID)
-	if femaleVoice == "" {
-		femaleVoice = strings.TrimSpace(c.cfg.FemaleVoiceID)
-	}
-	if maleVoice == "" || femaleVoice == "" {
-		return AudioResult{}, errors.New("gemini multi-speaker voice ids are required")
+	if len(req.SpeakerVoiceConfigs) > 0 {
+		if len(req.SpeakerVoiceConfigs) != 2 {
+			return AudioResult{}, errors.New("gemini multi-speaker requires exactly 2 speaker voice configs")
+		}
+		for _, cfg := range req.SpeakerVoiceConfigs {
+			if strings.TrimSpace(cfg.Speaker) == "" || strings.TrimSpace(cfg.VoiceID) == "" {
+				return AudioResult{}, errors.New("gemini multi-speaker speaker and voice ids are required")
+			}
+		}
+	} else {
+		maleVoice := strings.TrimSpace(req.MaleVoiceID)
+		if maleVoice == "" {
+			maleVoice = strings.TrimSpace(c.cfg.MaleVoiceID)
+		}
+		femaleVoice := strings.TrimSpace(req.FemaleVoiceID)
+		if femaleVoice == "" {
+			femaleVoice = strings.TrimSpace(c.cfg.FemaleVoiceID)
+		}
+		if maleVoice == "" || femaleVoice == "" {
+			return AudioResult{}, errors.New("gemini multi-speaker voice ids are required")
+		}
+		req.MaleVoiceID = maleVoice
+		req.FemaleVoiceID = femaleVoice
 	}
 
 	turns := make([]ConversationTurn, 0, len(req.Turns))
@@ -169,7 +188,10 @@ func (c *Client) SynthesizeConversation(ctx context.Context, req SynthesizeConve
 		if text == "" {
 			continue
 		}
-		speaker := normalizeSpeaker(turn.Speaker)
+		speaker := conversationSpeakerKey(req, turn.Speaker)
+		if speaker == "" {
+			return AudioResult{}, errors.New("gemini multi-speaker speaker is required")
+		}
 		turns = append(turns, ConversationTurn{
 			Speaker: speaker,
 			Text:    text,
@@ -180,11 +202,12 @@ func (c *Client) SynthesizeConversation(ctx context.Context, req SynthesizeConve
 	}
 
 	body := BuildConversationGenerateContentRequestBody(c.cfg.TTSModel, SynthesizeConversationRequest{
-		Prompt:       req.Prompt,
-		Turns:        turns,
-		SpeakerNames: req.SpeakerNames,
-		MaleVoiceID:  maleVoice,
-		FemaleVoiceID: femaleVoice,
+		Prompt:              req.Prompt,
+		Turns:               turns,
+		SpeakerNames:        req.SpeakerNames,
+		SpeakerVoiceConfigs: req.SpeakerVoiceConfigs,
+		MaleVoiceID:         req.MaleVoiceID,
+		FemaleVoiceID:       req.FemaleVoiceID,
 	})
 
 	requestURL := buildGenerateContentURL(c.cfg.TTSURL, c.cfg.TTSModel)
@@ -609,6 +632,17 @@ func normalizeSpeaker(speaker string) string {
 		return "female"
 	}
 	return "male"
+}
+
+func conversationSpeakerKey(req SynthesizeConversationRequest, speaker string) string {
+	raw := strings.TrimSpace(speaker)
+	if raw == "" {
+		return ""
+	}
+	if len(req.SpeakerVoiceConfigs) > 0 {
+		return raw
+	}
+	return normalizeSpeaker(raw)
 }
 
 func firstNonEmpty(values ...string) string {

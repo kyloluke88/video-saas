@@ -108,6 +108,8 @@ export interface PodcastScriptListItem {
 
 export interface PracticalScriptSpeaker {
   speaker_id?: string;
+  google_voice_id?: string;
+  elevenlabs_voice_id?: string;
   speaker_role: string;
   speaker_prompt?: string;
   name?: string;

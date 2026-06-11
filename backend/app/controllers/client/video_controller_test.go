@@ -116,10 +116,26 @@ func TestBuildPodcastRequestPayloadStoresDefaultMetadata(t *testing.T) {
 	}
 }
 
+func TestBuildPracticalRequestPayloadStoresTTSType(t *testing.T) {
+	payload := buildPracticalRequestPayload(video.CreatePracticalDialogueRequest{
+		Lang:           "ja",
+		TTSType:        2,
+		ScriptFilename: "lesson.json",
+	}, "ja_practical_20260607010101", 0, nil, nil)
+
+	if got, _ := payload["tts_type"].(int); got != 2 {
+		t.Fatalf("unexpected tts_type: %#v", payload["tts_type"])
+	}
+	if got, _ := payload["start_from"].(string); got != "generate" {
+		t.Fatalf("unexpected start_from: %#v", payload["start_from"])
+	}
+}
+
 func TestBuildPracticalTaskPayloadUsesStageRange(t *testing.T) {
 	payload := buildPracticalTaskPayload(map[string]interface{}{
 		"project_id":   "ja_practical_20260423162724",
 		"run_mode":     1,
+		"tts_type":     2,
 		"start_from":   "images",
 		"stop_at":      "render",
 		"chapter_nums": []int{2, 6},
@@ -139,6 +155,9 @@ func TestBuildPracticalTaskPayloadUsesStageRange(t *testing.T) {
 	}
 	if _, exists := payload["specify_tasks"]; exists {
 		t.Fatalf("unexpected specify_tasks in payload: %#v", payload["specify_tasks"])
+	}
+	if got, _ := payload["tts_type"].(int); got != 2 {
+		t.Fatalf("unexpected tts_type: %#v", payload["tts_type"])
 	}
 }
 
@@ -163,15 +182,21 @@ func TestResolvePodcastStagePlanRejectsAlignForType2(t *testing.T) {
 }
 
 func TestResolvePracticalStagePlanUsesStartStageTask(t *testing.T) {
-	plan, err := resolvePracticalStagePlan(1, "render", "persist")
+	plan, err := resolvePracticalStagePlan(1, 1, "render", "persist")
 	if err != nil {
 		t.Fatalf("resolvePracticalStagePlan returned err: %v", err)
 	}
-	got, err := practicalTaskTypeForPlan(plan)
+	got, err := practicalTaskTypeForPlan(1, plan)
 	if err != nil {
 		t.Fatalf("practicalTaskTypeForPlan returned err: %v", err)
 	}
 	if got != "practical.compose.render.v1" {
 		t.Fatalf("unexpected task type: %s", got)
+	}
+}
+
+func TestResolvePracticalStagePlanRejectsAlignForType2(t *testing.T) {
+	if _, err := resolvePracticalStagePlan(2, 1, "align", "render"); err == nil {
+		t.Fatalf("expected type2 align validation error")
 	}
 }

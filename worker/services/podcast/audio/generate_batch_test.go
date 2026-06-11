@@ -151,13 +151,17 @@ func TestPersistGoogleTTSDebugArtifacts_WritesOneJsonPerBlock(t *testing.T) {
 
 func TestCleanupGoogleTTSDebugArtifacts_RemovesDebugFilesOnly(t *testing.T) {
 	projectDir := t.TempDir()
+	ttsDebugDir := filepath.Join(projectDir, "tts_debug")
 	blockStatesDir := filepath.Join(projectDir, "block_states")
+	if err := os.MkdirAll(ttsDebugDir, 0o755); err != nil {
+		t.Fatalf("failed to create tts_debug dir: %v", err)
+	}
 	if err := os.MkdirAll(blockStatesDir, 0o755); err != nil {
 		t.Fatalf("failed to create block_states dir: %v", err)
 	}
 
 	keepPath := filepath.Join(blockStatesDir, "001_block_001.json")
-	requestPath := filepath.Join(blockStatesDir, "block_001.google_request.json")
+	requestPath := filepath.Join(ttsDebugDir, "block_001.google_request.json")
 	tempoPath := filepath.Join(blockStatesDir, "001_block_001.pre_tempo.wav")
 
 	for path, content := range map[string]string{
@@ -184,25 +188,29 @@ func TestCleanupGoogleTTSDebugArtifacts_RemovesDebugFilesOnly(t *testing.T) {
 	}
 }
 
-func TestCanReuseCachedBlockAudioRejectsBlockIDMismatch(t *testing.T) {
-	current := dto.PodcastBlock{
-		BlockID: "block_001",
-		Segments: []dto.PodcastSegment{
-			{
-				SegmentID: "seg_001",
-				Speaker:   "female",
-				Text:      "你好",
-				Tokens: []dto.PodcastToken{
-					{Char: "你", StartMS: 10, EndMS: 20},
-					{Char: "好", StartMS: 20, EndMS: 30},
-				},
-			},
-		},
+func TestRemoveAlignedBlockArtifactsRemovesAudioAndState(t *testing.T) {
+	projectDir := t.TempDir()
+	artifacts, err := prepareAudioArtifacts(projectDir)
+	if err != nil {
+		t.Fatalf("prepareAudioArtifacts failed: %v", err)
 	}
-	cached := current
-	cached.BlockID = "block_002"
 
-	if canReuseCachedBlockAudio(podcastTTSTypeGoogle, "zh", current, cached) {
-		t.Fatalf("expected block id mismatch to reject reuse")
+	audioPath := unitAudioPath(artifacts.blocksDir, 0, "block_001", "mp3")
+	statePath := blockStatePath(artifacts.blockStatesDir, 0, "block_001")
+	if err := os.WriteFile(audioPath, []byte("audio"), 0o644); err != nil {
+		t.Fatalf("write audio failed: %v", err)
+	}
+	if err := os.WriteFile(statePath, []byte("{}"), 0o644); err != nil {
+		t.Fatalf("write state failed: %v", err)
+	}
+
+	if err := removeAlignedBlockArtifacts(artifacts, 0, "block_001"); err != nil {
+		t.Fatalf("removeAlignedBlockArtifacts failed: %v", err)
+	}
+	if fileExists(audioPath) {
+		t.Fatalf("expected aligned audio to be removed")
+	}
+	if fileExists(statePath) {
+		t.Fatalf("expected aligned state to be removed")
 	}
 }

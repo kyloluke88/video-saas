@@ -68,7 +68,7 @@ func buildConversationTranscript(req SynthesizeConversationRequest) string {
 }
 
 func speakerDisplayName(req SynthesizeConversationRequest, speaker string) string {
-	key := normalizeSpeaker(speaker)
+	key := conversationSpeakerKey(req, speaker)
 	if req.SpeakerNames != nil {
 		if name := strings.TrimSpace(req.SpeakerNames[key]); name != "" {
 			return name
@@ -78,6 +78,24 @@ func speakerDisplayName(req SynthesizeConversationRequest, speaker string) strin
 }
 
 func buildConversationSpeechConfig(req SynthesizeConversationRequest) map[string]any {
+	if len(req.SpeakerVoiceConfigs) > 0 {
+		configs := make([]map[string]any, 0, len(req.SpeakerVoiceConfigs))
+		for _, cfg := range req.SpeakerVoiceConfigs {
+			configs = append(configs, map[string]any{
+				"speaker": speakerDisplayName(req, cfg.Speaker),
+				"voiceConfig": map[string]any{
+					"prebuiltVoiceConfig": map[string]any{
+						"voiceName": strings.TrimSpace(cfg.VoiceID),
+					},
+				},
+			})
+		}
+		return map[string]any{
+			"multiSpeakerVoiceConfig": map[string]any{
+				"speakerVoiceConfigs": configs,
+			},
+		}
+	}
 	return map[string]any{
 		"multiSpeakerVoiceConfig": map[string]any{
 			"speakerVoiceConfigs": []map[string]any{

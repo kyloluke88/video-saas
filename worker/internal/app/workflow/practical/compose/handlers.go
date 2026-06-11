@@ -20,7 +20,7 @@ func HandleComposeRender(ctx context.Context, ch *amqp.Channel, msg task.VideoTa
 		return err
 	}
 	if shouldInvalidate(string(practicalpipeline.StageRender), payload.StartFrom) {
-		if err := practicalpipeline.InvalidateOutputs(payload.ProjectID, payload.StartFrom); err != nil {
+		if err := practicalpipeline.InvalidateOutputs(payload.ProjectID, payload.TTSType, payload.StartFrom); err != nil {
 			return err
 		}
 	}
@@ -63,14 +63,14 @@ func composeInputFromPayload(payload dto.PracticalAudioGeneratePayload) practica
 }
 
 func publishNextPracticalTaskFromComposePayload(ch *amqp.Channel, payload dto.PracticalAudioGeneratePayload, currentStage string) error {
-	nextStage, ok, err := practicalpipeline.NextStage(currentStage, payload.StopAt)
+	nextStage, ok, err := practicalpipeline.NextStage(normalizePracticalTTSType(payload.TTSType), currentStage, payload.StopAt)
 	if err != nil {
 		return err
 	}
 	if !ok {
 		return nil
 	}
-	taskType, err := practicalpipeline.TaskTypeForStage(practicalpipeline.Stage(nextStage))
+	taskType, err := practicalpipeline.TaskTypeForStage(normalizePracticalTTSType(payload.TTSType), practicalpipeline.Stage(nextStage))
 	if err != nil {
 		return err
 	}

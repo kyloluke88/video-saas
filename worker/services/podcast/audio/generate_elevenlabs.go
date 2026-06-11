@@ -77,7 +77,7 @@ func synthesizeWithElevenLabs(
 		if err != nil {
 			return nil, err
 		}
-		if err := persistElevenTTSDebugArtifacts(artifacts.blockStatesDir, block.BlockID, ttsRequest, ttsResult.RawResponse, len(ttsResult.Audio)); err != nil {
+		if err := persistElevenTTSDebugArtifacts(artifacts.ttsDebugDir, block.BlockID, ttsRequest, ttsResult.RawResponse, len(ttsResult.Audio)); err != nil {
 			return nil, err
 		}
 
@@ -104,7 +104,7 @@ func synthesizeWithElevenLabs(
 			ttsResult.VoiceSegments,
 			blockDurationMS,
 		)
-		if err := artifacts.persistBlockCheckpoint(blockIndex, alignedBlock, blockDurationMS, nil); err != nil {
+		if err := persistBlockCheckpoint(artifacts.blockStatesDir, blockIndex, alignedBlock, blockDurationMS, 0); err != nil {
 			return nil, err
 		}
 
@@ -251,18 +251,7 @@ func tryReuseCachedBlockWithoutMFA(
 	index int,
 	block dto.PodcastBlock,
 ) (blockSynthesisResult, bool, error) {
-	return tryReuseCompletedBlockWithoutMFA(
-		podcastTTSTypeElevenLabs,
-		"elevenlabs",
-		projectID,
-		language,
-		artifacts,
-		index,
-		block,
-		nil,
-		true,
-		false,
-	)
+	return tryReuseAlignedBlock("elevenlabs", projectID, language, artifacts, index, block, 0, false)
 }
 
 func alignBlockWithElevenLabsTimestamps(

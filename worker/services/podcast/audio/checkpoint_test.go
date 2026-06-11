@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	services "worker/services"
 	dto "worker/services/podcast/model"
@@ -73,9 +72,10 @@ func TestBlockCheckpointCompleteRejectsMissingTokenTiming(t *testing.T) {
 			},
 		},
 		DurationMS: 1000,
+		Tempo:      0.78,
 	}
 
-	if blockCheckpointComplete("zh", state, audioPath) {
+	if blockCheckpointComplete("zh", state, audioPath, 0.78, false) {
 		t.Fatalf("expected checkpoint with missing token timing to be rejected")
 	}
 }
@@ -101,10 +101,40 @@ func TestBlockCheckpointCompleteAcceptsJapaneseHighlightTiming(t *testing.T) {
 			},
 		},
 		DurationMS: 1000,
+		Tempo:      0.78,
 	}
 
-	if !blockCheckpointComplete("ja", state, audioPath) {
+	if !blockCheckpointComplete("ja", state, audioPath, 0.78, false) {
 		t.Fatalf("expected checkpoint with highlight timings to be accepted")
+	}
+}
+
+func TestBlockCheckpointCompleteRejectsTempoMismatch(t *testing.T) {
+	dir := t.TempDir()
+	audioPath := filepath.Join(dir, "001_block_001.wav")
+	if err := os.WriteFile(audioPath, []byte("audio"), 0o644); err != nil {
+		t.Fatalf("failed to write audio file: %v", err)
+	}
+
+	state := blockCheckpoint{
+		Block: dto.PodcastBlock{
+			Segments: []dto.PodcastSegment{
+				{
+					SegmentID: "seg_001",
+					StartMS:   0,
+					EndMS:     1000,
+					Tokens: []dto.PodcastToken{
+						{Char: "你", StartMS: 10, EndMS: 100},
+					},
+				},
+			},
+		},
+		DurationMS: 1000,
+		Tempo:      0.78,
+	}
+
+	if blockCheckpointComplete("zh", state, audioPath, 0.9, false) {
+		t.Fatalf("expected tempo mismatch to reject reuse")
 	}
 }
 
@@ -331,7 +361,7 @@ func TestBuildProvisionalAlignedScriptCreatesHeuristicTimeline(t *testing.T) {
 	}
 }
 
-func TestBlockCheckpointIndexMigratesLegacyCheckpointOnFlush(t *testing.T) {
+func TestLoadBlockCheckpointReadsCheckpointFile(t *testing.T) {
 	projectDir := t.TempDir()
 	artifacts, err := prepareAudioArtifacts(projectDir)
 	if err != nil {
@@ -360,7 +390,7 @@ func TestBlockCheckpointIndexMigratesLegacyCheckpointOnFlush(t *testing.T) {
 		t.Fatalf("write legacy checkpoint failed: %v", err)
 	}
 
-	got, ok, err := artifacts.loadBlockCheckpoint(artifacts.blockStatesDir, 0, state.Block.BlockID)
+	got, ok, err := loadBlockCheckpoint(artifacts.blockStatesDir, 0, state.Block.BlockID)
 	if err != nil {
 		t.Fatalf("loadBlockCheckpoint failed: %v", err)
 	}
@@ -370,25 +400,12 @@ func TestBlockCheckpointIndexMigratesLegacyCheckpointOnFlush(t *testing.T) {
 	if got.DurationMS != 1000 {
 		t.Fatalf("expected duration 1000, got %d", got.DurationMS)
 	}
-	if err := artifacts.flushCheckpointStores(); err != nil {
-		t.Fatalf("flushCheckpointStores failed: %v", err)
-	}
-
-	indexPath := filepath.Join(artifacts.blockStatesDir, "index.json")
-	var index blockCheckpointIndex
-	if err := readJSON(indexPath, &index); err != nil {
-		t.Fatalf("read index failed: %v", err)
-	}
-	entry, ok := index.Blocks[blockCheckpointKey(0, state.Block.BlockID)]
-	if !ok {
-		t.Fatalf("expected checkpoint entry in index")
-	}
-	if entry.State.DurationMS != 1000 {
-		t.Fatalf("expected indexed duration 1000, got %d", entry.State.DurationMS)
+	if got.Block.Segments[0].Tokens[0].StartMS != 10 {
+		t.Fatalf("expected token timing to load, got %+v", got.Block.Segments[0].Tokens[0])
 	}
 }
 
-func TestBlockCheckpointIndexReloadsChangedCheckpointFile(t *testing.T) {
+func TestPersistBlockCheckpointOverwritesCheckpointFile(t *testing.T) {
 	projectDir := t.TempDir()
 	artifacts, err := prepareAudioArtifacts(projectDir)
 	if err != nil {
@@ -410,14 +427,9 @@ func TestBlockCheckpointIndexReloadsChangedCheckpointFile(t *testing.T) {
 			},
 		},
 	}
-	if err := artifacts.persistBlockCheckpoint(0, original, 1000, nil); err != nil {
+	if err := persistBlockCheckpoint(artifacts.blockStatesDir, 0, original, 1000, 0.78); err != nil {
 		t.Fatalf("persistBlockCheckpoint failed: %v", err)
 	}
-	if err := artifacts.flushCheckpointStores(); err != nil {
-		t.Fatalf("flushCheckpointStores failed: %v", err)
-	}
-
-	time.Sleep(10 * time.Millisecond)
 
 	updated := original
 	updated.Segments = []dto.PodcastSegment{
@@ -432,20 +444,13 @@ func TestBlockCheckpointIndexReloadsChangedCheckpointFile(t *testing.T) {
 			},
 		},
 	}
-	if err := writeJSON(blockStatePath(artifacts.blockStatesDir, 0, updated.BlockID), blockCheckpoint{
-		Block:      updated,
-		DurationMS: 1500,
-	}); err != nil {
-		t.Fatalf("rewrite checkpoint failed: %v", err)
+	if err := persistBlockCheckpoint(artifacts.blockStatesDir, 0, updated, 1500, 0.9); err != nil {
+		t.Fatalf("persistBlockCheckpoint overwrite failed: %v", err)
 	}
 
-	reloadedArtifacts, err := prepareAudioArtifacts(projectDir)
+	got, ok, err := loadBlockCheckpoint(artifacts.blockStatesDir, 0, updated.BlockID)
 	if err != nil {
-		t.Fatalf("prepareAudioArtifacts reload failed: %v", err)
-	}
-	got, ok, err := reloadedArtifacts.loadBlockCheckpoint(reloadedArtifacts.blockStatesDir, 0, updated.BlockID)
-	if err != nil {
-		t.Fatalf("loadBlockCheckpoint reload failed: %v", err)
+		t.Fatalf("loadBlockCheckpoint failed: %v", err)
 	}
 	if !ok {
 		t.Fatalf("expected checkpoint to reload")
@@ -455,5 +460,8 @@ func TestBlockCheckpointIndexReloadsChangedCheckpointFile(t *testing.T) {
 	}
 	if got.Block.Segments[0].Text != "再见" {
 		t.Fatalf("expected updated checkpoint text, got %q", got.Block.Segments[0].Text)
+	}
+	if got.Tempo != 0.9 {
+		t.Fatalf("expected updated tempo 0.9, got %v", got.Tempo)
 	}
 }

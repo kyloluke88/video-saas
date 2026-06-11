@@ -81,7 +81,7 @@
    - `topic_translations`
    - `speakers`
    - `chapters`
-5. `topic` 必须是自然的日文场景标题。
+5. `topic` 必须是自然的日文场景描述，不能超过20个字符。
 6. `topic_translations` 必须完整覆盖 `translation_locales`。
 
 【block_prompt 规则】
@@ -150,6 +150,12 @@
 11. `speaker_prompt` 必须包含以下统一画风描述：
     `Clean anime-inspired 2D character design, semi-flat shading, crisp line art, warm muted colors, friendly editorial style`
 
+【speakers 规则】
+1. speakers 允许2个以上的角色
+2. 影片的主人公 speaker_role 的值固定为 hero
+3. speaker_role 必须在block内是唯一
+4. speaker_id 必须是 male 或者 female，禁止是其他的值
+5. hero 之外的 speaker_role 必须与 hero 的性别不同！比如：hero 是女性，则其他的speaker必须是男性。反之亦然。
 
 【prompt 规则】
 `speaker_prompt` 里面禁止出现 `margin from canvas edges` 这种描述，不需要任何的 margin。
@@ -168,9 +174,12 @@
 2. `turn_id` 必须在整个 script 中唯一。
 3. `turn_id` 必须按 `t_01`、`t_02`、`t_03` 的格式在整个 script 中顺序递增。
 4. `speaker_role` 必须来自当前 block 的 `speakers[].speaker_role`。
-5. `text` 必须是自然、口语化、适合初中级学习者的日语，因此允许对话比真实生活稍微啰嗦一些。。
-6. `speech_text` 默认必须等于 `text`。
-7. 只有在 TTS 需要特殊读法、停顿或发音调整时，`speech_text` 才可以与 `text` 不同。
+5. `text` 必须是自然、口语化、适合初中级学习者的日语，因此允许对话比真实生活稍微啰嗦一些。
+5. `text` 必须是 ます、です形。
+6. `speech_text` 是用于 eleventLabs 文字转语音的请求TTS的。
+7. `speech_text` 中需要添加表示感情色彩的标签，比如：[happy], [sad], [excited], [curious]等等，标签的种类非常多。必要的时候请参考 eleventLabs 网站的说明。
+7. `speech_text` 中添加的感情色彩的标签必须要符合整体文本内容的气氛。
+7. `speech_text` 除了表达感情的标签之外，其余内容必须和 `text` 保持一致。
 8. `translations` 必须完整覆盖 `translation_locales`。
 9. `tokens` 字段必须存在。
 10. 第一阶段不生成具体 tokens 内容，统一输出 `tokens: []`。
@@ -182,31 +191,27 @@
 【内容体量硬性规则】
 
 必须严格根据每个 block 的 duration_minutes 生成对应数量的 chapters 和 turns。
-
-注意：
-- duration_minutes 不是参考值，而是控制内容体量的硬性字段。
-- 每个 block 的 turns 总数必须落在指定范围内。
-- 如果 turns 总数不足，必须继续扩写该 block 的对话，直到满足数量范围。
-- 不允许因为 JSON 很长而减少 turns 数量。
-- 不允许只生成简短示例式对话。
-
-当 duration_minutes 为 3：
-- 每个 block 必须生成 3 个 chapters
-- 每个 block 必须生成 35 到 45 个 turns
-- 每个 chapter 内 turn 的数量请按照内容场景合理分配
-
 当 duration_minutes 为 5：
-- 每个 block 必须生成 5 个 chapters
-- 每个 block 必须生成 60 到 70 个 turns
+- 每个 block 必须生成 6 到 7 个 chapters
+- 每个 block 必须生成 80 到 95 个 turns
 - 每个 chapter 内 turn 的数量请按照内容场景合理分配
-- 不得少于 60 个 turns
+- 建议每个 chapter 内 12～18 个 turns
+- 不得少于 80 个 turns
 
 当 duration_minutes 为 15：
-- 每个 block 必须生成 9 到 10 个 chapters
-- 每个 block 必须生成 180 到 200 个 turns
-- 建议每个 chapter 内 20 ～ 35
-- 不得少于 180 个 turns
+- 每个 block 必须生成 12 到 14 个 chapters
+- 每个 block 必须生成 230 到 260 个 turns
+- 每个 chapter 内 turn 的数量请按照内容场景合理分配
+- 建议每个 chapter 内 18～25 个 turns
+- 不得少于 250 个 turns
 
+注意：
+- duration_minutes 而是控制内容体量的硬性字段。
+- 每个 block 的 turns 总数必须落在指定范围内。
+- 每个 turn 的 text 不要过短，除自然寒暄、回应、确认以外，普通 turn 建议保持 10～28 个日文字符。
+- 每个 chapter 至少包含 2～4 个稍长句，用于自然展开场景、说明动作或表达感受。
+- 不要为了凑 turn 数大量生成「はい」「そうですね」「いいですね」这类过短回应。
+- 场景推进要自然，每个 chapter 应该围绕一个明确的小场景或小任务展开。
 
 【输出前自检要求】
 在输出第一阶段 JSON 之前，必须自行检查：
@@ -219,7 +224,6 @@
 7. `block_id` 是否在整个 JSON 中顺序递增。
 8. `chapter_id` 是否在整个 JSON 中唯一且顺序递增。
 9. `turn_id` 是否在整个 JSON 中唯一且顺序递增。
-10. 每个 block 是否只有一个 `female` 和一个 `male`。
 11. 每个 `turn.speaker_role` 是否都能在当前 block 的 `speakers[].speaker_role` 中找到。
 12. 每个 `topic_translations` 是否完整覆盖 `translation_locales`。
 13. 每个 `scene_translations` 是否完整覆盖 `translation_locales`。
@@ -233,6 +237,10 @@
 21. duration_minutes 为 5 的 block，turns 总数必须在 65 到 80 之间。
 22. 如果任何 block 的 turns 总数低于目标范围，禁止输出 JSON，必须先继续扩写。
 23. 如果任何 block 的 chapters 数量不符合 duration_minutes 对应要求，禁止输出 JSON，必须先补足 chapters。
+24. 每个 chapter 中必须只能出现2个不同的 speaker_role。
+25. speakers[].speaker_role 必须有一个是 hero。
+26. speakers[].speaker_id 必须是 male 或者 female，不能是其他的值
+27. speech_text 需要适当的添加表单感情的标签
 
 【输出要求】
 - 只输出合法 JSON。
@@ -320,25 +328,17 @@
 }
 
 现在根据以下输入生成内容：
-title：4个日常场景中对话的听力练习
-difficulty_level：N4
+title：一个人乘坐电车的对话听力练习
+
+difficulty_level：N5-N4
 "topics": [
-    {
-        "topic": "病院で診察を受ける",
-        "duration_minutes": 15,
-        "description": "参考以下结构：
-        ch_01 病院の受付で初診の手続きをする
-        ch_02 保険証を出して問診票を記入する
-        ch_03 待合室で待ち、看護師からの呼び出しに応じる
-        ch_04 診察室で医師に症状を詳しく伝える
-        ch_05 医師の質問に答え、体温や血圧を測る
-        ch_06 検査（レントゲンや血液検査など）の指示を受ける
-        ch_07 診断結果と今後の治療について説明を聞く
-        ch_08 会計の窓口で診察代を支払う
-        ch_09 処方箋を受け取り、お薬手帳について確認する
-        ch_10 薬局へ向かい、薬の飲み方の説明を受けて受け取る
-        "
-    }
+{
+
+"topic": 乘坐电车的会话的听力练习,
+"duration_minutes": 15,
+"description": "一个人独自乘坐电车,需要有中转等，需要多个角色。“
+}
+
 ]
 
 請按照规则要求生成内容，提供可下载的json文件。

@@ -1,75 +1,1103 @@
 {
-    "title": "日本語タイトル",
-    "en_title": "English Title",
-    "language": "ja",
-    "difficulty_level": "N2",
-    "translation_locales": [
-        "en",
-        "es-419",
-        "zh-Hans",
-        "vi",
-        "ko",
-        "id"
-    ],
-    "blocks": [
-        {
-            "block_id": "block_01",
-            "topic": "スーパーで買い物",
-            "topic_translations": {
-                "en": "Shopping at the supermarket",
-                "es-419": "Comprar en el supermercado",
-                "zh-Hans": "超市购物",
-                "vi": "Mua sắm ở siêu thị",
-                "ko": "마트에서 장보기",
-                "id": "Belanja di supermarket"
-            },
-            "speakers": [
-                {
-                    "speaker_id": "female",
-                    "speaker_role": "customer"
-                },
-                {
-                    "speaker_id": "male",
-                    "speaker_role": "waiter"
-                }
-            ],
-            "chapters": [
-                {
-                    "chapter_id": "ch_01",
-                    "scene": "店員に売り場を聞く",
-                    "scene_translations": {
-                        "en": "Asking a store clerk where an item is",
-                        "es-419": "Preguntar al empleado dónde está un producto",
-                        "zh-Hans": "向店员询问商品区在哪里",
-                        "vi": "Hỏi nhân viên cửa hàng món đồ ở đâu",
-                        "ko": "직원에게 상품 위치를 묻기",
-                        "id": "Bertanya kepada pegawai toko barang ada di mana"
-                    },
-                    "scene_prompt": "A clean Japanese supermarket dairy aisle, neatly arranged milk shelves, soft warm lighting, a customer asking a store clerk for help, realistic everyday shopping atmosphere, static composition, no text, no watermark",
-                    "turns": [
-                        {
-                            "turn_id": "ch01_t01",
-                            "speaker_role": "customer",
-                            "text": "すみません。牛乳はどこですか？",
-                            "speech_text": "すみません。ぎゅうにゅう は どこ です か？",
-                            "translations": {
-                                "en": "Excuse me. Where is the milk?",
-                                "es-419": "Disculpe. ¿Dónde está la leche?",
-                                "zh-Hans": "请问，牛奶在哪儿？",
-                                "vi": "Xin lỗi, sữa ở đâu vậy?",
-                                "ko": "실례합니다. 우유는 어디에 있나요?",
-                                "id": "Permisi, susu ada di mana?"
-                            },
-                            "tokens": [
-                                {
-                                    "text": "牛乳",
-                                    "reading": "ぎゅうにゅう"
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ]
-        }
-    ]
+"title": "4つの日常シーンで学ぶリスニング練習",
+"en_title": "Listening Practice in 4 Daily Scenes",
+"language": "ja",
+"difficulty_level": "N4",
+"translation_locales": [
+"en",
+"es-419",
+"zh-Hans",
+"vi",
+"ko",
+"id"
+],
+"blocks": [
+{
+"block_id": "block_01",
+"topic": "私の土曜日",
+"block_prompt": "A bustling Japanese city street on a sunny weekend, showing a cozy cafe, a bakery, and a bookstore, warm natural lighting, realistic everyday weekend atmosphere, Clean 2D cartoon illustration, semi-flat shading, crisp line art, warm muted colors, friendly editorial style",
+"topic_translations": {
+"en": "My Saturday",
+"es-419": "Mi sábado",
+"zh-Hans": "我的周六的一天",
+"vi": "Thứ Bảy của tôi",
+"ko": "나의 토요일",
+"id": "Hari Sabtu Saya"
+},
+"speakers": [
+{
+"speaker_id": "female_1",
+"speaker_role": "hero",
+"speaker_prompt": "A lively female anime character as a weekend goer, wearing a casual modern weekend outfit, friendly expression, clean anime-inspired 2D character design, semi-flat shading, crisp line art, warm muted colors, friendly editorial style, suitable for full body and front view reference image, simple plain background"
+},
+{
+"speaker_id": "male_1",
+"speaker_role": "friend",
+"speaker_prompt": "A calm male anime character as a steady friend, wearing comfortable stylish casual clothes, relaxed expression, clean anime-inspired 2D character design, semi-flat shading, crisp line art, warm muted colors, friendly editorial style, suitable for full body and front view reference image, simple plain background"
+},
+{
+"speaker_id": "female_2",
+"speaker_role": "clerk",
+"speaker_prompt": "A cheerful female anime character as a bakery clerk, wearing a neat uniform and apron, welcoming expression, clean anime-inspired 2D character design, semi-flat shading, crisp line art, warm muted colors, friendly editorial style, suitable for full body and front view reference image, simple plain background"
+},
+{
+"speaker_id": "male_2",
+"speaker_role": "staff",
+"speaker_prompt": "A polite male anime character as a bookstore staff, wearing a simple apron and name tag, helpful expression, clean anime-inspired 2D character design, semi-flat shading, crisp line art, warm muted colors, friendly editorial style, suitable for full body and front view reference image, simple plain background"
+}
+],
+"chapters": [
+{
+"chapter_id": "ch_01",
+"scene": "路上で友達に会う",
+"scene_translations": {
+"en": "Meeting a friend on the street",
+"es-419": "Encontrarse con un amigo en la calle",
+"zh-Hans": "在街上遇到朋友",
+"vi": "Gặp bạn trên đường",
+"ko": "길에서 친구를 만나기",
+"id": "Bertemu teman di jalan"
+},
+"scene_prompt": "A clean Japanese city street with blooming trees and a clear blue sky, @[hero] and @[friend] are standing on the sidewalk talking and smiling, sunny daylight, realistic everyday weekend atmosphere, Clean 2D cartoon illustration, semi-flat shading, crisp line art, warm muted colors, friendly editorial style",
+"turns": [
+{
+"turn_id": "t_01",
+"speaker_role": "hero",
+"text": "あっ、アキラくん！おはよう。",
+"speech_text": "あっ、アキラくん！おはよう。",
+"translations": {
+"en": "Ah, Akira! Good morning.",
+"es-419": "¡Ah, Akira! Buenos días.",
+"zh-Hans": "啊，Akira！早上好。",
+"vi": "A, Akira! Chào buổi sáng.",
+"ko": "아, 아키라! 안녕.",
+"id": "Ah, Akira! Selamat pagi."
+},
+"tokens": []
+},
+{
+"turn_id": "t_02",
+"speaker_role": "friend",
+"text": "やあ、結衣ちゃん！おはよう。偶然だね。",
+"speech_text": "やあ、ゆいちゃん！おはよう。ぐうぜんだね。",
+"translations": {
+"en": "Oh, Yui! Good morning. What a coincidence.",
+"es-419": "¡Oh, Yui! Buenos días. Qué casualidad.",
+"zh-Hans": "哎呀，Yui！早上好。真巧啊。",
+"vi": "Ồ, Yui! Chào buổi sáng. Thật tình cờ.",
+"ko": "어, 유이! 안녕. 우연이네.",
+"id": "Oh, Yui! Selamat pagi. Kebetulan sekali."
+},
+"tokens": []
+},
+{
+"turn_id": "t_03",
+"speaker_role": "hero",
+"text": "久しぶりだね。元気だった？",
+"speech_text": "ひさしぶりだね。げんきだった？",
+"translations": {
+"en": "It's been a while. Have you been well?",
+"es-419": "Cuánto tiempo. ¿Has estado bien?",
+"zh-Hans": "好久不见。最近好吗？",
+"vi": "Lâu rồi không gặp. Bạn khỏe không?",
+"ko": "오랜만이네. 잘 지냈어?",
+"id": "Sudah lama ya. Apakah kamu baik-baik saja?"
+},
+"tokens": []
+},
+{
+"turn_id": "t_04",
+"speaker_role": "friend",
+"text": "うん、元気だよ。",
+"speech_text": "うん、げんきだよ。",
+"translations": {
+"en": "Yeah, I've been well.",
+"es-419": "Sí, he estado bien.",
+"zh-Hans": "嗯，挺好的。",
+"vi": "Ừ, mình khỏe.",
+"ko": "응, 잘 지냈어.",
+"id": "Iya, aku baik."
+},
+"tokens": []
+},
+{
+"turn_id": "t_05",
+"speaker_role": "hero",
+"text": "今からどこかへ行くの？",
+"speech_text": "いまからどこかへいくの？",
+"translations": {
+"en": "Are you going somewhere now?",
+"es-419": "¿Vas a alguna parte ahora?",
+"zh-Hans": "你现在要去哪儿吗？",
+"vi": "Bây giờ bạn đang đi đâu à?",
+"ko": "지금 어디 가?",
+"id": "Apakah kamu mau pergi ke suatu tempat sekarang?"
+},
+"tokens": []
+},
+{
+"turn_id": "t_06",
+"speaker_role": "friend",
+"text": "うん、カメラを買いに行くんだ。",
+"speech_text": "うん、カメラをかいにいくんだ。",
+"translations": {
+"en": "Yes, I'm going to buy a camera.",
+"es-419": "Sí, voy a comprar una cámara.",
+"zh-Hans": "嗯，我要去买相机。",
+"vi": "Ừ, mình đi mua máy ảnh.",
+"ko": "응, 카메라 사러 가.",
+"id": "Iya, aku mau pergi membeli kamera."
+},
+"tokens": []
+},
+{
+"turn_id": "t_07",
+"speaker_role": "hero",
+"text": "カメラ？いいね。",
+"speech_text": "カメラ？いいね。",
+"translations": {
+"en": "A camera? That's nice.",
+"es-419": "¿Una cámara? Qué bien.",
+"zh-Hans": "相机？真不错。",
+"vi": "Máy ảnh sao? Tuyệt quá.",
+"ko": "카메라? 좋네.",
+"id": "Kamera? Bagus tuh."
+},
+"tokens": []
+},
+{
+"turn_id": "t_08",
+"speaker_role": "friend",
+"text": "結衣ちゃんは？",
+"speech_text": "ゆいちゃんは？",
+"translations": {
+"en": "What about you, Yui?",
+"es-419": "¿Y tú, Yui?",
+"zh-Hans": "你呢，Yui？",
+"vi": "Còn Yui thì sao?",
+"ko": "유이는?",
+"id": "Bagaimana denganmu, Yui?"
+},
+"tokens": []
+},
+{
+"turn_id": "t_09",
+"speaker_role": "hero",
+"text": "私は散歩しているだけ。今日は天気がいいね。",
+"speech_text": "わたしはさんぽしているだけ。きょうはてんきがいいね。",
+"translations": {
+"en": "I'm just taking a walk. The weather is great today.",
+"es-419": "Solo estoy dando un paseo. Hoy hace un tiempo estupendo.",
+"zh-Hans": "我只是在散步。今天天气真好。",
+"vi": "Mình chỉ đang đi dạo thôi. Hôm nay thời tiết đẹp quá.",
+"ko": "난 그냥 산책하고 있어. 오늘 날씨 좋네.",
+"id": "Aku cuma jalan-jalan saja. Cuaca hari ini bagus ya."
+},
+"tokens": []
+},
+{
+"turn_id": "t_10",
+"speaker_role": "friend",
+"text": "そうだね。空がとても青いよ。",
+"speech_text": "そうだね。そらがとてもあおいよ。",
+"translations": {
+"en": "Yeah, the sky is so blue.",
+"es-419": "Sí, el cielo está muy azul.",
+"zh-Hans": "是啊。天空特别蓝。",
+"vi": "Đúng vậy. Bầu trời rất xanh.",
+"ko": "그렇네. 하늘이 정말 파랗다.",
+"id": "Iya. Langitnya sangat biru."
+},
+"tokens": []
+},
+{
+"turn_id": "t_11",
+"speaker_role": "hero",
+"text": "今、時間ある？",
+"speech_text": "いま、じかんある？",
+"translations": {
+"en": "Do you have time now?",
+"es-419": "¿Tienes tiempo ahora?",
+"zh-Hans": "你现在有时间吗？",
+"vi": "Bây giờ bạn có thời gian không?",
+"ko": "지금 시간 있어?",
+"id": "Apakah kamu punya waktu sekarang?"
+},
+"tokens": []
+},
+{
+"turn_id": "t_12",
+"speaker_role": "friend",
+"text": "うん、店が開くまで少し時間があるよ。",
+"speech_text": "うん、みせがあくまですこしじかんがあるよ。",
+"translations": {
+"en": "Yeah, I have some free time before the store opens.",
+"es-419": "Sí, tengo un poco de tiempo antes de que abra la tienda.",
+"zh-Hans": "嗯，在店开门之前还有一点时间。",
+"vi": "Ừ, mình có chút thời gian trước khi cửa hàng mở cửa.",
+"ko": "응, 가게 문 열 때까지 시간 좀 있어.",
+"id": "Iya, aku punya sedikit waktu sebelum tokonya buka."
+},
+"tokens": []
+},
+{
+"turn_id": "t_13",
+"speaker_role": "hero",
+"text": "じゃあ、あそこのカフェに行こう！",
+"speech_text": "じゃあ、あそこのカフェにいこう！",
+"translations": {
+"en": "Then, let's go to that cafe over there!",
+"es-419": "Entonces, ¡vamos a esa cafetería de allí!",
+"zh-Hans": "那我们去那边的咖啡店吧！",
+"vi": "Vậy thì, chúng ta đến quán cà phê đằng kia đi!",
+"ko": "그럼, 저기 있는 카페 가자!",
+"id": "Kalau begitu, ayo kita ke kafe di sana!"
+},
+"tokens": []
+},
+{
+"turn_id": "t_14",
+"speaker_role": "friend",
+"text": "いいね。行こう。",
+"speech_text": "いいね。いこう。",
+"translations": {
+"en": "Sounds good. Let's go.",
+"es-419": "Suena bien. Vamos.",
+"zh-Hans": "好啊。走吧。",
+"vi": "Nghe hay đấy. Đi thôi.",
+"ko": "좋아. 가자.",
+"id": "Boleh. Ayo."
+},
+"tokens": []
+}
+]
+},
+{
+"chapter_id": "ch_02",
+"scene": "カフェで話す",
+"scene_translations": {
+"en": "Chatting at a cafe",
+"es-419": "Charlando en una cafetería",
+"zh-Hans": "在咖啡店聊天",
+"vi": "Trò chuyện ở quán cà phê",
+"ko": "카페에서 이야기하기",
+"id": "Mengobrol di kafe"
+},
+"scene_prompt": "A clean Japanese cafe interior with wooden tables and large windows, @[hero] and @[friend] are sitting across from each other drinking coffee and chatting cheerfully, realistic everyday weekend atmosphere, Clean 2D cartoon illustration, semi-flat shading, crisp line art, warm muted colors, friendly editorial style",
+"turns": [
+{
+"turn_id": "t_15",
+"speaker_role": "hero",
+"text": "このカフェ、とても静かでいいね。",
+"speech_text": "このカフェ、とてもしずかでいいね。",
+"translations": {
+"en": "This cafe is very quiet and nice.",
+"es-419": "Esta cafetería es muy tranquila y agradable.",
+"zh-Hans": "这家咖啡店很安静，真不错呢。",
+"vi": "Quán cà phê này thật yên tĩnh và dễ chịu.",
+"ko": "이 카페, 조용해서 참 좋네.",
+"id": "Kafe ini sangat tenang dan bagus ya."
+},
+"tokens": []
+},
+{
+"turn_id": "t_16",
+"speaker_role": "friend",
+"text": "うん。何を飲む？",
+"speech_text": "うん。なにをのむ？",
+"translations": {
+"en": "Yeah. What will you drink?",
+"es-419": "Sí. ¿Qué vas a beber?",
+"zh-Hans": "是啊。你想喝什么？",
+"vi": "Ừ. Bạn uống gì?",
+"ko": "응. 뭐 마실래?",
+"id": "Iya. Kamu mau minum apa?"
+},
+"tokens": []
+},
+{
+"turn_id": "t_17",
+"speaker_role": "hero",
+"text": "私はホットコーヒーにする。",
+"speech_text": "わたしはホットコーヒーにする。",
+"translations": {
+"en": "I'll have a hot coffee.",
+"es-419": "Tomaré un café caliente.",
+"zh-Hans": "我要热咖啡。",
+"vi": "Mình sẽ uống cà phê nóng.",
+"ko": "난 따뜻한 커피 마실래.",
+"id": "Aku mau pesan kopi panas."
+},
+"tokens": []
+},
+{
+"turn_id": "t_18",
+"speaker_role": "friend",
+"text": "僕はアイスティーにするよ。",
+"speech_text": "ぼくはアイスティーにするよ。",
+"translations": {
+"en": "I'll have an iced tea.",
+"es-419": "Yo tomaré un té helado.",
+"zh-Hans": "我要冰红茶。",
+"vi": "Mình sẽ uống trà đá.",
+"ko": "난 아이스티로 할게.",
+"id": "Aku mau es teh."
+},
+"tokens": []
+},
+{
+"turn_id": "t_19",
+"speaker_role": "hero",
+"text": "最近、忙しい？",
+"speech_text": "さいきん、いそがしい？",
+"translations": {
+"en": "Have you been busy lately?",
+"es-419": "¿Has estado ocupado últimamente?",
+"zh-Hans": "最近忙吗？",
+"vi": "Dạo này bạn bận không?",
+"ko": "요즘 바빠?",
+"id": "Akhir-akhir ini kamu sibuk?"
+},
+"tokens": []
+},
+{
+"turn_id": "t_20",
+"speaker_role": "friend",
+"text": "少しね。仕事が大変だったんだ。",
+"speech_text": "すこしね。しごとがたいへんだったんだ。",
+"translations": {
+"en": "A little bit. Work has been tough.",
+"es-419": "Un poco. El trabajo ha sido duro.",
+"zh-Hans": "有一点。工作挺辛苦的。",
+"vi": "Một chút. Công việc khá vất vả.",
+"ko": "조금. 일이 좀 힘들었어.",
+"id": "Sedikit. Kerjaan lumayan berat."
+},
+"tokens": []
+},
+{
+"turn_id": "t_21",
+"speaker_role": "hero",
+"text": "お疲れ様。週末はゆっくり休んだほうがいいよ。",
+"speech_text": "おつかれさま。しゅうまつはゆっくりやすんだほうがいいよ。",
+"translations": {
+"en": "Good job. You should rest up on the weekend.",
+"es-419": "Buen trabajo. Deberías descansar el fin de semana.",
+"zh-Hans": "辛苦了。周末还是好好休息比较好哦。",
+"vi": "Vất vả cho bạn rồi. Cuối tuần nên nghỉ ngơi thoải mái đi.",
+"ko": "수고했어. 주말엔 푹 쉬는 게 좋아.",
+"id": "Kerja bagus. Kamu sebaiknya istirahat saat akhir pekan."
+},
+"tokens": []
+},
+{
+"turn_id": "t_22",
+"speaker_role": "friend",
+"text": "ありがとう。結衣ちゃんは何か楽しいことあった？",
+"speech_text": "ありがとう。ゆいちゃんはなにかたのしいことあった？",
+"translations": {
+"en": "Thanks. Yui, did you do anything fun?",
+"es-419": "Gracias. Yui, ¿hiciste algo divertido?",
+"zh-Hans": "谢谢。Yui，你有什么开心的事情吗？",
+"vi": "Cảm ơn. Yui có chuyện gì vui không?",
+"ko": "고마워. 유이는 뭐 재밌는 일 있었어?",
+"id": "Terima kasih. Yui, apa ada hal yang menyenangkan?"
+},
+"tokens": []
+},
+{
+"turn_id": "t_23",
+"speaker_role": "hero",
+"text": "昨日、日本の映画を見たよ。",
+"speech_text": "きのう、にほんのえいがをみたよ。",
+"translations": {
+"en": "I watched a Japanese movie yesterday.",
+"es-419": "Ayer vi una película japonesa.",
+"zh-Hans": "昨天看了一部日本电影哦。",
+"vi": "Hôm qua mình đã xem một bộ phim Nhật Bản.",
+"ko": "어제 일본 영화 봤어.",
+"id": "Kemarin aku menonton film Jepang."
+},
+"tokens": []
+},
+{
+"turn_id": "t_24",
+"speaker_role": "friend",
+"text": "へえ、どんな映画？",
+"speech_text": "へえ、どんなえいが？",
+"translations": {
+"en": "Oh, what kind of movie?",
+"es-419": "¿Ah sí? ¿Qué tipo de película?",
+"zh-Hans": "哎，是什么样的电影？",
+"vi": "Ồ, bộ phim thế nào?",
+"ko": "헤에, 무슨 영화?",
+"id": "Oh, film apa?"
+},
+"tokens": []
+},
+{
+"turn_id": "t_25",
+"speaker_role": "hero",
+"text": "タイムトラベルのアニメだよ。",
+"speech_text": "タイムトラベルのアニメだよ。",
+"translations": {
+"en": "It's an anime about time travel.",
+"es-419": "Es un anime sobre viajes en el tiempo.",
+"zh-Hans": "是关于时间旅行的动漫。",
+"vi": "Là phim hoạt hình về du hành thời gian đó.",
+"ko": "시간 여행하는 애니메이션이야.",
+"id": "Itu anime tentang perjalanan waktu."
+},
+"tokens": []
+},
+{
+"turn_id": "t_26",
+"speaker_role": "friend",
+"text": "面白そうだね。僕も見たいな。",
+"speech_text": "おもしろそうだね。ぼくもみたいな。",
+"translations": {
+"en": "That sounds interesting. I want to watch it too.",
+"es-419": "Suena interesante. Yo también quiero verla.",
+"zh-Hans": "听起来很有趣。我也想看。",
+"vi": "Nghe thú vị nhỉ. Mình cũng muốn xem.",
+"ko": "재밌겠다. 나도 보고 싶어.",
+"id": "Kedengarannya menarik. Aku juga mau nonton."
+},
+"tokens": []
+},
+{
+"turn_id": "t_27",
+"speaker_role": "hero",
+"text": "今度、DVDを貸してあげるね。",
+"speech_text": "こんど、DVDをかしてあげるね。",
+"translations": {
+"en": "I'll lend you the DVD next time.",
+"es-419": "Te prestaré el DVD la próxima vez.",
+"zh-Hans": "下次借给你DVD哦。",
+"vi": "Lần sau mình cho bạn mượn đĩa DVD nhé.",
+"ko": "다음에 DVD 빌려줄게.",
+"id": "Kapan-kapan aku pinjamkan DVD-nya ya."
+},
+"tokens": []
+},
+{
+"turn_id": "t_28",
+"speaker_role": "friend",
+"text": "本当？ありがとう！",
+"speech_text": "ほんとう？ありがとう！",
+"translations": {
+"en": "Really? Thank you!",
+"es-419": "¿De verdad? ¡Gracias!",
+"zh-Hans": "真的吗？谢谢！",
+"vi": "Thật không? Cảm ơn bạn!",
+"ko": "정말? 고마워!",
+"id": "Benarkah? Terima kasih!"
+},
+"tokens": []
+}
+]
+},
+{
+"chapter_id": "ch_03",
+"scene": "駅で別れる",
+"scene_translations": {
+"en": "Parting at the station",
+"es-419": "Despedida en la estación",
+"zh-Hans": "在车站分别",
+"vi": "Chia tay ở ga tàu",
+"ko": "역에서 헤어지기",
+"id": "Berpisah di stasiun"
+},
+"scene_prompt": "A busy Japanese train station entrance with ticket gates and commuters in the background, @[hero] and @[friend] are standing and waving goodbye to each other with warm smiles, realistic everyday weekend atmosphere, Clean 2D cartoon illustration, semi-flat shading, crisp line art, warm muted colors, friendly editorial style",
+"turns": [
+{
+"turn_id": "t_29",
+"speaker_role": "friend",
+"text": "あ、もう十時だ。",
+"speech_text": "あ、もうじゅうじだ。",
+"translations": {
+"en": "Oh, it's already 10 o'clock.",
+"es-419": "Oh, ya son las 10 en punto.",
+"zh-Hans": "啊，已经十点了。",
+"vi": "Á, đã mười giờ rồi.",
+"ko": "아, 벌써 10시야.",
+"id": "Ah, sudah jam 10."
+},
+"tokens": []
+},
+{
+"turn_id": "t_30",
+"speaker_role": "hero",
+"text": "カメラ屋さんがもうすぐ開くね。",
+"speech_text": "カメラやさんがもうすぐあくね。",
+"translations": {
+"en": "The camera store will open soon.",
+"es-419": "La tienda de cámaras abrirá pronto.",
+"zh-Hans": "相机店快开门了呢。",
+"vi": "Cửa hàng máy ảnh sắp mở cửa rồi nhỉ.",
+"ko": "카메라 가게가 곧 문 열겠네.",
+"id": "Toko kameranya akan segera buka ya."
+},
+"tokens": []
+},
+{
+"turn_id": "t_31",
+"speaker_role": "friend",
+"text": "うん、そろそろ行かなくちゃ。",
+"speech_text": "うん、そろそろいかなくちゃ。",
+"translations": {
+"en": "Yeah, I should get going.",
+"es-419": "Sí, debería irme ya.",
+"zh-Hans": "嗯，我差不多该走了。",
+"vi": "Ừ, mình phải đi thôi.",
+"ko": "응, 슬슬 가봐야겠다.",
+"id": "Iya, aku harus segera pergi."
+},
+"tokens": []
+},
+{
+"turn_id": "t_32",
+"speaker_role": "hero",
+"text": "どこのお店に行くの？",
+"speech_text": "どこのおみせにいくの？",
+"translations": {
+"en": "Which store are you going to?",
+"es-419": "¿A qué tienda vas?",
+"zh-Hans": "你要去哪家店？",
+"vi": "Bạn sẽ đến cửa hàng nào?",
+"ko": "어느 가게 갈 거야?",
+"id": "Kamu mau pergi ke toko yang mana?"
+},
+"tokens": []
+},
+{
+"turn_id": "t_33",
+"speaker_role": "friend",
+"text": "駅前の電気屋さんだよ。",
+"speech_text": "えきまえのでんきやさんだよ。",
+"translations": {
+"en": "The electronics store in front of the station.",
+"es-419": "A la tienda de electrónica frente a la estación.",
+"zh-Hans": "车站前的电器店。",
+"vi": "Cửa hàng điện máy trước nhà ga đó.",
+"ko": "역 앞 전자제품 가게야.",
+"id": "Toko elektronik di depan stasiun."
+},
+"tokens": []
+},
+{
+"turn_id": "t_34",
+"speaker_role": "hero",
+"text": "そっか。私はこれからパン屋さんに行くよ。",
+"speech_text": "そっか。わたしはこれからパンやさんにいくよ。",
+"translations": {
+"en": "I see. I'm going to the bakery now.",
+"es-419": "Ya veo. Yo voy ahora a la panadería.",
+"zh-Hans": "这样啊。我接下来要去面包店。",
+"vi": "Vậy à. Giờ mình sẽ đi đến tiệm bánh mì.",
+"ko": "그렇구나. 난 이제 빵집 갈 거야.",
+"id": "Oh begitu. Aku mau pergi ke toko roti sekarang."
+},
+"tokens": []
+},
+{
+"turn_id": "t_35",
+"speaker_role": "friend",
+"text": "パン屋？お昼ご飯を買うの？",
+"speech_text": "パンや？おひるごはんをかうの？",
+"translations": {
+"en": "Bakery? Are you buying lunch?",
+"es-419": "¿Panadería? ¿Vas a comprar el almuerzo?",
+"zh-Hans": "面包店？你要买午餐吗？",
+"vi": "Tiệm bánh mì à? Bạn mua bữa trưa sao?",
+"ko": "빵집? 점심 살 거야?",
+"id": "Toko roti? Apakah kamu mau beli makan siang?"
+},
+"tokens": []
+},
+{
+"turn_id": "t_36",
+"speaker_role": "hero",
+"text": "うん、美味しいパンが食べたいから。",
+"speech_text": "うん、おいしいパンがたべたいから。",
+"translations": {
+"en": "Yes, I want to eat delicious bread.",
+"es-419": "Sí, quiero comer pan delicioso.",
+"zh-Hans": "嗯，因为我想吃好吃的面包。",
+"vi": "Ừ, vì mình muốn ăn bánh mì ngon.",
+"ko": "응, 맛있는 빵 먹고 싶어서.",
+"id": "Iya, karena aku ingin makan roti yang enak."
+},
+"tokens": []
+},
+{
+"turn_id": "t_37",
+"speaker_role": "friend",
+"text": "じゃあ、結衣ちゃん、良い週末を！",
+"speech_text": "じゃあ、ゆいちゃん、よいしゅうまつを！",
+"translations": {
+"en": "Have a good weekend, Yui!",
+"es-419": "¡Que tengas un buen fin de semana, Yui!",
+"zh-Hans": "那Yui，周末愉快！",
+"vi": "Vậy, Yui, cuối tuần vui vẻ nhé!",
+"ko": "그럼 유이, 좋은 주말 보내!",
+"id": "Kalau begitu, Yui, selamat berakhir pekan!"
+},
+"tokens": []
+},
+{
+"turn_id": "t_38",
+"speaker_role": "hero",
+"text": "アキラくんもね！今度新しいカメラを見せてね。",
+"speech_text": "アキラくんもね！こんどあたらしいカメラをみせてね。",
+"translations": {
+"en": "You too, Akira! Show me your new camera next time.",
+"es-419": "¡Tú también, Akira! Enséñame tu cámara nueva la próxima vez.",
+"zh-Hans": "Akira也是！下次让我看看你的新相机哦。",
+"vi": "Akira cũng vậy nhé! Lần tới cho mình xem máy ảnh mới nha.",
+"ko": "아키라도! 다음에 새 카메라 보여줘.",
+"id": "Kamu juga, Akira! Lain kali tunjukkan kamera barumu padaku ya."
+},
+"tokens": []
+},
+{
+"turn_id": "t_39",
+"speaker_role": "friend",
+"text": "もちろん！またね。",
+"speech_text": "もちろん！またね。",
+"translations": {
+"en": "Of course! See you.",
+"es-419": "¡Por supuesto! Nos vemos.",
+"zh-Hans": "没问题！回见。",
+"vi": "Tất nhiên rồi! Hẹn gặp lại.",
+"ko": "물론이지! 또 봐.",
+"id": "Tentu saja! Sampai jumpa."
+},
+"tokens": []
+},
+{
+"turn_id": "t_40",
+"speaker_role": "hero",
+"text": "またね！",
+"speech_text": "またね！",
+"translations": {
+"en": "See you!",
+"es-419": "¡Hasta luego!",
+"zh-Hans": "再见！",
+"vi": "Tạm biệt!",
+"ko": "안녕!",
+"id": "Sampai jumpa!"
+},
+"tokens": []
+}
+]
+},
+{
+"chapter_id": "ch_04",
+"scene": "パン屋でパンを買う",
+"scene_translations": {
+"en": "Buying bread at a bakery",
+"es-419": "Comprando pan en una panadería",
+"zh-Hans": "在面包店买面包",
+"vi": "Mua bánh mì ở tiệm bánh",
+"ko": "빵집에서 빵 사기",
+"id": "Membeli roti di toko roti"
+},
+"scene_prompt": "A cozy Japanese bakery interior with display cases full of fresh bread, @[hero] is pointing at some bread with excitement, @[clerk] is standing behind the counter smiling politely, soft warm lighting, realistic everyday weekend atmosphere, Clean 2D cartoon illustration, semi-flat shading, crisp line art, warm muted colors, friendly editorial style",
+"turns": [
+{
+"turn_id": "t_41",
+"speaker_role": "clerk",
+"text": "いらっしゃいませ！",
+"speech_text": "いらっしゃいませ！",
+"translations": {
+"en": "Welcome!",
+"es-419": "¡Bienvenidos!",
+"zh-Hans": "欢迎光临！",
+"vi": "Kính chào quý khách!",
+"ko": "어서 오세요!",
+"id": "Selamat datang!"
+},
+"tokens": []
+},
+{
+"turn_id": "t_42",
+"speaker_role": "hero",
+"text": "こんにちは。今日はメロンパンがありますか？",
+"speech_text": "こんにちは。きょうはメロンパンがありますか？",
+"translations": {
+"en": "Hello. Do you have melon bread today?",
+"es-419": "Hola. ¿Tienen pan de melón hoy?",
+"zh-Hans": "你好。今天有蜜瓜包吗？",
+"vi": "Xin chào. Hôm nay có bánh mì dưa lưới không?",
+"ko": "안녕하세요. 오늘 메론빵 있나요?",
+"id": "Halo. Apakah hari ini ada roti melon?"
+},
+"tokens": []
+},
+{
+"turn_id": "t_43",
+"speaker_role": "clerk",
+"text": "はい、ちょうど焼き上がったところです。",
+"speech_text": "はい、ちょうどやきあがったところです。",
+"translations": {
+"en": "Yes, they just came out of the oven.",
+"es-419": "Sí, acaban de salir del horno.",
+"zh-Hans": "有的，刚刚烤好。",
+"vi": "Vâng, bánh vừa mới nướng xong ạ.",
+"ko": "네, 방금 구워져 나왔어요.",
+"id": "Iya, baru saja matang dipanggang."
+},
+"tokens": []
+},
+{
+"turn_id": "t_44",
+"speaker_role": "hero",
+"text": "わあ、いい匂い。ふたつお願いします。",
+"speech_text": "わあ、いいにおい。ふたつおねがいします。",
+"translations": {
+"en": "Wow, it smells so good. I'll take two, please.",
+"es-419": "Vaya, huele muy bien. Deme dos, por favor.",
+"zh-Hans": "哇，好香啊。请给我两个。",
+"vi": "Tuyệt quá, thơm ghê. Cho tôi hai cái nhé.",
+"ko": "와, 좋은 냄새. 두 개 주세요.",
+"id": "Wah, aromanya enak. Tolong dua ya."
+},
+"tokens": []
+},
+{
+"turn_id": "t_45",
+"speaker_role": "clerk",
+"text": "メロンパンをふたつですね。",
+"speech_text": "メロンパンをふたつですね。",
+"translations": {
+"en": "Two melon breads, right?",
+"es-419": "Dos panes de melón, ¿verdad?",
+"zh-Hans": "两个蜜瓜包对吧。",
+"vi": "Hai bánh mì dưa lưới phải không ạ.",
+"ko": "메론빵 두 개요.",
+"id": "Dua roti melon ya."
+},
+"tokens": []
+},
+{
+"turn_id": "t_46",
+"speaker_role": "hero",
+"text": "あと、このサンドイッチは何ですか？",
+"speech_text": "あと、このサンドイッチはなんですか？",
+"translations": {
+"en": "Also, what is this sandwich?",
+"es-419": "Además, ¿qué es este sándwich?",
+"zh-Hans": "还有，这个三明治是什么口味的？",
+"vi": "Thêm nữa, sandwich này là loại gì vậy?",
+"ko": "그리고, 이 샌드위치는 뭐예요?",
+"id": "Lalu, sandwich ini isinya apa?"
+},
+"tokens": []
+},
+{
+"turn_id": "t_47",
+"speaker_role": "clerk",
+"text": "それは卵とチーズのサンドイッチです。とても人気がありますよ。",
+"speech_text": "それはたまごとチーズのサンドイッチです。とてもにんきがありますよ。",
+"translations": {
+"en": "That is an egg and cheese sandwich. It's very popular.",
+"es-419": "Ese es un sándwich de huevo y queso. Es muy popular.",
+"zh-Hans": "那是鸡蛋芝士三明治。非常受欢迎哦。",
+"vi": "Đó là sandwich trứng và phô mai. Món này rất được ưa chuộng đó ạ.",
+"ko": "그건 계란 치즈 샌드위치예요. 아주 인기 있어요.",
+"id": "Itu sandwich telur dan keju. Sangat populer lho."
+},
+"tokens": []
+},
+{
+"turn_id": "t_48",
+"speaker_role": "hero",
+"text": "美味しそうですね。これも一つください。",
+"speech_text": "おいしそうですね。これもひとつください。",
+"translations": {
+"en": "It looks delicious. I'll take one of this too.",
+"es-419": "Se ve delicioso. Deme uno de estos también.",
+"zh-Hans": "看起来很好吃。请给我来一个。",
+"vi": "Trông ngon quá. Cho tôi một cái này nữa.",
+"ko": "맛있겠네요. 이것도 하나 주세요.",
+"id": "Kelihatannya enak. Tolong satu yang ini juga ya."
+},
+"tokens": []
+},
+{
+"turn_id": "t_49",
+"speaker_role": "clerk",
+"text": "かしこまりました。こちらでお召し上がりですか？",
+"speech_text": "かしこまりました。こちらでおめしあがりですか？",
+"translations": {
+"en": "Certainly. Will you eat here?",
+"es-419": "Por supuesto. ¿Comerá aquí?",
+"zh-Hans": "好的。您要在这里吃吗？",
+"vi": "Vâng ạ. Quý khách dùng tại đây hay mang đi?",
+"ko": "알겠습니다. 드시고 가시나요?",
+"id": "Baik. Apakah Anda mau makan di sini?"
+},
+"tokens": []
+},
+{
+"turn_id": "t_50",
+"speaker_role": "hero",
+"text": "いいえ、持ち帰ります。",
+"speech_text": "いいえ、もちかえります。",
+"translations": {
+"en": "No, I will take it to go.",
+"es-419": "No, es para llevar.",
+"zh-Hans": "不，我要带走。",
+"vi": "Không, tôi mua mang về.",
+"ko": "아뇨, 포장해 갈게요.",
+"id": "Tidak, dibungkus saja."
+},
+"tokens": []
+},
+{
+"turn_id": "t_51",
+"speaker_role": "clerk",
+"text": "全部で八百円になります。",
+"speech_text": "ぜんぶではっぴゃくえんになります。",
+"translations": {
+"en": "That will be 800 yen in total.",
+"es-419": "Serán 800 yenes en total.",
+"zh-Hans": "总共是800日元。",
+"vi": "Tổng cộng là 800 yên ạ.",
+"ko": "전부 800엔입니다.",
+"id": "Totalnya jadi 800 yen."
+},
+"tokens": []
+},
+{
+"turn_id": "t_52",
+"speaker_role": "hero",
+"text": "千円からお願いします。",
+"speech_text": "せんえんからおねがいします。",
+"translations": {
+"en": "Here is a thousand yen.",
+"es-419": "Aquí tiene mil yenes.",
+"zh-Hans": "给您1000日元。",
+"vi": "Đây là 1000 yên.",
+"ko": "천 엔이요.",
+"id": "Ini 1000 yen."
+},
+"tokens": []
+},
+{
+"turn_id": "t_53",
+"speaker_role": "clerk",
+"text": "二百円のお返しです。ありがとうございました！",
+"speech_text": "にひゃくえんのおかえしです。ありがとうございました！",
+"translations": {
+"en": "Here is your change, 200 yen. Thank you very much!",
+"es-419": "Aquí tiene su cambio, 200 yenes. ¡Muchas gracias!",
+"zh-Hans": "找您200日元。非常感谢！",
+"vi": "Gửi lại quý khách 200 yên tiền thừa. Xin cảm ơn rất nhiều!",
+"ko": "거스름돈 200엔입니다. 감사합니다!",
+"id": "Ini kembalian Anda 200 yen. Terima kasih banyak!"
+},
+"tokens": []
+}
+]
+},
+{
+"chapter_id": "ch_05",
+"scene": "本屋で本を探す",
+"scene_translations": {
+"en": "Looking for a book at a bookstore",
+"es-419": "Buscando un libro en una librería",
+"zh-Hans": "在书店找书",
+"vi": "Tìm sách ở hiệu sách",
+"ko": "서점에서 책 찾기",
+"id": "Mencari buku di toko buku"
+},
+"scene_prompt": "A bright Japanese bookstore interior with neatly arranged wooden bookshelves, @[hero] is looking around with a curious expression, @[staff] is pointing towards the stairs politely, realistic everyday weekend atmosphere, Clean 2D cartoon illustration, semi-flat shading, crisp line art, warm muted colors, friendly editorial style",
+"turns": [
+{
+"turn_id": "t_54",
+"speaker_role": "staff",
+"text": "いらっしゃいませ。何かお探しですか？",
+"speech_text": "いらっしゃいませ。なにかおさがしですか？",
+"translations": {
+"en": "Welcome. May I help you find something?",
+"es-419": "Bienvenido. ¿Busca algo en particular?",
+"zh-Hans": "欢迎光临。您在找什么吗？",
+"vi": "Kính chào quý khách. Quý khách đang tìm gì ạ?",
+"ko": "어서 오세요. 뭐 찾으시는 거 있나요?",
+"id": "Selamat datang. Ada yang bisa saya bantu?"
+},
+"tokens": []
+},
+{
+"turn_id": "t_55",
+"speaker_role": "hero",
+"text": "はい。日本語の辞書を探しているんですが。",
+"speech_text": "はい。にほんごのじしょをさがしているんですが。",
+"translations": {
+"en": "Yes. I'm looking for a Japanese dictionary.",
+"es-419": "Sí. Estoy buscando un diccionario de japonés.",
+"zh-Hans": "是的。我在找日语词典。",
+"vi": "Vâng. Tôi đang tìm từ điển tiếng Nhật.",
+"ko": "네. 일본어 사전 찾고 있는데요.",
+"id": "Iya. Saya sedang mencari kamus bahasa Jepang."
+},
+"tokens": []
+},
+{
+"turn_id": "t_56",
+"speaker_role": "staff",
+"text": "辞書は二階にございます。",
+"speech_text": "じしょはにかいにございます。",
+"translations": {
+"en": "Dictionaries are on the second floor.",
+"es-419": "Los diccionarios están en el segundo piso.",
+"zh-Hans": "词典在二楼。",
+"vi": "Từ điển ở trên tầng hai ạ.",
+"ko": "사전은 2층에 있습니다.",
+"id": "Kamus ada di lantai dua."
+},
+"tokens": []
+},
+{
+"turn_id": "t_57",
+"speaker_role": "hero",
+"text": "あ、二階ですね。階段はどこですか？",
+"speech_text": "あ、にかいですね。かいだんはどこですか？",
+"translations": {
+"en": "Oh, the second floor. Where are the stairs?",
+"es-419": "Ah, el segundo piso. ¿Dónde están las escaleras?",
+"zh-Hans": "啊，二楼啊。楼梯在哪里？",
+"vi": "A, tầng hai nhỉ. Cầu thang ở đâu vậy?",
+"ko": "아, 2층이요. 계단은 어디 있나요?",
+"id": "Oh, lantai dua ya. Tangganya ada di mana?"
+},
+"tokens": []
+},
+{
+"turn_id": "t_58",
+"speaker_role": "staff",
+"text": "この通路をまっすぐ行って、右側にあります。",
+"speech_text": "このつうろをまっすぐいって、みぎがわにあります。",
+"translations": {
+"en": "Go straight down this aisle, and they are on your right.",
+"es-419": "Vaya recto por este pasillo y están a su derecha.",
+"zh-Hans": "沿着这条走道直走，就在右边。",
+"vi": "Đi thẳng lối này, nó nằm ở phía bên phải ạ.",
+"ko": "이 통로로 직진하시면 오른쪽에 있습니다.",
+"id": "Lurus saja di lorong ini, letaknya ada di sebelah kanan."
+},
+"tokens": []
+},
+{
+"turn_id": "t_59",
+"speaker_role": "hero",
+"text": "ありがとうございます。あと、ファッション雑誌はありますか？",
+"speech_text": "ありがとうございます。あと、ファッションざっしはありますか？",
+"translations": {
+"en": "Thank you. Also, do you have fashion magazines?",
+"es-419": "Gracias. Además, ¿tienen revistas de moda?",
+"zh-Hans": "谢谢。还有，这里有时尚杂志吗？",
+"vi": "Cảm ơn bạn. À, có tạp chí thời trang không?",
+"ko": "감사합니다. 그리고 패션 잡지도 있나요?",
+"id": "Terima kasih. Lalu, apakah ada majalah mode?"
+},
+"tokens": []
+},
+{
+"turn_id": "t_60",
+"speaker_role": "staff",
+"text": "はい、雑誌はあちらの窓際にございます。",
+"speech_text": "はい、ざっしはあちらのまどぎわにございます。",
+"translations": {
+"en": "Yes, magazines are right over there by the window.",
+"es-419": "Sí, las revistas están allá junto a la ventana.",
+"zh-Hans": "有的，杂志在那边的窗边。",
+"vi": "Vâng, tạp chí ở đằng kia, cạnh cửa sổ ạ.",
+"ko": "네, 잡지는 저기 창가에 있습니다.",
+"id": "Iya, majalahnya ada di dekat jendela sebelah sana."
+},
+"tokens": []
+},
+{
+"turn_id": "t_61",
+"speaker_role": "hero",
+"text": "買う前に読んでもいいですか？",
+"speech_text": "かう前によんでもいいですか？",
+"translations": {
+"en": "Can I read them before buying?",
+"es-419": "¿Puedo leerlas antes de comprar?",
+"zh-Hans": "买之前可以翻阅吗？",
+"vi": "Tôi có thể đọc thử trước khi mua không?",
+"ko": "사기 전에 읽어봐도 되나요?",
+"id": "Bolehkah saya membacanya sebelum membeli?"
+},
+"tokens": []
+},
+{
+"turn_id": "t_62",
+"speaker_role": "staff",
+"text": "はい、ご自由に読んでいただけます。",
+"speech_text": "はい、ごじゆうによんでいただけます。",
+"translations": {
+"en": "Yes, you can browse them freely.",
+"es-419": "Sí, puede hojearlas libremente.",
+"zh-Hans": "可以的，您可以自由阅览。",
+"vi": "Vâng, quý khách có thể đọc thoải mái ạ.",
+"ko": "네, 자유롭게 읽어보실 수 있습니다.",
+"id": "Iya, silakan dibaca bebas."
+},
+"tokens": []
+},
+{
+"turn_id": "t_63",
+"speaker_role": "hero",
+"text": "よかったです。先に雑誌を見てみます。",
+"speech_text": "よかったです。さきにざっしをみてみます。",
+"translations": {
+"en": "That's great. I will go look at the magazines first.",
+"es-419": "Qué bien. Primero echaré un vistazo a las revistas.",
+"zh-Hans": "太好了。我先去看看杂志。",
+"vi": "Tuyệt quá. Tôi sẽ qua xem tạp chí trước.",
+"ko": "다행이네요. 먼저 잡지부터 볼게요.",
+"id": "Baguslah. Saya mau lihat-lihat majalahnya dulu."
+},
+"tokens": []
+},
+{
+"turn_id": "t_64",
+"speaker_role": "staff",
+"text": "ごゆっくりどうぞ。何かあればお声がけください。",
+"speech_text": "ごゆっくりどうぞ。なにかあればおこえがけください。",
+"translations": {
+"en": "Take your time. Let me know if you need anything.",
+"es-419": "Tómese su tiempo. Avíseme si necesita algo.",
+"zh-Hans": "您慢慢看。有什么需要请叫我。",
+"vi": "Xin cứ thong thả. Có cần gì xin cứ gọi tôi.",
+"ko": "천천히 보세요. 필요한 게 있으시면 말씀해 주세요.",
+"id": "Silakan nikmati waktu Anda. Panggil saja kalau butuh bantuan."
+},
+"tokens": []
+},
+{
+"turn_id": "t_65",
+"speaker_role": "hero",
+"text": "はい。どうもありがとうございます。",
+"speech_text": "はい。どうもありがとうございます。",
+"translations": {
+"en": "I will. Thank you very much.",
+"es-419": "Lo haré. Muchas gracias.",
+"zh-Hans": "好的。非常感谢。",
+"vi": "Vâng. Xin cảm ơn rất nhiều.",
+"ko": "네. 감사합니다.",
+"id": "Baik. Terima kasih banyak."
+},
+"tokens": []
+}
+]
+}
+]
+}
+]
 }

@@ -23,6 +23,9 @@ func TestWritePracticalASSUsesPodcastType1TypographyAndBox(t *testing.T) {
 				Chapters: []dto.PracticalChapter{
 					{
 						ChapterID: "ch_01",
+						Scene:     "レジで支払う",
+						StartMS:   0,
+						EndMS:     1800,
 						Turns: []dto.PracticalTurn{
 							{
 								TurnID:      "t_01",
@@ -58,26 +61,38 @@ func TestWritePracticalASSUsesPodcastType1TypographyAndBox(t *testing.T) {
 	if !strings.Contains(text, "Style: TurnBoxFemale,Maruko Gothic CJKjp Medium,20,") {
 		t.Fatalf("expected female turn box style, got: %s", text)
 	}
-	if !strings.Contains(text, "Style: BlockSub,Maruko Gothic CJKjp Medium,83,") {
+	if !strings.Contains(text, "Style: BlockSub,Maruko Gothic CJKjp Medium,90,") {
 		t.Fatalf("expected block title font size, got: %s", text)
 	}
-	if !strings.Contains(text, "Style: TurnSub,Maruko Gothic CJKjp Medium,53,") {
+	if !strings.Contains(text, "Style: SceneSub,Maruko Gothic CJKjp Medium,63,") {
+		t.Fatalf("expected scene title font size to be turn font size + 5, got: %s", text)
+	}
+	if !strings.Contains(text, "Style: TurnSub,Maruko Gothic CJKjp Medium,58,") {
 		t.Fatalf("expected practical turn font size, got: %s", text)
 	}
-	if !strings.Contains(text, "Style: TurnRuby,Maruko Gothic CJKjp Medium,28,") {
+	if !strings.Contains(text, "Style: TurnRuby,Maruko Gothic CJKjp Medium,30,") {
 		t.Fatalf("expected ruby style, got: %s", text)
 	}
-	if !strings.Contains(text, "Style: TurnRuby,Maruko Gothic CJKjp Medium,28,&H00000000,&H00000000,&H00000000,&H00000000,0,0,0,0,100,100,-1.33,0,1,0,0,8,0,0,0,1") {
+	if !strings.Contains(text, "Style: TurnRuby,Maruko Gothic CJKjp Medium,30,&H00000000,&H00000000,&H00000000,&H00000000,0,0,0,0,100,100,-1.33,0,1,0,0,8,0,0,0,1") {
 		t.Fatalf("expected podcast-style ruby spacing, got: %s", text)
 	}
 	if !strings.Contains(text, "ぎゅうにゅう") {
 		t.Fatalf("expected ruby reading to be rendered, got: %s", text)
 	}
-	if !strings.Contains(text, ",TurnBox,,0,0,0,,{\\p1}") {
+	if !strings.Contains(text, ",TurnBox,,0,0,0,,{\\an7\\pos(0,0)\\p1}") {
 		t.Fatalf("expected vector box dialogue line, got: %s", text)
+	}
+	if !strings.Contains(text, ",SceneBox,,0,0,0,,{\\an7\\pos(0,0)\\p1}") {
+		t.Fatalf("expected scene box to use absolute positioning, got: %s", text)
 	}
 	if !strings.Contains(text, ",BlockSub,,0,0,0,,{\\an5\\pos(") {
 		t.Fatalf("expected centered block subtitle line, got: %s", text)
+	}
+	if !strings.Contains(text, ",SceneSub,,0,0,0,,{\\an7\\pos(") {
+		t.Fatalf("expected top-left scene subtitle line, got: %s", text)
+	}
+	if !strings.Contains(text, "レジで支払う") {
+		t.Fatalf("expected scene title to be rendered, got: %s", text)
 	}
 }
 
@@ -149,21 +164,56 @@ func TestBuildPracticalTurnSubtitleWindowsAvoidsOverlap(t *testing.T) {
 	}
 }
 
+func TestPracticalSceneTitleWindowPersistsForEntireChapter(t *testing.T) {
+	chapter := dto.PracticalChapter{
+		ChapterID: "ch_01",
+		StartMS:   5000,
+		EndMS:     12000,
+		Turns: []dto.PracticalTurn{
+			{TurnID: "t_01", StartMS: 6200, EndMS: 7600},
+		},
+	}
+
+	startMS, endMS := practicalSceneTitleWindow(chapter)
+	if startMS != 5000 {
+		t.Fatalf("unexpected scene start: %d", startMS)
+	}
+	if endMS != 12000 {
+		t.Fatalf("expected scene title to persist for the whole chapter, got %d", endMS)
+	}
+}
+
 func TestPracticalTurnPanelGrowsWithLargerTypography(t *testing.T) {
 	style := practicalSubtitleStyleFor("ja", 1)
 	panel := buildPracticalTurnPanelWithLineWidths(1920, 1080, style, []float64{estimatePracticalTextWidth("すみません。牛乳はどこですか？", style.TurnFontSize)})
 
-	if style.TurnFontSize != 53 {
+	if style.TurnFontSize != 58 {
 		t.Fatalf("unexpected turn font size: %d", style.TurnFontSize)
 	}
-	if style.RubyFontSize != 28 {
+	if style.RubyFontSize != 30 {
 		t.Fatalf("unexpected ruby font size: %d", style.RubyFontSize)
 	}
-	if panel.Height < 95 {
+	if panel.Height < 100 {
 		t.Fatalf("expected larger subtitle panel height, got %d", panel.Height)
 	}
 	if panel.Width < 560 {
 		t.Fatalf("expected larger subtitle panel width, got %d", panel.Width)
+	}
+}
+
+func TestBuildPracticalTopLeftPanelUsesTighterSceneWidth(t *testing.T) {
+	style := practicalSubtitleStyleFor("ja", 1)
+	lines := buildPracticalSubtitleLines("公園で友達にばったり会う", style.SceneMaxLineChars, style.SceneMaxLines)
+	panel := buildPracticalTopLeftPanel(1920, 1080, style, lines)
+
+	looseWidth := int(math.Ceil(estimatePracticalTextWidth(lines[0].Text, style.SceneFontSize))) + style.SceneBoxPaddingX*2
+	tightWidth := int(math.Ceil(estimatePracticalSceneTextWidth(lines[0].Text, style.SceneFontSize))) + style.SceneBoxPaddingX*2
+
+	if panel.Width != tightWidth {
+		t.Fatalf("expected scene panel width %d, got %d", tightWidth, panel.Width)
+	}
+	if panel.Width >= looseWidth {
+		t.Fatalf("expected tighter scene width than loose subtitle estimate, got panel=%d loose=%d", panel.Width, looseWidth)
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	practicalpipeline "worker/internal/app/workflow/practical/pipeline"
 	dto "worker/services/practical/model"
 )
 
@@ -41,10 +42,7 @@ func normalizePracticalDesignType(value int) int {
 }
 
 func normalizePracticalTTSType(value int) int {
-	if value == 1 {
-		return 1
-	}
-	return 1
+	return practicalpipeline.NormalizeTTSType(value)
 }
 
 func decodePayload(raw map[string]interface{}) (dto.PracticalAudioGeneratePayload, error) {

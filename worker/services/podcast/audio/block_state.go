@@ -2,7 +2,7 @@ package podcast_audio_service
 
 import (
 	"fmt"
-	"log"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,66 +15,15 @@ import (
 type blockCheckpoint struct {
 	Block      dto.PodcastBlock `json:"block"`
 	DurationMS int              `json:"duration_ms"`
-	IsMultiple *int             `json:"is_multiple,omitempty"`
+	Tempo      float64          `json:"tempo,omitempty"`
 }
-
-type blockCheckpointIndex struct {
-	Version int                                  `json:"version"`
-	Blocks  map[string]blockCheckpointIndexEntry `json:"blocks"`
-}
-
-type blockCheckpointIndexEntry struct {
-	State         blockCheckpoint `json:"state"`
-	FileSize      int64           `json:"file_size"`
-	FileModUnixNS int64           `json:"file_mod_unix_ns"`
-}
-
-type blockCheckpointStore struct {
-	dir       string
-	indexPath string
-	index     blockCheckpointIndex
-	loaded    bool
-	dirty     bool
-}
-
-const blockCheckpointIndexVersion = 1
 
 func blockStatePath(dir string, index int, blockID string) string {
 	return unitAudioPath(dir, index, blockID, "json")
 }
 
-func newBlockCheckpointStore(dir string) *blockCheckpointStore {
-	return &blockCheckpointStore{
-		dir:       dir,
-		indexPath: filepath.Join(dir, "index.json"),
-	}
-}
-
-func (s *blockCheckpointStore) loadBlockCheckpoint(index int, blockID string) (blockCheckpoint, bool, error) {
-	if s == nil {
-		return blockCheckpoint{}, false, nil
-	}
-
-	path := blockStatePath(s.dir, index, blockID)
-	info, err := os.Stat(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return blockCheckpoint{}, false, nil
-		}
-		return blockCheckpoint{}, false, err
-	}
-	if err := s.ensureLoaded(); err != nil {
-		return blockCheckpoint{}, false, err
-	}
-
-	key := blockCheckpointKey(index, blockID)
-	if entry, ok := s.index.Blocks[key]; ok && entry.matches(info) {
-		if err := validateBlockStateSegments(path, entry.State.Block); err != nil {
-			return blockCheckpoint{}, false, err
-		}
-		return entry.State, true, nil
-	}
-
+func loadBlockCheckpoint(dir string, index int, blockID string) (blockCheckpoint, bool, error) {
+	path := blockStatePath(dir, index, blockID)
 	var state blockCheckpoint
 	if err := readJSON(path, &state); err != nil {
 		if os.IsNotExist(err) {
@@ -85,97 +34,19 @@ func (s *blockCheckpointStore) loadBlockCheckpoint(index int, blockID string) (b
 	if err := validateBlockStateSegments(path, state.Block); err != nil {
 		return blockCheckpoint{}, false, err
 	}
-	s.index.Blocks[key] = newBlockCheckpointIndexEntry(state, info)
-	s.dirty = true
 	return state, true, nil
 }
 
-func (s *blockCheckpointStore) persistBlockCheckpoint(index int, block dto.PodcastBlock, durationMS int, isMultiple *int) error {
-	if s == nil {
-		return nil
-	}
-
-	path := blockStatePath(s.dir, index, block.BlockID)
+func persistBlockCheckpoint(dir string, index int, block dto.PodcastBlock, durationMS int, tempo float64) error {
+	path := blockStatePath(dir, index, block.BlockID)
 	if err := validateBlockStateSegments(path, block); err != nil {
 		return err
 	}
-	state := blockCheckpoint{
+	return writeJSON(path, blockCheckpoint{
 		Block:      block,
 		DurationMS: durationMS,
-		IsMultiple: isMultiple,
-	}
-	if err := writeJSON(path, state); err != nil {
-		return err
-	}
-	info, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-	if err := s.ensureLoaded(); err != nil {
-		return err
-	}
-	s.index.Blocks[blockCheckpointKey(index, block.BlockID)] = newBlockCheckpointIndexEntry(state, info)
-	s.dirty = true
-	return nil
-}
-
-func (s *blockCheckpointStore) flush() error {
-	if s == nil || !s.loaded || !s.dirty {
-		return nil
-	}
-	if err := os.MkdirAll(s.dir, 0o755); err != nil {
-		return err
-	}
-	s.index.Version = blockCheckpointIndexVersion
-	if s.index.Blocks == nil {
-		s.index.Blocks = make(map[string]blockCheckpointIndexEntry)
-	}
-	if err := writeJSON(s.indexPath, s.index); err != nil {
-		return err
-	}
-	s.dirty = false
-	return nil
-}
-
-func (s *blockCheckpointStore) ensureLoaded() error {
-	if s == nil || s.loaded {
-		return nil
-	}
-	s.loaded = true
-	s.index = blockCheckpointIndex{
-		Version: blockCheckpointIndexVersion,
-		Blocks:  make(map[string]blockCheckpointIndexEntry),
-	}
-
-	var index blockCheckpointIndex
-	if err := readJSON(s.indexPath, &index); err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		log.Printf("⚠️ podcast block checkpoint index ignored dir=%s err=%v", s.dir, err)
-		return nil
-	}
-	if index.Blocks == nil {
-		index.Blocks = make(map[string]blockCheckpointIndexEntry)
-	}
-	index.Version = blockCheckpointIndexVersion
-	s.index = index
-	return nil
-}
-
-func (e blockCheckpointIndexEntry) matches(info os.FileInfo) bool {
-	if info == nil {
-		return false
-	}
-	return e.FileSize == info.Size() && e.FileModUnixNS == info.ModTime().UnixNano()
-}
-
-func newBlockCheckpointIndexEntry(state blockCheckpoint, info os.FileInfo) blockCheckpointIndexEntry {
-	return blockCheckpointIndexEntry{
-		State:         state,
-		FileSize:      info.Size(),
-		FileModUnixNS: info.ModTime().UnixNano(),
-	}
+		Tempo:      tempo,
+	})
 }
 
 func blockHasAlignedTiming(language string, block dto.PodcastBlock) bool {
@@ -203,11 +74,24 @@ func blockHasAlignedTiming(language string, block dto.PodcastBlock) bool {
 	return true
 }
 
-func blockCheckpointComplete(language string, state blockCheckpoint, audioPath string) bool {
+func blockCheckpointComplete(language string, state blockCheckpoint, audioPath string, tempo float64, allowLegacyTempo bool) bool {
 	if !blockCheckpointHasAudio(state, audioPath) {
 		return false
 	}
+	if !blockCheckpointTempoMatches(state, tempo, allowLegacyTempo) {
+		return false
+	}
 	return blockHasAlignedTiming(language, state.Block)
+}
+
+func blockCheckpointTempoMatches(state blockCheckpoint, tempo float64, allowLegacyTempo bool) bool {
+	if tempo <= 0 {
+		return math.Abs(state.Tempo) <= 0.001
+	}
+	if math.Abs(state.Tempo) <= 0.001 {
+		return allowLegacyTempo
+	}
+	return math.Abs(state.Tempo-tempo) <= 0.001
 }
 
 func blockCheckpointChineseSegmentHasTiming(seg dto.PodcastSegment) bool {
@@ -275,10 +159,6 @@ func unitAudioFilename(index int, unitID, ext string) string {
 		ext = "mp3"
 	}
 	return fmt.Sprintf("%03d_%s.%s", index+1, sanitizeSegmentID(unitID), ext)
-}
-
-func blockCheckpointKey(index int, blockID string) string {
-	return unitAudioFilename(index, blockID, "json")
 }
 
 func validateBlockStateSegments(path string, block dto.PodcastBlock) error {

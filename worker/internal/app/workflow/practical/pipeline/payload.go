@@ -119,7 +119,7 @@ func normalizePayload(payload dto.PracticalAudioGeneratePayload) (dto.PracticalA
 	payload.Resolution = strings.TrimSpace(payload.Resolution)
 	payload.AspectRatio = strings.TrimSpace(payload.AspectRatio)
 	payload.DesignType = normalizeDesignType(payload.DesignType)
-	_, _, err := ValidateRange(payload.RunMode, payload.StartFrom, payload.StopAt)
+	_, _, err := ValidateRange(payload.TTSType, payload.RunMode, payload.StartFrom, payload.StopAt)
 	if err != nil {
 		return dto.PracticalAudioGeneratePayload{}, err
 	}
@@ -134,10 +134,7 @@ func normalizeRunMode(value int) int {
 }
 
 func normalizeTTSType(value int) int {
-	if value == 1 {
-		return 1
-	}
-	return 1
+	return NormalizeTTSType(value)
 }
 
 func normalizeDesignType(value int) int {

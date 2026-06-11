@@ -31,7 +31,13 @@ func HandleGenerate(ctx context.Context, ch *amqp.Channel, msg task.VideoTaskMes
 		return err
 	}
 	if shouldInvalidate(string(practicalpipeline.StageGenerate), payload.StartFrom) {
-		if err := practicalpipeline.InvalidateOutputs(payload.ProjectID, payload.StartFrom); err != nil {
+		if err := practicalpipeline.InvalidateAudioOutputs(
+			payload.ProjectID,
+			payload.TTSType,
+			payload.StartFrom,
+			compactPositiveInts(payload.BlockNums),
+			compactPositiveInts(payload.ChapterNums),
+		); err != nil {
 			return err
 		}
 	}
@@ -54,7 +60,13 @@ func HandleAlign(ctx context.Context, ch *amqp.Channel, msg task.VideoTaskMessag
 		return err
 	}
 	if shouldInvalidate(string(practicalpipeline.StageAlign), payload.StartFrom) {
-		if err := practicalpipeline.InvalidateOutputs(payload.ProjectID, payload.StartFrom); err != nil {
+		if err := practicalpipeline.InvalidateAudioOutputs(
+			payload.ProjectID,
+			payload.TTSType,
+			payload.StartFrom,
+			compactPositiveInts(payload.BlockNums),
+			compactPositiveInts(payload.ChapterNums),
+		); err != nil {
 			return err
 		}
 	}
@@ -77,8 +89,8 @@ func validateFreshGeneratePayload(payload dto.PracticalAudioGeneratePayload) err
 	if payload.DesignType != 0 && normalizePracticalDesignType(payload.DesignType) != payload.DesignType {
 		return fmt.Errorf("design_type must be 1 or 2")
 	}
-	if payload.TTSType != 0 && normalizePracticalTTSType(payload.TTSType) != payload.TTSType {
-		return fmt.Errorf("tts_type must be 1")
+	if payload.TTSType != 0 && payload.TTSType != 1 && payload.TTSType != 2 {
+		return fmt.Errorf("tts_type must be 1 or 2")
 	}
 	return nil
 }
@@ -86,6 +98,7 @@ func validateFreshGeneratePayload(payload dto.PracticalAudioGeneratePayload) err
 func generateAndContinue(ctx context.Context, ch *amqp.Channel, payload dto.PracticalAudioGeneratePayload) error {
 	_, err := practicalaudioservice.Generate(ctx, practicalaudioservice.GenerateInput{
 		ProjectID:      payload.ProjectID,
+		TTSType:        normalizePracticalTTSType(payload.TTSType),
 		Language:       payload.Lang,
 		ScriptFilename: payload.ScriptFilename,
 		BlockNums:      compactPositiveInts(payload.BlockNums),
@@ -100,6 +113,7 @@ func generateAndContinue(ctx context.Context, ch *amqp.Channel, payload dto.Prac
 func alignAndContinue(ctx context.Context, ch *amqp.Channel, payload dto.PracticalAudioGeneratePayload) error {
 	_, err := practicalaudioservice.Align(ctx, practicalaudioservice.AlignInput{
 		ProjectID:   payload.ProjectID,
+		TTSType:     normalizePracticalTTSType(payload.TTSType),
 		Language:    payload.Lang,
 		BlockNums:   compactPositiveInts(payload.BlockNums),
 		ChapterNums: compactPositiveInts(payload.ChapterNums),
@@ -111,14 +125,14 @@ func alignAndContinue(ctx context.Context, ch *amqp.Channel, payload dto.Practic
 }
 
 func publishNextPracticalTaskFromGeneratePayload(ch *amqp.Channel, payload dto.PracticalAudioGeneratePayload, currentStage string) error {
-	nextStage, ok, err := practicalpipeline.NextStage(currentStage, payload.StopAt)
+	nextStage, ok, err := practicalpipeline.NextStage(normalizePracticalTTSType(payload.TTSType), currentStage, payload.StopAt)
 	if err != nil {
 		return err
 	}
 	if !ok {
 		return nil
 	}
-	taskType, err := practicalpipeline.TaskTypeForStage(practicalpipeline.Stage(nextStage))
+	taskType, err := practicalpipeline.TaskTypeForStage(normalizePracticalTTSType(payload.TTSType), practicalpipeline.Stage(nextStage))
 	if err != nil {
 		return err
 	}
@@ -196,10 +210,7 @@ func normalizePracticalDesignType(value int) int {
 }
 
 func normalizePracticalTTSType(value int) int {
-	if value == 1 {
-		return 1
-	}
-	return 1
+	return practicalpipeline.NormalizeTTSType(value)
 }
 
 func shouldInvalidate(currentStage string, startFrom string) bool {

@@ -238,7 +238,7 @@ func TestChineseSubtitleLayout_Style1UsesConfiguredTopBandsAndColors(t *testing.
 	if got, want := layout.HanziColor, assColorRGB(255, 255, 255); got != want {
 		t.Fatalf("unexpected style1 hanzi color: got %q want %q", got, want)
 	}
-	if got, want := layout.HighlightColor, assColorRGB(196, 236, 121); got != want {
+	if got, want := layout.HighlightColor, assColorRGB(255, 222, 89); got != want {
 		t.Fatalf("unexpected style1 highlight color: got %q want %q", got, want)
 	}
 	if got, want := layout.EnglishColor, assColorRGB(183, 236, 70); got != want {
@@ -250,8 +250,18 @@ func TestChineseSubtitleLayout_Style1UsesConfiguredTopBandsAndColors(t *testing.
 
 	var b strings.Builder
 	writeASSHeader(&b, layout)
-	if !strings.Contains(b.String(), layout.HighlightColor) {
+	rendered := b.String()
+	if !strings.Contains(rendered, layout.HighlightColor) {
 		t.Fatalf("expected style1 ass header to use configured highlight color")
+	}
+	if !strings.Contains(rendered, "Style: HanziActive,"+layout.HanziFontName+",") {
+		t.Fatalf("expected ass header to define HanziActive style")
+	}
+	if !strings.Contains(rendered, ","+layout.OutlineColor+",&H64000000,0,0,0,0,100,100,") {
+		t.Fatalf("expected HanziActive to keep configured outline color")
+	}
+	if !strings.Contains(rendered, ",0,1,2,0,5,10,10,10,1\n") {
+		t.Fatalf("expected HanziActive to use thicker outline during highlight")
 	}
 }
 

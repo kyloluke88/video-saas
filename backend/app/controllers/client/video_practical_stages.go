@@ -28,6 +28,13 @@ var practicalStageOrder = []practicalStage{
 	practicalStagePersist,
 }
 
+var practicalElevenStageOrder = []practicalStage{
+	practicalStageGenerate,
+	practicalStageImages,
+	practicalStageRender,
+	practicalStagePersist,
+}
+
 var practicalStageTaskTypes = map[practicalStage]string{
 	practicalStageGenerate: "practical.audio.generate.v1",
 	practicalStageAlign:    "practical.audio.align.v1",
@@ -41,6 +48,20 @@ func normalizePracticalRunMode(value int) int {
 		return 1
 	}
 	return 0
+}
+
+func normalizePracticalTTSType(value int) int {
+	if value == 2 {
+		return 2
+	}
+	return 1
+}
+
+func practicalStageOrderForTTSType(ttsType int) []practicalStage {
+	if normalizePracticalTTSType(ttsType) == 2 {
+		return practicalElevenStageOrder
+	}
+	return practicalStageOrder
 }
 
 func practicalStageForTaskType(taskType string) string {
@@ -84,8 +105,9 @@ func parsePracticalStage(value string) (practicalStage, bool) {
 	}
 }
 
-func resolvePracticalStagePlan(runMode int, startFrom string, stopAt string) (practicalStagePlan, error) {
+func resolvePracticalStagePlan(ttsType int, runMode int, startFrom string, stopAt string) (practicalStagePlan, error) {
 	normalizedRunMode := normalizePracticalRunMode(runMode)
+	normalizedTTSType := normalizePracticalTTSType(ttsType)
 	start := strings.TrimSpace(startFrom)
 	if normalizedRunMode == 0 {
 		if start == "" {
@@ -102,9 +124,10 @@ func resolvePracticalStagePlan(runMode int, startFrom string, stopAt string) (pr
 	if !ok {
 		return practicalStagePlan{}, fmt.Errorf("unsupported start_from value: %s", start)
 	}
-	startIndex := practicalStageIndex(practicalStageOrder, startStage)
+	order := practicalStageOrderForTTSType(normalizedTTSType)
+	startIndex := practicalStageIndex(order, startStage)
 	if startIndex < 0 {
-		return practicalStagePlan{}, fmt.Errorf("unsupported practical stage %q", startStage)
+		return practicalStagePlan{}, fmt.Errorf("start_from stage %q is not supported for tts_type=%d", startStage, normalizedTTSType)
 	}
 
 	plan := practicalStagePlan{Start: startStage}
@@ -116,9 +139,9 @@ func resolvePracticalStagePlan(runMode int, startFrom string, stopAt string) (pr
 	if !ok {
 		return practicalStagePlan{}, fmt.Errorf("unsupported stop_at value: %s", strings.TrimSpace(stopAt))
 	}
-	stopIndex := practicalStageIndex(practicalStageOrder, stopStage)
+	stopIndex := practicalStageIndex(order, stopStage)
 	if stopIndex < 0 {
-		return practicalStagePlan{}, fmt.Errorf("unsupported practical stage %q", stopStage)
+		return practicalStagePlan{}, fmt.Errorf("stop_at stage %q is not supported for tts_type=%d", stopStage, normalizedTTSType)
 	}
 	if stopIndex < startIndex {
 		return practicalStagePlan{}, fmt.Errorf("stop_at %q cannot be earlier than start_from %q", stopStage, startStage)
@@ -127,8 +150,11 @@ func resolvePracticalStagePlan(runMode int, startFrom string, stopAt string) (pr
 	return plan, nil
 }
 
-func practicalTaskTypeForStage(stage practicalStage) (string, error) {
+func practicalTaskTypeForStage(ttsType int, stage practicalStage) (string, error) {
 	stage = practicalStage(strings.ToLower(strings.TrimSpace(string(stage))))
+	if practicalStageIndex(practicalStageOrderForTTSType(ttsType), stage) < 0 {
+		return "", fmt.Errorf("stage %q is not supported for tts_type=%d", stage, normalizePracticalTTSType(ttsType))
+	}
 	taskType, ok := practicalStageTaskTypes[stage]
 	if !ok {
 		return "", fmt.Errorf("unsupported practical stage %q", stage)
@@ -136,12 +162,13 @@ func practicalTaskTypeForStage(stage practicalStage) (string, error) {
 	return taskType, nil
 }
 
-func practicalTaskTypeForPlan(plan practicalStagePlan) (string, error) {
-	return practicalTaskTypeForStage(plan.Start)
+func practicalTaskTypeForPlan(ttsType int, plan practicalStagePlan) (string, error) {
+	return practicalTaskTypeForStage(ttsType, plan.Start)
 }
 
-func practicalTerminalStage() practicalStage {
-	return practicalStageOrder[len(practicalStageOrder)-1]
+func practicalTerminalStage(ttsType int) practicalStage {
+	order := practicalStageOrderForTTSType(ttsType)
+	return order[len(order)-1]
 }
 
 func practicalStageIndex(order []practicalStage, stage practicalStage) int {

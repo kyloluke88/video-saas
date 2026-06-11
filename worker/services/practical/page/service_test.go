@@ -141,3 +141,98 @@ func TestGenerateYouTubeTranscriptsIncludesSourceLanguage(t *testing.T) {
 		t.Fatalf("expected ja srt to contain source text, got %q", string(jaRaw))
 	}
 }
+
+func TestGenerateYouTubeTranscriptsUsesTurnTextForSourceLanguage(t *testing.T) {
+	projectDir := t.TempDir()
+	script := dto.PracticalScript{
+		Language: "ja",
+		Blocks: []dto.PracticalBlock{
+			{
+				BlockID: "block_01",
+				Topic:   "Topic",
+				Chapters: []dto.PracticalChapter{
+					{
+						ChapterID: "ch_01",
+						Turns: []dto.PracticalTurn{
+							{
+								TurnID:     "t_01",
+								Text:       "すみません、注文をお願いします。",
+								SpeechText: "[happy] すみません、注文をお願いします。",
+								StartMS:    1200,
+								EndMS:      2400,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	paths, err := generateYouTubeTranscripts(projectDir, script)
+	if err != nil {
+		t.Fatalf("generateYouTubeTranscripts returned err: %v", err)
+	}
+	if len(paths) != 1 {
+		t.Fatalf("unexpected transcript path count: %d", len(paths))
+	}
+
+	raw, err := os.ReadFile(paths[0])
+	if err != nil {
+		t.Fatalf("read srt failed: %v", err)
+	}
+	text := string(raw)
+	if !strings.Contains(text, "すみません、注文をお願いします。") {
+		t.Fatalf("expected source transcript to use turn text, got %q", text)
+	}
+	if strings.Contains(text, "[happy]") {
+		t.Fatalf("expected source transcript to omit speech_text markup, got %q", text)
+	}
+}
+
+func TestGenerateYouTubeTranscriptsPreservesExistingFilesWhenNoLocalesGenerated(t *testing.T) {
+	projectDir := t.TempDir()
+	existingPath := filepath.Join(projectDir, "youtube_transcript_ja.srt")
+	if err := os.WriteFile(existingPath, []byte("existing"), 0o644); err != nil {
+		t.Fatalf("write existing transcript failed: %v", err)
+	}
+
+	paths, err := generateYouTubeTranscripts(projectDir, dto.PracticalScript{})
+	if err != nil {
+		t.Fatalf("generateYouTubeTranscripts returned err: %v", err)
+	}
+	if !reflect.DeepEqual(paths, []string{existingPath}) {
+		t.Fatalf("unexpected transcript paths:\n got %#v\nwant %#v", paths, []string{existingPath})
+	}
+
+	raw, err := os.ReadFile(existingPath)
+	if err != nil {
+		t.Fatalf("read existing transcript failed: %v", err)
+	}
+	if string(raw) != "existing" {
+		t.Fatalf("expected existing transcript to be preserved, got %q", string(raw))
+	}
+}
+
+func TestGenerateYouTubePublishTextPreservesExistingFileWhenNewContentEmpty(t *testing.T) {
+	projectDir := t.TempDir()
+	existingPath := filepath.Join(projectDir, youtubePublishFilename)
+	if err := os.WriteFile(existingPath, []byte("existing"), 0o644); err != nil {
+		t.Fatalf("write existing publish text failed: %v", err)
+	}
+
+	path, err := generateYouTubePublishText(projectDir, dto.PracticalScript{})
+	if err != nil {
+		t.Fatalf("generateYouTubePublishText returned err: %v", err)
+	}
+	if path != existingPath {
+		t.Fatalf("unexpected publish path: got %q want %q", path, existingPath)
+	}
+
+	raw, err := os.ReadFile(existingPath)
+	if err != nil {
+		t.Fatalf("read existing publish text failed: %v", err)
+	}
+	if string(raw) != "existing" {
+		t.Fatalf("expected existing publish text to be preserved, got %q", string(raw))
+	}
+}

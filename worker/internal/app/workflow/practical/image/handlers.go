@@ -20,7 +20,7 @@ func HandleGenerate(ctx context.Context, ch *amqp.Channel, msg task.VideoTaskMes
 		return err
 	}
 	if shouldInvalidate(string(practicalpipeline.StageImages), payload.StartFrom) {
-		if err := practicalpipeline.InvalidateOutputs(payload.ProjectID, payload.StartFrom); err != nil {
+		if err := practicalpipeline.InvalidateOutputs(payload.ProjectID, payload.TTSType, payload.StartFrom); err != nil {
 			return err
 		}
 	}
@@ -60,14 +60,14 @@ func resolveImagePayload(raw map[string]interface{}) (dto.PracticalAudioGenerate
 }
 
 func publishNextPracticalTaskFromImagePayload(ch *amqp.Channel, payload dto.PracticalAudioGeneratePayload, currentStage string) error {
-	nextStage, ok, err := practicalpipeline.NextStage(currentStage, payload.StopAt)
+	nextStage, ok, err := practicalpipeline.NextStage(normalizePracticalTTSType(payload.TTSType), currentStage, payload.StopAt)
 	if err != nil {
 		return err
 	}
 	if !ok {
 		return nil
 	}
-	taskType, err := practicalpipeline.TaskTypeForStage(practicalpipeline.Stage(nextStage))
+	taskType, err := practicalpipeline.TaskTypeForStage(normalizePracticalTTSType(payload.TTSType), practicalpipeline.Stage(nextStage))
 	if err != nil {
 		return err
 	}
@@ -129,10 +129,7 @@ func normalizePracticalDesignType(value int) int {
 }
 
 func normalizePracticalTTSType(value int) int {
-	if value == 1 {
-		return 1
-	}
-	return 1
+	return practicalpipeline.NormalizeTTSType(value)
 }
 
 func shouldInvalidate(currentStage string, startFrom string) bool {
