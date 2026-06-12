@@ -24,6 +24,14 @@ func main() {
 	if err := bootstrap.Initialize(""); err != nil {
 		log.Fatalf("bootstrap init failed: %v", err)
 	}
+	workerRole := task.NormalizeWorkerRole(conf.Get[string]("worker.worker_role"))
+	if task.SplitQueuesEnabled() && workerRole == task.WorkerRoleAll {
+		log.Fatal("worker_role must be main or align when RABBITMQ_SPLIT_QUEUES=true")
+	}
+	queueName, err := task.QueueForWorkerRole(workerRole)
+	if err != nil {
+		log.Fatalf("resolve worker queue failed: %v", err)
+	}
 	log.Printf("⚙️ FFMPEG_WORK_DIR=%s", conf.Get[string]("worker.ffmpeg_work_dir"))
 	log.Printf("⚙️ BGM_ENABLED=%t", conf.Get[bool]("worker.bgm_enabled"))
 	log.Printf("⚙️ S3_ENABLED=%t", conf.Get[bool]("worker.s3_enabled"))
@@ -40,17 +48,22 @@ func main() {
 		conf.Get[int]("worker.worker_concurrency"),
 		conf.Get[int]("worker.rabbitmq_prefetch"),
 	)
+	log.Printf("⚙️ WORKER_ROLE=%s RABBITMQ_SPLIT_QUEUES=%t RABBITMQ_QUEUE=%s",
+		workerRole,
+		task.SplitQueuesEnabled(),
+		queueName,
+	)
 
 	conn, err := bootstrap.SetupRabbitMQ()
 	if err != nil {
 		log.Fatalf("rabbitmq bootstrap failed: %v", err)
 	}
 
-	dispatcher := task.NewDispatcher(newTaskScheduler(), task.NewProjectLocker())
+	dispatcher := task.NewDispatcher(newTaskScheduler(workerRole), task.NewProjectLocker())
 	for {
 		pool := consumer.Pool{
 			Connection:  conn,
-			Queue:       conf.Get[string]("worker.rabbitmq_queue"),
+			Queue:       queueName,
 			Prefetch:    conf.Get[int]("worker.rabbitmq_prefetch"),
 			Concurrency: conf.Get[int]("worker.worker_concurrency"),
 			Handler:     dispatcher.HandleMessage,
@@ -77,21 +90,29 @@ func main() {
 
 }
 
-func newTaskScheduler() map[string]task.TaskHandler {
-	return map[string]task.TaskHandler{
-		"plan.v1":                     idiompipeline.HandlePlan,
-		"scene.generate.v1":           idiompipeline.HandleSceneGenerate,
-		"compose.v1":                  idiompipeline.HandleProjectCompose,
-		"practical.audio.generate.v1": practicalaudiopipeline.HandleGenerate,
-		"practical.audio.align.v1":    practicalaudiopipeline.HandleAlign,
-		"practical.image.generate.v1": practicalimagepipeline.HandleGenerate,
-		"practical.compose.render.v1": practicalcomposepipeline.HandleComposeRender,
-		"practical.page.persist.v1":   practicalpagepipeline.HandlePersist,
-		"podcast.audio.generate.v1":   podcastaudiopipeline.HandleGenerate,
-		"podcast.audio.align.v1":      podcastaudiopipeline.HandleAlign,
-		"podcast.compose.render.v1":   podcastcomposepipeline.HandleComposeRender,
-		"podcast.compose.finalize.v1": podcastcomposepipeline.HandleComposeFinalize,
-		"upload.v1":                   uploadpipeline.HandleUploadTask,
-		"podcast.page.persist.v1":     podcastpagepipeline.HandlePersist,
+func newTaskScheduler(role string) map[string]task.TaskHandler {
+	scheduler := make(map[string]task.TaskHandler)
+	normalizedRole := task.NormalizeWorkerRole(role)
+
+	if normalizedRole == task.WorkerRoleAll || normalizedRole == task.WorkerRoleMain {
+		scheduler["plan.v1"] = idiompipeline.HandlePlan
+		scheduler["scene.generate.v1"] = idiompipeline.HandleSceneGenerate
+		scheduler["compose.v1"] = idiompipeline.HandleProjectCompose
+		scheduler["practical.audio.generate.v1"] = practicalaudiopipeline.HandleGenerate
+		scheduler["practical.image.generate.v1"] = practicalimagepipeline.HandleGenerate
+		scheduler["practical.compose.render.v1"] = practicalcomposepipeline.HandleComposeRender
+		scheduler["practical.page.persist.v1"] = practicalpagepipeline.HandlePersist
+		scheduler["podcast.audio.generate.v1"] = podcastaudiopipeline.HandleGenerate
+		scheduler["podcast.compose.render.v1"] = podcastcomposepipeline.HandleComposeRender
+		scheduler["podcast.compose.finalize.v1"] = podcastcomposepipeline.HandleComposeFinalize
+		scheduler["upload.v1"] = uploadpipeline.HandleUploadTask
+		scheduler["podcast.page.persist.v1"] = podcastpagepipeline.HandlePersist
 	}
+
+	if normalizedRole == task.WorkerRoleAll || normalizedRole == task.WorkerRoleAlign {
+		scheduler["practical.audio.align.v1"] = practicalaudiopipeline.HandleAlign
+		scheduler["podcast.audio.align.v1"] = podcastaudiopipeline.HandleAlign
+	}
+
+	return scheduler
 }

@@ -8,7 +8,7 @@ import (
 )
 
 func TestProjectLockerSerializesSameProject(t *testing.T) {
-	locker := NewProjectLocker()
+	locker := NewLocalProjectLocker()
 
 	var active int32
 	var maxActive int32
@@ -41,7 +41,7 @@ func TestProjectLockerSerializesSameProject(t *testing.T) {
 }
 
 func TestProjectLockerAllowsDifferentProjectsInParallel(t *testing.T) {
-	locker := NewProjectLocker()
+	locker := NewLocalProjectLocker()
 
 	entered := make(chan string, 2)
 	release := make(chan struct{})

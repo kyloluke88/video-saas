@@ -1,16 +1,11 @@
 FROM golang:1.24-bookworm
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get -o Acquire::Retries=5 update && apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
     bash \
     bzip2 \
     ca-certificates \
-    chromium \
     curl \
     ffmpeg \
-    fontconfig \
-    fonts-dejavu \
-    fonts-noto-cjk \
-    git \
     && rm -rf /var/lib/apt/lists/*
 
 RUN arch="$(uname -m)" && \
@@ -60,8 +55,6 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY assets/fonts/ /usr/share/fonts/custom/
-RUN fc-cache -f
-
 COPY . .
 
 ARG TARGETOS=linux

@@ -106,6 +106,13 @@ func Align(ctx context.Context, input AlignInput) (AlignResult, error) {
 		return AlignResult{}, err
 	}
 	fullAlign := len(requestedBlocks) == 0 && len(requestedChapterNums) == 0
+	log.Printf("🎯 practical align start project_id=%s mode=%s blocks=%d selected_blocks=%d selected_chapters=%d",
+		input.ProjectID,
+		map[bool]string{true: "full", false: "partial"}[fullAlign],
+		len(script.Blocks),
+		len(requestedBlocks),
+		len(requestedChapterNums),
+	)
 
 	reusableLocalScript := dto.PracticalScript{}
 	if !fullAlign {
@@ -253,6 +260,13 @@ func alignScriptTimings(
 					Err: fmt.Errorf("chapter audio missing for block %s chapter %s: %s", strings.TrimSpace(block.BlockID), strings.TrimSpace(chapter.ChapterID), rawAudioPath),
 				}
 			}
+			log.Printf("🧩 practical align chapter start project_id=%s block=%03d chapter=%03d block_id=%s chapter_id=%s",
+				filepath.Base(projectDir),
+				blockIndex+1,
+				globalChapterNum,
+				strings.TrimSpace(block.BlockID),
+				strings.TrimSpace(chapter.ChapterID),
+			)
 			preparedChapter, err := strategy.PrepareChapter(ctx, projectDir, aligned.Language, *block, blockIndex+1, chapter, chapterIndex+1)
 			if err != nil {
 				return dto.PracticalScript{}, err
@@ -263,6 +277,14 @@ func alignScriptTimings(
 				return dto.PracticalScript{}, err
 			}
 			block.Chapters[chapterIndex] = finalChapter
+			log.Printf("✅ practical align chapter done project_id=%s block=%03d chapter=%03d chapter_id=%s duration_ms=%d turns=%d",
+				filepath.Base(projectDir),
+				blockIndex+1,
+				globalChapterNum,
+				strings.TrimSpace(chapter.ChapterID),
+				preparedChapter.DurationMS,
+				len(finalChapter.Turns),
+			)
 		}
 		chapterCursor += len(block.Chapters)
 	}

@@ -51,7 +51,7 @@ func HandleMessage(ch *amqp.Channel, msg amqp.Delivery, scheduler map[string]Tas
 
 	var task VideoTaskMessage
 	if err := json.Unmarshal(msg.Body, &task); err != nil {
-		_ = publishToDLQ(ch, msg.Body, retries+1)
+		_ = publishToDLQ(ch, "", msg.Body, retries+1)
 		return msg.Ack(false)
 	}
 
@@ -67,7 +67,7 @@ func HandleMessage(ch *amqp.Channel, msg amqp.Delivery, scheduler map[string]Tas
 			}
 			log.Printf("❌ project activity check failed task_id=%s project_id=%s err=%v", task.TaskID, projectID, err)
 			if isNonRetryable(err) {
-				if dlqErr := publishToDLQ(ch, msg.Body, retries); dlqErr != nil {
+				if dlqErr := publishToDLQ(ch, task.TaskType, msg.Body, retries); dlqErr != nil {
 					_ = msg.Nack(false, true)
 					return dlqErr
 				}
@@ -90,7 +90,7 @@ func HandleMessage(ch *amqp.Channel, msg amqp.Delivery, scheduler map[string]Tas
 			}
 			log.Printf("❌ task tracker start failed task_id=%s project_id=%s err=%v", task.TaskID, projectID, err)
 			if isNonRetryable(err) {
-				if dlqErr := publishToDLQ(ch, msg.Body, retries); dlqErr != nil {
+				if dlqErr := publishToDLQ(ch, task.TaskType, msg.Body, retries); dlqErr != nil {
 					_ = msg.Nack(false, true)
 					return dlqErr
 				}
@@ -121,7 +121,7 @@ func HandleMessage(ch *amqp.Channel, msg amqp.Delivery, scheduler map[string]Tas
 				if trackerErr := taskTracker.OnTaskFailed(task, retries, err); trackerErr != nil {
 					log.Printf("⚠️ task tracker final failure update failed task_id=%s project_id=%s err=%v", task.TaskID, projectID, trackerErr)
 				}
-				if dlqErr := publishToDLQ(ch, msg.Body, retries); dlqErr != nil {
+				if dlqErr := publishToDLQ(ch, task.TaskType, msg.Body, retries); dlqErr != nil {
 					_ = msg.Nack(false, true)
 					return dlqErr
 				}
@@ -131,13 +131,13 @@ func HandleMessage(ch *amqp.Channel, msg amqp.Delivery, scheduler map[string]Tas
 				if trackerErr := taskTracker.OnTaskFailed(task, retries, err); trackerErr != nil {
 					log.Printf("⚠️ task tracker max-retries failure update failed task_id=%s project_id=%s err=%v", task.TaskID, projectID, trackerErr)
 				}
-				if dlqErr := publishToDLQ(ch, msg.Body, retries+1); dlqErr != nil {
+				if dlqErr := publishToDLQ(ch, task.TaskType, msg.Body, retries+1); dlqErr != nil {
 					_ = msg.Nack(false, true)
 					return dlqErr
 				}
 				return msg.Ack(false)
 			}
-			if retryErr := publishToRetry(ch, msg.Body, retries+1); retryErr != nil {
+			if retryErr := publishToRetry(ch, task.TaskType, msg.Body, retries+1); retryErr != nil {
 				_ = msg.Nack(false, true)
 				return retryErr
 			}
@@ -165,9 +165,10 @@ func processTask(ctx context.Context, ch *amqp.Channel, task VideoTaskMessage, s
 	return handler(ctx, ch, task)
 }
 
-func publishToRetry(ch *amqp.Channel, body []byte, retries int) error {
+func publishToRetry(ch *amqp.Channel, taskType string, body []byte, retries int) error {
 	delay := TaskRetryDelay(retries)
-	return ch.Publish(conf.Get[string]("worker.rabbitmq_exchange"), TaskRetryRoutingKey(conf.Get[string]("worker.rabbitmq_retry_routing_key"), retries), false, false, amqp.Publishing{
+	route := RouteForTaskType(taskType)
+	return ch.Publish(conf.Get[string]("worker.rabbitmq_exchange"), TaskRetryRoutingKey(route.RetryRoutingKeyBase, retries), false, false, amqp.Publishing{
 		ContentType:  "application/json",
 		DeliveryMode: amqp.Persistent,
 		Timestamp:    nowUTC(),
@@ -179,8 +180,9 @@ func publishToRetry(ch *amqp.Channel, body []byte, retries int) error {
 	})
 }
 
-func publishToDLQ(ch *amqp.Channel, body []byte, retries int) error {
-	return ch.Publish(conf.Get[string]("worker.rabbitmq_dlx"), conf.Get[string]("worker.rabbitmq_dlq_routing_key"), false, false, amqp.Publishing{
+func publishToDLQ(ch *amqp.Channel, taskType string, body []byte, retries int) error {
+	route := RouteForTaskType(taskType)
+	return ch.Publish(conf.Get[string]("worker.rabbitmq_dlx"), route.DLQRoutingKey, false, false, amqp.Publishing{
 		ContentType:  "application/json",
 		DeliveryMode: amqp.Persistent,
 		Timestamp:    nowUTC(),

@@ -1,16 +1,11 @@
 FROM golang:1.24-bookworm
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get -o Acquire::Retries=5 update && apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
     bash \
     bzip2 \
     ca-certificates \
-    chromium \
     curl \
     ffmpeg \
-    fontconfig \
-    fonts-dejavu \
-    fonts-noto-cjk \
-    git \
     && rm -rf /var/lib/apt/lists/*
 
 # MFA's published dependency stack is much more stable on x86_64 than on
@@ -65,8 +60,6 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY assets/fonts/ /usr/share/fonts/custom/
-RUN fc-cache -f
-
 COPY . .
 
 CMD ["air"]

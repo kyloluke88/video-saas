@@ -64,12 +64,6 @@ func setupRabbitMQTopology(ch *amqp.Channel) error {
 	exchange := conf.Get[string]("worker.rabbitmq_exchange")
 	exchangeType := conf.Get[string]("worker.rabbitmq_exchange_type")
 	dlx := conf.Get[string]("worker.rabbitmq_dlx")
-	queue := conf.Get[string]("worker.rabbitmq_queue")
-	routingKey := conf.Get[string]("worker.rabbitmq_routing_key")
-	dlq := conf.Get[string]("worker.rabbitmq_dlq")
-	dlqRoutingKey := conf.Get[string]("worker.rabbitmq_dlq_routing_key")
-	retryQueueBase := conf.Get[string]("worker.rabbitmq_retry_queue")
-	retryRoutingKeyBase := conf.Get[string]("worker.rabbitmq_retry_routing_key")
 
 	if err := ch.ExchangeDeclare(exchange, exchangeType, true, false, false, false, nil); err != nil {
 		return err
@@ -78,21 +72,30 @@ func setupRabbitMQTopology(ch *amqp.Channel) error {
 		return err
 	}
 
+	for _, route := range task.RabbitMQRoutes() {
+		if err := declareTaskRouteTopology(ch, exchange, dlx, route); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func declareTaskRouteTopology(ch *amqp.Channel, exchange, dlx string, route task.QueueRoute) error {
 	mainArgs := amqp.Table{
 		"x-dead-letter-exchange":    dlx,
-		"x-dead-letter-routing-key": dlqRoutingKey,
+		"x-dead-letter-routing-key": route.DLQRoutingKey,
 	}
-	if _, err := ch.QueueDeclare(queue, true, false, false, false, mainArgs); err != nil {
+	if _, err := ch.QueueDeclare(route.Queue, true, false, false, false, mainArgs); err != nil {
 		return err
 	}
-	if err := ch.QueueBind(queue, routingKey, exchange, false, nil); err != nil {
+	if err := ch.QueueBind(route.Queue, route.RoutingKey, exchange, false, nil); err != nil {
 		return err
 	}
 
-	if _, err := ch.QueueDeclare(dlq, true, false, false, false, nil); err != nil {
+	if _, err := ch.QueueDeclare(route.DLQ, true, false, false, false, nil); err != nil {
 		return err
 	}
-	if err := ch.QueueBind(dlq, dlqRoutingKey, dlx, false, nil); err != nil {
+	if err := ch.QueueBind(route.DLQ, route.DLQRoutingKey, dlx, false, nil); err != nil {
 		return err
 	}
 
@@ -101,10 +104,10 @@ func setupRabbitMQTopology(ch *amqp.Channel) error {
 		retryArgs := amqp.Table{
 			"x-message-ttl":             int32(delay / time.Millisecond),
 			"x-dead-letter-exchange":    exchange,
-			"x-dead-letter-routing-key": routingKey,
+			"x-dead-letter-routing-key": route.RoutingKey,
 		}
-		retryQueue := task.TaskRetryQueueName(retryQueueBase, attempt)
-		retryRoutingKey := task.TaskRetryRoutingKey(retryRoutingKeyBase, attempt)
+		retryQueue := task.TaskRetryQueueName(route.RetryQueueBase, attempt)
+		retryRoutingKey := task.TaskRetryRoutingKey(route.RetryRoutingKeyBase, attempt)
 		if _, err := ch.QueueDeclare(retryQueue, true, false, false, false, retryArgs); err != nil {
 			return err
 		}
