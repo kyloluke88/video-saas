@@ -22,9 +22,10 @@ func presetSilkThreadPulse(resolution string, style int, audioInputIndex int) wa
 	y := waveformTopY(h, waveH, style)
 	color := waveformColor(style)
 	audioGraph := fmt.Sprintf(
-		"[%d:a]aformat=channel_layouts=mono,volume=2.40,showwaves=s=%dx%d:mode=cline:rate=30:colors=%s,format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*(0.28+0.72*pow(max(0,1-abs(2*X/W-1)),1.80))',gblur=sigma=0.30[sw]",
+		"[%d:a]aformat=channel_layouts=mono,volume=2.40,showwaves=s=%dx%d:mode=cline:rate=%d:colors=%s,format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*(0.28+0.72*pow(max(0,1-abs(2*X/W-1)),1.80))',gblur=sigma=0.30[sw]",
 		audioInputIndex,
 		waveW, waveH,
+		podcastVideoFPS(),
 		color,
 	)
 	return waveformPreset{

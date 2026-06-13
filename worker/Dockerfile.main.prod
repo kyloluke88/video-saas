@@ -1,0 +1,32 @@
+FROM --platform=$BUILDPLATFORM golang:1.24-bookworm AS builder
+
+WORKDIR /src
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /usr/local/bin/worker .
+
+FROM debian:bookworm-slim
+
+RUN apt-get -o Acquire::Retries=5 update && apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
+    ca-certificates \
+    chromium \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV WORKER_PDF_BROWSER_BIN="/usr/bin/chromium"
+
+WORKDIR /app
+
+RUN mkdir -p /app/assets /app/outputs /app/storage/logs
+
+COPY assets/ /app/assets/
+COPY assets/fonts/ /usr/share/fonts/custom/
+COPY --from=builder /usr/local/bin/worker /usr/local/bin/worker
+
+CMD ["/usr/local/bin/worker"]

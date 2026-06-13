@@ -7,8 +7,8 @@ This repository now includes a low-cost AWS deployment path built around one x86
 - It avoids the fixed monthly cost of ALB + ECS for the first production version.
 - It keeps the deployment model close to local Docker Compose.
 - It still supports push-to-deploy CI/CD on AWS.
-- It stays compatible with the current worker stack. The worker currently prefers x86_64 because MFA is pinned to that path in practice, so do not start with Graviton for this repo.
-- The default production stack now excludes `rabbitmq` and `worker`. You can enable them later without redesigning the host.
+- It stays compatible with the current worker stack. `worker-align` currently prefers x86_64 because MFA is pinned to that path in practice, so do not start with Graviton for this repo.
+- The default production stack now excludes `rabbitmq`, `worker-main`, and `worker-align`. You can enable them later without redesigning the host.
 
 ## Target topology
 
@@ -20,7 +20,8 @@ This repository now includes a low-cost AWS deployment path built around one x86
   - `redis`
 - Optional later:
   - `rabbitmq`
-  - `worker`
+  - `worker-main`
+  - `worker-align`
 - One Elastic IP mapped to your domain.
 - CodePipeline:
   - Source: GitHub via CodeConnections
@@ -40,6 +41,7 @@ This repository now includes a low-cost AWS deployment path built around one x86
    - `video-saas-backend`
    - `video-saas-frontend`
    - `video-saas-worker`
+   The worker repository stores both `worker-main` and `worker-align` image tags.
 6. Point your domain A record to the Elastic IP.
 7. SSH into the EC2 instance and run [bootstrap_ec2.sh](/Users/luca/go/github.com/luca/video-saas/infra/aws/scripts/bootstrap_ec2.sh).
 
@@ -87,7 +89,7 @@ Only create `worker.env` when you later set `ENABLE_WORKER_STACK=true`.
    - builds production Docker images
    - pushes them to ECR
    - emits `infra/aws/image-tags.env`
-   - only builds the worker image when `BUILD_WORKER_IMAGE=true`
+   - only builds the worker images when `BUILD_WORKER_IMAGE=true`
 4. CodeDeploy copies the release bundle to EC2.
 5. [deploy.sh](/Users/luca/go/github.com/luca/video-saas/infra/aws/scripts/deploy.sh) logs into ECR, pulls the new images, and runs `docker compose up -d`.
 6. The PostgreSQL container is published on `POSTGRES_PUBLIC_PORT` so your local machine can connect directly. Do not open that port to the world; restrict the EC2 security group to your own office or home IP.

@@ -2,20 +2,10 @@ package main
 
 import (
 	"log"
-	"time"
 
 	"worker/bootstrap"
-	"worker/internal/app/consumer"
 	"worker/internal/app/task"
-	idiompipeline "worker/internal/app/workflow/idiom"
-	podcastaudiopipeline "worker/internal/app/workflow/podcast/audio"
-	podcastcomposepipeline "worker/internal/app/workflow/podcast/compose"
-	podcastpagepipeline "worker/internal/app/workflow/podcast/page"
-	practicalaudiopipeline "worker/internal/app/workflow/practical/audio"
-	practicalcomposepipeline "worker/internal/app/workflow/practical/compose"
-	practicalimagepipeline "worker/internal/app/workflow/practical/image"
-	practicalpagepipeline "worker/internal/app/workflow/practical/page"
-	uploadpipeline "worker/internal/app/workflow/upload"
+	"worker/internal/app/workerapp"
 	conf "worker/pkg/config"
 	"worker/pkg/googlecloud"
 )
@@ -54,65 +44,7 @@ func main() {
 		queueName,
 	)
 
-	conn, err := bootstrap.SetupRabbitMQ()
-	if err != nil {
-		log.Fatalf("rabbitmq bootstrap failed: %v", err)
+	if err := workerapp.RunQueue(queueName, workerapp.SchedulerForRole(workerRole)); err != nil {
+		log.Fatalf("rabbitmq worker loop failed: %v", err)
 	}
-
-	dispatcher := task.NewDispatcher(newTaskScheduler(workerRole), task.NewProjectLocker())
-	for {
-		pool := consumer.Pool{
-			Connection:  conn,
-			Queue:       queueName,
-			Prefetch:    conf.Get[int]("worker.rabbitmq_prefetch"),
-			Concurrency: conf.Get[int]("worker.worker_concurrency"),
-			Handler:     dispatcher.HandleMessage,
-		}
-		if err := pool.Run(); err != nil {
-			_ = conn.Close()
-			log.Printf("⚠️ RabbitMQ 消费连接关闭，准备重连: %v", err)
-			time.Sleep(2 * time.Second)
-			continue
-		}
-
-		_ = conn.Close()
-		for {
-			conn, err = bootstrap.SetupRabbitMQ()
-			if err != nil {
-				log.Printf("⚠️ RabbitMQ 重连失败，3s 后重试: %v", err)
-				time.Sleep(3 * time.Second)
-				continue
-			}
-			break
-		}
-		time.Sleep(2 * time.Second)
-	}
-
-}
-
-func newTaskScheduler(role string) map[string]task.TaskHandler {
-	scheduler := make(map[string]task.TaskHandler)
-	normalizedRole := task.NormalizeWorkerRole(role)
-
-	if normalizedRole == task.WorkerRoleAll || normalizedRole == task.WorkerRoleMain {
-		scheduler["plan.v1"] = idiompipeline.HandlePlan
-		scheduler["scene.generate.v1"] = idiompipeline.HandleSceneGenerate
-		scheduler["compose.v1"] = idiompipeline.HandleProjectCompose
-		scheduler["practical.audio.generate.v1"] = practicalaudiopipeline.HandleGenerate
-		scheduler["practical.image.generate.v1"] = practicalimagepipeline.HandleGenerate
-		scheduler["practical.compose.render.v1"] = practicalcomposepipeline.HandleComposeRender
-		scheduler["practical.page.persist.v1"] = practicalpagepipeline.HandlePersist
-		scheduler["podcast.audio.generate.v1"] = podcastaudiopipeline.HandleGenerate
-		scheduler["podcast.compose.render.v1"] = podcastcomposepipeline.HandleComposeRender
-		scheduler["podcast.compose.finalize.v1"] = podcastcomposepipeline.HandleComposeFinalize
-		scheduler["upload.v1"] = uploadpipeline.HandleUploadTask
-		scheduler["podcast.page.persist.v1"] = podcastpagepipeline.HandlePersist
-	}
-
-	if normalizedRole == task.WorkerRoleAll || normalizedRole == task.WorkerRoleAlign {
-		scheduler["practical.audio.align.v1"] = practicalaudiopipeline.HandleAlign
-		scheduler["podcast.audio.align.v1"] = podcastaudiopipeline.HandleAlign
-	}
-
-	return scheduler
 }

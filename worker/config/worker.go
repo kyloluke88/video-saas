@@ -71,6 +71,7 @@ func init() {
 			"podcast_ffmpeg_timeout_sec":     cast.ToInt(config.Env("PODCAST_FFMPEG_TIMEOUT_SEC", 0)),
 			"practical_ffmpeg_timeout_sec":   cast.ToInt(config.Env("PRACTICAL_FFMPEG_TIMEOUT_SEC", 0)),
 			"podcast_mode":                   config.Env("PODCAST_MODE", "debug"),
+			"podcast_fps":                    cast.ToInt(config.Env("PODCAST_FPS", 30)),
 			"podcast_x264_preset":            config.Env("PODCAST_X264_PRESET", "veryfast"),
 			"podcast_keep_ass":               cast.ToBool(config.Env("PODCAST_KEEP_ASS", strings.EqualFold(strings.TrimSpace(cast.ToString(config.Env("PODCAST_MODE", "debug"))), "debug"))),
 			"practical_x264_preset":          config.Env("PRACTICAL_X264_PRESET", "veryfast"),

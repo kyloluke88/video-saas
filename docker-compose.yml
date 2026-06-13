@@ -75,6 +75,7 @@ services:
       DB_DATABASE: ${POSTGRES_DB}
       DB_USERNAME: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
+      LOG_NAME: storage/logs/main/worker.log
       RABBITMQ_SPLIT_QUEUES: "true"
       WORKER_ROLE: main
     volumes:
@@ -84,15 +85,15 @@ services:
     platform: linux/amd64
     build:
       context: ./worker
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.align
     container_name: video_worker_align
     restart: always
+    env_file:
+      - ./worker/.env
     depends_on:
       rabbitmq:
         condition: service_healthy
       postgres:
-        condition: service_started
-      redis:
         condition: service_started
     environment:
       DB_CONNECTION: postgresql
@@ -101,10 +102,12 @@ services:
       DB_DATABASE: ${POSTGRES_DB}
       DB_USERNAME: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
+      LOG_NAME: storage/logs/align/worker.log
       RABBITMQ_SPLIT_QUEUES: "true"
       WORKER_ROLE: align
     volumes:
-      - ./worker:/app
+      - ./worker/outputs:/app/outputs
+      - ./worker/storage:/app/storage
 
   frontend:
     build:

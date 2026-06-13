@@ -19,7 +19,8 @@ phases:
       - SHORT_SHA="${IMAGE_TAG:0:12}"
       - BACKEND_IMAGE="${ECR_REGISTRY}/${ECR_BACKEND_REPOSITORY}:${SHORT_SHA}"
       - FRONTEND_IMAGE="${ECR_REGISTRY}/${ECR_FRONTEND_REPOSITORY}:${SHORT_SHA}"
-      - WORKER_IMAGE="${ECR_REGISTRY}/${ECR_WORKER_REPOSITORY}:${SHORT_SHA}"
+      - WORKER_MAIN_IMAGE="${ECR_REGISTRY}/${ECR_WORKER_REPOSITORY}:${SHORT_SHA}-main"
+      - WORKER_ALIGN_IMAGE="${ECR_REGISTRY}/${ECR_WORKER_REPOSITORY}:${SHORT_SHA}-align"
       - aws ecr get-login-password --region "${AWS_REGION}" | docker login --username AWS --password-stdin "${ECR_REGISTRY}"
 
   build:
@@ -36,7 +37,8 @@ phases:
       - docker build --build-arg NEXT_PUBLIC_API_BASE_URL="${NEXT_PUBLIC_API_BASE_URL:-}" --build-arg NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL:-}" -f frontend/Dockerfile.prod -t "${FRONTEND_IMAGE}" ./frontend
       - |
         if [[ "${BUILD_WORKER_IMAGE:-false}" == "true" ]]; then
-          docker build -f worker/Dockerfile.prod -t "${WORKER_IMAGE}" ./worker
+          docker build -f worker/Dockerfile.main.prod -t "${WORKER_MAIN_IMAGE}" ./worker
+          docker build -f worker/Dockerfile.align -t "${WORKER_ALIGN_IMAGE}" ./worker
         else
           echo "Skipping worker image build because BUILD_WORKER_IMAGE=false"
         fi
@@ -47,12 +49,14 @@ phases:
       - docker push "${FRONTEND_IMAGE}"
       - |
         if [[ "${BUILD_WORKER_IMAGE:-false}" == "true" ]]; then
-          docker push "${WORKER_IMAGE}"
+          docker push "${WORKER_MAIN_IMAGE}"
+          docker push "${WORKER_ALIGN_IMAGE}"
         else
-          WORKER_IMAGE=""
+          WORKER_MAIN_IMAGE=""
+          WORKER_ALIGN_IMAGE=""
         fi
       - mkdir -p infra/aws
-      - printf 'BACKEND_IMAGE=%s\nFRONTEND_IMAGE=%s\nWORKER_IMAGE=%s\n' "${BACKEND_IMAGE}" "${FRONTEND_IMAGE}" "${WORKER_IMAGE}" > infra/aws/image-tags.env
+      - printf 'BACKEND_IMAGE=%s\nFRONTEND_IMAGE=%s\nWORKER_MAIN_IMAGE=%s\nWORKER_ALIGN_IMAGE=%s\n' "${BACKEND_IMAGE}" "${FRONTEND_IMAGE}" "${WORKER_MAIN_IMAGE}" "${WORKER_ALIGN_IMAGE}" > infra/aws/image-tags.env
 
 artifacts:
   files:
