@@ -1,6 +1,6 @@
 # Environment Guide
 
-This file defines the intended difference between local development, the current production deployment, and the later full production deployment with worker support.
+This file defines the intended difference between local development, the current production deployment, and the later full production deployment with split worker support.
 
 ## Overview
 
@@ -23,7 +23,8 @@ Services:
 - `postgres`
 - `redis`
 - `rabbitmq`
-- `worker`
+- `worker-main`
+- `worker-align`
 
 Primary file:
 
@@ -32,7 +33,8 @@ Primary file:
 Key behavior:
 
 - `backend` expects RabbitMQ to be enabled.
-- `worker` is present and consumes tasks.
+- `worker-main` handles generation, render, finalize, and upload tasks.
+- `worker-align` handles audio alignment tasks.
 - podcast / video generation can run locally.
 - local assets and outputs are written inside the repo bind mounts.
 
@@ -60,7 +62,8 @@ Services:
 Not deployed right now:
 
 - `rabbitmq`
-- `worker`
+- `worker-main`
+- `worker-align`
 
 Primary file:
 
@@ -98,12 +101,13 @@ Security requirement:
 
 ## Future Production Full Stack
 
-Later, production can be upgraded to include the queue and worker without rebuilding the whole deployment model.
+Later, production can be upgraded to include the queue and split workers without rebuilding the whole deployment model.
 
 Additional services:
 
 - `rabbitmq`
-- `worker`
+- `worker-main`
+- `worker-align`
 
 Additional file:
 
@@ -123,7 +127,7 @@ What changes when you enable the full stack:
 
 - CodeDeploy starts both base compose and worker compose.
 - RabbitMQ runs on the EC2 host.
-- Worker runs on the EC2 host.
+- `worker-main` and `worker-align` run on the EC2 host with split queues enabled.
 - Backend waits for RabbitMQ again.
 - task submission endpoints become usable online.
 
@@ -160,7 +164,7 @@ Right now the recommended workflow is:
 2. Keep production focused on public page delivery.
 3. Connect your local tooling to the production PostgreSQL instance through the published PostgreSQL port.
 4. Restrict that PostgreSQL port in AWS security groups to your own IP only.
-5. Move `worker` online later when the public site is stable.
+5. Move `worker-main` and `worker-align` online later when the public site is stable.
 
 ## Why This Split Exists
 

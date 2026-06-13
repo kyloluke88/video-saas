@@ -23,8 +23,8 @@ services:
       timeout: 5s
       retries: 12
 
-  worker:
-    image: ${WORKER_IMAGE}
+  worker-main:
+    image: ${WORKER_MAIN_IMAGE}
     restart: unless-stopped
     depends_on:
       rabbitmq:
@@ -36,6 +36,30 @@ services:
     env_file:
       - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/env/global.env
       - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/env/worker.env
+    environment:
+      LOG_NAME: storage/logs/main/worker.log
+      RABBITMQ_SPLIT_QUEUES: "true"
+      WORKER_ROLE: main
+    volumes:
+      - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/env/worker.env:/app/.env:ro
+      - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/outputs:/app/outputs
+      - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/storage:/app/storage
+
+  worker-align:
+    image: ${WORKER_ALIGN_IMAGE}
+    restart: unless-stopped
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    env_file:
+      - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/env/global.env
+      - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/env/worker.env
+    environment:
+      LOG_NAME: storage/logs/align/worker.log
+      RABBITMQ_SPLIT_QUEUES: "true"
+      WORKER_ROLE: align
     volumes:
       - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/env/worker.env:/app/.env:ro
       - ${DEPLOY_BASE_DIR:-/opt/video-saas}/shared/outputs:/app/outputs

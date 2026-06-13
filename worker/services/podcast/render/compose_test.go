@@ -2,6 +2,7 @@ package podcast
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -63,6 +64,27 @@ func TestAppendLoopedImageInput(t *testing.T) {
 	for i := range want {
 		if got[i] != want[i] {
 			t.Fatalf("unexpected args: got %v want %v", got, want)
+		}
+	}
+}
+
+func TestPodcastVideoFilterChainUsesFixedPodcastFPS(t *testing.T) {
+	got := podcastVideoFilterChain("subtitles=podcast.ass:fontsdir=assets/fonts")
+	want := "fps=30,subtitles=podcast.ass:fontsdir=assets/fonts,setsar=1,setpts=PTS-STARTPTS"
+	if got != want {
+		t.Fatalf("unexpected video filter chain\nwant: %s\ngot:  %s", want, got)
+	}
+}
+
+func TestPodcastIntroConcatFilterNormalizesBothVideoInputs(t *testing.T) {
+	got := podcastIntroConcatFilter("1080p", "subtitles=podcast.ass:fontsdir=assets/fonts")
+	for _, want := range []string{
+		"[0:v]fps=30,scale=1920:1080,setsar=1,setpts=PTS-STARTPTS[v0]",
+		"[1:v]fps=30,subtitles=podcast.ass:fontsdir=assets/fonts,setsar=1,setpts=PTS-STARTPTS[v1]",
+		"[v0][a0][v1][a1]concat=n=2:v=1:a=1[v][a]",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("expected concat filter to contain %q in %s", want, got)
 		}
 	}
 }

@@ -44,4 +44,19 @@ if [[ "${frontend_health}" != "healthy" ]]; then
   exit 1
 fi
 
+if [[ "${ENABLE_WORKER_STACK:-false}" == "true" ]]; then
+  for service in rabbitmq worker-main worker-align; do
+    container_id="$(compose ps -q "${service}")"
+    if [[ -z "${container_id}" ]]; then
+      echo "${service} container is missing" >&2
+      exit 1
+    fi
+    status="$(docker inspect -f '{{.State.Status}}' "${container_id}")"
+    if [[ "${status}" != "running" ]]; then
+      echo "${service} is not running: ${status}" >&2
+      exit 1
+    fi
+  done
+fi
+
 echo "deployment validated"

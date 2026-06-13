@@ -142,6 +142,25 @@ func escapeFFmpegPath(path string) string {
 	return path
 }
 
+func podcastVideoFilterChain(filters ...string) string {
+	parts := []string{fmt.Sprintf("fps=%d", podcastVideoFPS())}
+	for _, filter := range filters {
+		if trimmed := strings.TrimSpace(filter); trimmed != "" {
+			parts = append(parts, trimmed)
+		}
+	}
+	parts = append(parts, "setsar=1", "setpts=PTS-STARTPTS")
+	return strings.Join(parts, ",")
+}
+
+func podcastIntroConcatFilter(resolution, contentVideoFilter string) string {
+	return fmt.Sprintf(
+		"[0:v]%s[v0];[0:a]aresample=48000,asetpts=N/SR/TB[a0];[1:v]%s[v1];[1:a]aresample=48000,asetpts=N/SR/TB[a1];[v0][a0][v1][a1]concat=n=2:v=1:a=1[v][a]",
+		podcastVideoFilterChain(fmt.Sprintf("scale=%s", common.ResolutionToScale(resolution))),
+		podcastVideoFilterChain(contentVideoFilter),
+	)
+}
+
 func podcastX264Preset() string {
 	return strings.TrimSpace(conf.Get[string]("worker.podcast_x264_preset", "veryfast"))
 }
@@ -212,8 +231,7 @@ func prependPodcastIntroIfNeeded(ctx context.Context, input ComposeInput, conten
 		)
 	}
 
-	scale := common.ResolutionToScale(input.Resolution)
-	filter := fmt.Sprintf("[0:v]scale=%s,setsar=1[v0];[0:a]aresample=48000,asetpts=N/SR/TB[a0];[1:v]setsar=1[v1];[1:a]aresample=48000,asetpts=N/SR/TB[a1];[v0][a0][v1][a1]concat=n=2:v=1:a=1[v][a]", scale)
+	filter := podcastIntroConcatFilter(input.Resolution, "")
 	if err := common.RunFFmpegWithTimeoutContext(ctx, ffmpegTimeout,
 		"-y",
 		"-i", introPath,
@@ -248,7 +266,7 @@ func renderFinalPodcastOutput(ctx context.Context, input ComposeInput, assPath, 
 		return common.RunFFmpegWithTimeoutContext(ctx, ffmpegTimeout,
 			"-y",
 			"-i", baseOutput,
-			"-vf", subFilter,
+			"-vf", podcastVideoFilterChain(subFilter),
 			"-c:v", "libx264",
 			"-preset", x264Preset,
 			"-pix_fmt", "yuv420p",
@@ -261,7 +279,7 @@ func renderFinalPodcastOutput(ctx context.Context, input ComposeInput, assPath, 
 			return common.RunFFmpegWithTimeoutContext(ctx, ffmpegTimeout,
 				"-y",
 				"-i", baseOutput,
-				"-vf", subFilter,
+				"-vf", podcastVideoFilterChain(subFilter),
 				"-c:v", "libx264",
 				"-preset", x264Preset,
 				"-pix_fmt", "yuv420p",
@@ -272,12 +290,7 @@ func renderFinalPodcastOutput(ctx context.Context, input ComposeInput, assPath, 
 		return err
 	}
 
-	scale := common.ResolutionToScale(input.Resolution)
-	complexFilter := fmt.Sprintf(
-		"[0:v]scale=%s,setsar=1[v0];[0:a]aresample=48000,asetpts=N/SR/TB[a0];[1:v]%s,setsar=1[v1];[1:a]aresample=48000,asetpts=N/SR/TB[a1];[v0][a0][v1][a1]concat=n=2:v=1:a=1[v][a]",
-		scale,
-		subFilter,
-	)
+	complexFilter := podcastIntroConcatFilter(input.Resolution, subFilter)
 	return common.RunFFmpegWithTimeoutContext(ctx, ffmpegTimeout,
 		"-y",
 		"-i", introPath,

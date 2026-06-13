@@ -3,6 +3,7 @@ package task
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 	"time"
@@ -14,11 +15,13 @@ import (
 )
 
 func PublishTask(ch *amqp.Channel, taskType string, payload map[string]interface{}) error {
-	if err := ensureProjectActive(taskProjectID(VideoTaskMessage{Payload: payload})); err != nil {
+	projectID := taskProjectID(VideoTaskMessage{Payload: payload})
+	if err := ensureProjectActive(projectID); err != nil {
 		return err
 	}
 
 	taskID := fmt.Sprintf("%s-%d", taskIDPrefixFromPayload(payload), time.Now().UnixNano())
+	route := RouteForTaskType(taskType)
 	body, err := json.Marshal(VideoTaskMessage{
 		TaskID:    taskID,
 		TaskType:  taskType,
@@ -28,11 +31,19 @@ func PublishTask(ch *amqp.Channel, taskType string, payload map[string]interface
 	if err != nil {
 		return err
 	}
-	return ch.Publish(conf.Get[string]("worker.rabbitmq_exchange"), conf.Get[string]("worker.rabbitmq_routing_key"), false, false, amqp.Publishing{
+	log.Printf("📨 发布任务 task_id=%s type=%s project_id=%s queue=%s routing_key=%s",
+		taskID, taskType, projectID, route.Queue, route.RoutingKey)
+	return publishRaw(ch, taskType, body, nil)
+}
+
+func publishRaw(ch *amqp.Channel, taskType string, body []byte, headers amqp.Table) error {
+	route := RouteForTaskType(taskType)
+	return ch.Publish(conf.Get[string]("worker.rabbitmq_exchange"), route.RoutingKey, false, false, amqp.Publishing{
 		ContentType:  "application/json",
 		DeliveryMode: amqp.Persistent,
 		Timestamp:    nowUTC(),
 		Body:         body,
+		Headers:      headers,
 	})
 }
 

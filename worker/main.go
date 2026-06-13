@@ -2,20 +2,10 @@ package main
 
 import (
 	"log"
-	"time"
 
 	"worker/bootstrap"
-	"worker/internal/app/consumer"
 	"worker/internal/app/task"
-	idiompipeline "worker/internal/app/workflow/idiom"
-	podcastaudiopipeline "worker/internal/app/workflow/podcast/audio"
-	podcastcomposepipeline "worker/internal/app/workflow/podcast/compose"
-	podcastpagepipeline "worker/internal/app/workflow/podcast/page"
-	practicalaudiopipeline "worker/internal/app/workflow/practical/audio"
-	practicalcomposepipeline "worker/internal/app/workflow/practical/compose"
-	practicalimagepipeline "worker/internal/app/workflow/practical/image"
-	practicalpagepipeline "worker/internal/app/workflow/practical/page"
-	uploadpipeline "worker/internal/app/workflow/upload"
+	"worker/internal/app/workerapp"
 	conf "worker/pkg/config"
 	"worker/pkg/googlecloud"
 )
@@ -23,6 +13,14 @@ import (
 func main() {
 	if err := bootstrap.Initialize(""); err != nil {
 		log.Fatalf("bootstrap init failed: %v", err)
+	}
+	workerRole := task.NormalizeWorkerRole(conf.Get[string]("worker.worker_role"))
+	if task.SplitQueuesEnabled() && workerRole == task.WorkerRoleAll {
+		log.Fatal("worker_role must be main or align when RABBITMQ_SPLIT_QUEUES=true")
+	}
+	queueName, err := task.QueueForWorkerRole(workerRole)
+	if err != nil {
+		log.Fatalf("resolve worker queue failed: %v", err)
 	}
 	log.Printf("⚙️ FFMPEG_WORK_DIR=%s", conf.Get[string]("worker.ffmpeg_work_dir"))
 	log.Printf("⚙️ BGM_ENABLED=%t", conf.Get[bool]("worker.bgm_enabled"))
@@ -40,58 +38,13 @@ func main() {
 		conf.Get[int]("worker.worker_concurrency"),
 		conf.Get[int]("worker.rabbitmq_prefetch"),
 	)
+	log.Printf("⚙️ WORKER_ROLE=%s RABBITMQ_SPLIT_QUEUES=%t RABBITMQ_QUEUE=%s",
+		workerRole,
+		task.SplitQueuesEnabled(),
+		queueName,
+	)
 
-	conn, err := bootstrap.SetupRabbitMQ()
-	if err != nil {
-		log.Fatalf("rabbitmq bootstrap failed: %v", err)
-	}
-
-	dispatcher := task.NewDispatcher(newTaskScheduler(), task.NewProjectLocker())
-	for {
-		pool := consumer.Pool{
-			Connection:  conn,
-			Queue:       conf.Get[string]("worker.rabbitmq_queue"),
-			Prefetch:    conf.Get[int]("worker.rabbitmq_prefetch"),
-			Concurrency: conf.Get[int]("worker.worker_concurrency"),
-			Handler:     dispatcher.HandleMessage,
-		}
-		if err := pool.Run(); err != nil {
-			_ = conn.Close()
-			log.Printf("⚠️ RabbitMQ 消费连接关闭，准备重连: %v", err)
-			time.Sleep(2 * time.Second)
-			continue
-		}
-
-		_ = conn.Close()
-		for {
-			conn, err = bootstrap.SetupRabbitMQ()
-			if err != nil {
-				log.Printf("⚠️ RabbitMQ 重连失败，3s 后重试: %v", err)
-				time.Sleep(3 * time.Second)
-				continue
-			}
-			break
-		}
-		time.Sleep(2 * time.Second)
-	}
-
-}
-
-func newTaskScheduler() map[string]task.TaskHandler {
-	return map[string]task.TaskHandler{
-		"plan.v1":                     idiompipeline.HandlePlan,
-		"scene.generate.v1":           idiompipeline.HandleSceneGenerate,
-		"compose.v1":                  idiompipeline.HandleProjectCompose,
-		"practical.audio.generate.v1": practicalaudiopipeline.HandleGenerate,
-		"practical.audio.align.v1":    practicalaudiopipeline.HandleAlign,
-		"practical.image.generate.v1": practicalimagepipeline.HandleGenerate,
-		"practical.compose.render.v1": practicalcomposepipeline.HandleComposeRender,
-		"practical.page.persist.v1":   practicalpagepipeline.HandlePersist,
-		"podcast.audio.generate.v1":   podcastaudiopipeline.HandleGenerate,
-		"podcast.audio.align.v1":      podcastaudiopipeline.HandleAlign,
-		"podcast.compose.render.v1":   podcastcomposepipeline.HandleComposeRender,
-		"podcast.compose.finalize.v1": podcastcomposepipeline.HandleComposeFinalize,
-		"upload.v1":                   uploadpipeline.HandleUploadTask,
-		"podcast.page.persist.v1":     podcastpagepipeline.HandlePersist,
+	if err := workerapp.RunQueue(queueName, workerapp.SchedulerForRole(workerRole)); err != nil {
+		log.Fatalf("rabbitmq worker loop failed: %v", err)
 	}
 }

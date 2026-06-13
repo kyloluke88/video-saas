@@ -55,12 +55,11 @@ services:
       - ./backend:/app
     command: air
 
-  worker:
-    platform: linux/amd64
+  worker-main:
     build:
       context: ./worker
-      dockerfile: Dockerfile
-    container_name: video_worker
+      dockerfile: Dockerfile.main
+    container_name: video_worker_main
     restart: always
     depends_on:
       rabbitmq:
@@ -76,8 +75,39 @@ services:
       DB_DATABASE: ${POSTGRES_DB}
       DB_USERNAME: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
+      LOG_NAME: storage/logs/main/worker.log
+      RABBITMQ_SPLIT_QUEUES: "true"
+      WORKER_ROLE: main
     volumes:
       - ./worker:/app
+
+  worker-align:
+    platform: linux/amd64
+    build:
+      context: ./worker
+      dockerfile: Dockerfile.align
+    container_name: video_worker_align
+    restart: always
+    env_file:
+      - ./worker/.env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      postgres:
+        condition: service_started
+    environment:
+      DB_CONNECTION: postgresql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${POSTGRES_DB}
+      DB_USERNAME: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      LOG_NAME: storage/logs/align/worker.log
+      RABBITMQ_SPLIT_QUEUES: "true"
+      WORKER_ROLE: align
+    volumes:
+      - ./worker/outputs:/app/outputs
+      - ./worker/storage:/app/storage
 
   frontend:
     build:

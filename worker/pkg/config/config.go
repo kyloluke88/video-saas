@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"reflect"
 
@@ -43,7 +44,11 @@ func loadEnv(envSuffix string) {
 
 	viper.SetConfigName(envPath)
 	if err := viper.ReadInConfig(); err != nil {
-		panic(err)
+		var notFound viperlib.ConfigFileNotFoundError
+		if !errors.As(err, &notFound) {
+			panic(err)
+		}
+		return
 	}
 	viper.WatchConfig()
 }
